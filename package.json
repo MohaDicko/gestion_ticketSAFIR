@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
+    "vercel-build": "npm run build --workspace=@devcapacity/shared && npm run build --workspace=@devcapacity/web",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\""

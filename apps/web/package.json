@@ -4,6 +4,7 @@
   "description": "Frontend Next.js (App Router) pour DevCapacity Manager",
   "scripts": {
     "dev": "next dev -p 3000",
+    "prebuild": "npm run build --workspace=@devcapacity/shared --if-present",
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint"
