@@ -264,21 +264,47 @@ Pour répondre aux contraintes d'infrastructure de Safir Consulting, le système
 
 ---
 
-## 10. SÉCURITÉ, TRAÇABILITÉ & CONFIDENTIALITÉ (RBAC)
+## 10. SÉCURITÉ, GOUVERNANCE & CLOISONNEMENT DES RÔLES (RBAC)
 
-L'accès est régi par un modèle de droits fondé sur les rôles :
+L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garantissant l'étanchéité des données et une expérience sur-mesure pour chaque collaborateur de Safir Consulting :
 
-| Fonctionnalité | `HEAD` (Aliko) | `DEVELOPER` (Équipe) | `CONSULTANT` | `ADMIN` (IT) |
+### 10.1. Matrice des Droits et Grants
+
+| Fonctionnalité / Périmètre | `HEAD` (Aliko) | `DEVELOPER` (Équipe) | `CONSULTANT` (Mélissa) | `ADMIN` (IT) |
 |---|:---:|:---:|:---:|:---:|
-| **Tableau de Bord Global & KPIs** | ✅ | Lecture limitée | ❌ | ✅ |
-| **Qualification des E-mails Entrants** | ✅ | ❌ | ❌ | ✅ |
-| **Validation des Affectations / Dérogations** | ✅ | ❌ | ❌ | ❌ |
-| **Consultation de ses Propres Tickets** | ✅ | ✅ | ❌ | ✅ |
-| **Mise à Jour Reste à Faire & Saisie Temps** | ✅ | ✅ | ❌ | ❌ |
-| **Déclaration / Résolution de Blocage** | ✅ | ✅ | ❌ | ❌ |
+| **Boîte de Réception Outlook M365 & Scoring d'Urgence** | ✅ | ❌ | ❌ | ✅ |
+| **Gouvernance Globale, Suivi Capacité & Alertes Surcharge** | ✅ | ❌ | ❌ | ✅ |
+| **Attribution des Tickets & Dérogations de Charge** | ✅ | ❌ | ❌ | ❌ |
+| **Espace Développeur Personnalisé (Mes Tickets Dédiés)** | ✅ (Vue globale) | ✅ (Strictement les siens) | ❌ | ✅ |
+| **Saisie Reste à Faire (RAF en heures)** | ✅ | ✅ | ❌ | ❌ |
+| **Déclaration de Blocage d'Urgence (« Stop-the-line »)** | ✅ | ✅ | ❌ | ❌ |
+| **Livraison de Ticket pour Recette** | ✅ | ✅ | ❌ | ❌ |
+| **Suivi Transparent de ses Demandes Émises** | ✅ | ❌ | ✅ | ✅ |
+| **Formulaire de Soumission Directe de Nouveau Besoin** | ✅ | ❌ | ✅ | ✅ |
 | **Validation Clôture Définitive (`CLOSED`)** | ✅ | ❌ | ❌ | ❌ |
-| **Gestion des Paramètres & Poids de Scoring** | ✅ | ❌ | ❌ | ✅ |
-| **Journal d'Audit Immuable** | ✅ | ❌ | ❌ | ✅ |
+| **Pondération des Critères de Scoring & Règle Métier** | ✅ | ❌ | ❌ | ✅ |
+| **Journal d'Audit Immuable & Traçabilité** | ✅ | ❌ | ❌ | ✅ |
+
+### 10.2. Expérience et Cloisonnement par Profil
+
+1. **Espace Direction (`HEAD` — Aliko Getheme)** :
+   - Vision consolidée à 360° : boîte de réception Outlook M365 (e-mails entrants, analyse anti-spoofing, scoring d'urgence).
+   - Suivi en temps réel de la capacité de l'équipe (heures disponibles vs heures RAF réelles, taux de saturation).
+   - Matrice Kanban et liste complète des tickets pour arbitrages d'affectation et validations.
+
+2. **Espace Développeur (`DEVELOPER` — Anoop, Moha, Hassane, etc.)** :
+   - **Isolation stricte** : la boîte e-mail de la direction et les métriques globales d'équipe sont masquées.
+   - Accès exclusif à la liste de ses **propres tickets assignés** classés par statut opérationnel.
+   - **Saisie du RAF (Reste à Faire)** : mise à jour instantanée du temps restant nécessaire avec recalcul automatique de la charge de travail.
+   - **Stop-the-line (Blocage)** : déclaration immédiate d'un point de blocage avec motif obligatoire pour remonter l'alerte à la direction sans délai.
+   - **Livraison** : passage du ticket en statut *Livré* dès achèvement des travaux.
+
+3. **Espace Métier / Consultante (`CONSULTANT` — Mélissa Diakité)** :
+   - Consultation et suivi en temps réel du cycle de vie de **ses propres demandes fonctionnelles émises**.
+   - Formulaire dédié pour soumettre directement un nouveau ticket dans le système sans transiter par une chaîne de mails informelle.
+
+4. **Sélecteur de Session Interactif (1-Clic)** :
+   - Sélecteur de profil corporate intégré dans l'en-tête permettant de basculer instantanément entre Aliko, Anoop, Moha et Mélissa pour les besoins de validation, tests et démonstrations.
 
 ---
 
@@ -289,12 +315,13 @@ L'accès est régi par un modèle de droits fondé sur les rôles :
 - ✅ **Jeu de Données Initial (Seed)** : 7 développeurs réels Safir Consulting (Moha Dicko, Anoop Pandimukkula, Hassane Bocoum, Nevrit Ahua, Fatoumata Traore, Korotoumou Thiam, Jean-Philippe Ebrottié), consultante Mélissa Diakité, compétences SAP et tickets enregistrés.
 - ✅ **Backend API REST NestJS** : Opérationnel sur `http://localhost:4000/api/v1` avec contrôleurs de tickets, qualification d'expéditeurs (Consultant Safir, Contact Client, Externe, Alerte anti-usurpation Gmail) et moteur de scoring.
 - ✅ **Frontend Next.js 15 App Router** : Opérationnel sur `http://localhost:3000` avec interface entreprise authentique, sobre et ergonomique (Tableau de bord de synthèse, Grand tableau des tickets SAP, Fiches de capacité de l'équipe, Boîte de réception Outlook M365 connectée).
-- ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas).
+- ✅ **Contrôle d'Accès & Espaces Multi-Utilisateurs (RBAC)** : Cloisonnement strict entre Direction (Aliko), Développeurs (Anoop, Moha, Hassane - saisie RAF, Stop-the-line, livraison) et Consultante (Mélissa - suivi et soumission directe de besoins), avec sélecteur de session instantané.
+- ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas des variables d'environnement).
 - ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
 - ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 
 ### 11.2. Feuille de Route pour Mise en Production
-1. **Revue & Validation par Aliko** : Démonstration sur le poste de travail des flux d'affectation et de qualification.
+1. **Revue & Validation par Aliko** : Démonstration sur le poste de travail des flux d'affectation, de la vue développeur (RAF / Stop-the-line) et de la boîte de réception.
 2. **Raccordement Office 365 Réel** : Renseignement des clés d'accès Azure Entra ID pour basculer du mode simulation vers la boîte de réception réelle.
 3. **Déploiement sur l'Hôte SAP** : Lancement du `docker-compose.yml` sur le serveur cible de Safir Consulting.
 
