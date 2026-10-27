@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: devcapacity-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-devcapacity}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devcapacity_secret}
+      POSTGRES_DB: ${DB_NAME:-devcapacity_db}
+    ports:
+      # Port configurable pour éviter tout conflit avec les ports SAP (ex: 5432 ou 5433)
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-devcapacity} -d ${DB_NAME:-devcapacity_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Interface web légère pour explorer la base de données
+  adminer:
+    image: adminer:latest
+    container_name: devcapacity-adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8085}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    name: devcapacity_postgres_data
