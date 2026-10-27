@@ -1,10 +1,10 @@
-import { PrismaClient, Role, ProfileStatus } from "@prisma/client";
+import { PrismaClient, Role, ProfileStatus, TicketStatus, TicketSource, MailProviderKind, EmailDirection, EmailProcessingStatus, SenderKind } from "@prisma/client";
 import * as argon2 from "argon2";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Début du seed initial DevCapacity Manager...");
+  console.log("🌱 Début du seed initial complet DevCapacity Manager...");
 
   // 1. Types de tickets
   const ticketTypes = [
@@ -45,7 +45,7 @@ async function main() {
   console.log("✓ Priorités initialisées");
 
   // 3. Catalogue des compétences (axé SAP & Dev)
-  const skills = [
+  const skillsData = [
     { name: "SAP Business One — Service Layer", category: "SAP", description: "Développement et intégration via API REST Service Layer B1" },
     { name: "SAP Business One — UI / DI API", category: "SAP", description: "Développement d'addons natifs SAP B1 (SDK)" },
     { name: "SAP S/4HANA — ABAP & CDS", category: "SAP", description: "Programmation ABAP moderne, CDS Views, RAP/CAP" },
@@ -59,16 +59,18 @@ async function main() {
     { name: "Architecture & Intégration API", category: "Transverse", description: "Conception de flux, webhooks et sécurité des échanges" },
   ];
 
-  for (const s of skills) {
-    await prisma.skill.upsert({
+  const skillMap = new Map<string, string>();
+  for (const s of skillsData) {
+    const created = await prisma.skill.upsert({
       where: { name: s.name },
       update: { category: s.category, description: s.description },
       create: s,
     });
+    skillMap.set(s.name, created.id);
   }
   console.log("✓ Catalogue de compétences initialisé");
 
-  // 4. Paramètres applicatifs (Settings)
+  // 4. Paramètres applicatifs
   const settings = [
     {
       key: "recommendation.weights",
@@ -96,7 +98,7 @@ async function main() {
   }
   console.log("✓ Paramètres applicatifs configurés");
 
-  // 5. Utilisateur principal : Aliko (HEAD)
+  // 5. Compte HEAD : Aliko Getheme
   const devPasswordHash = await argon2.hash("Safir2026!DevCapacity");
 
   const aliko = await prisma.user.upsert({
@@ -118,9 +120,320 @@ async function main() {
       timezone: "Europe/Paris",
     },
   });
-  console.log(`✓ Utilisateur HEAD créé : ${aliko.email} (Mot de passe repli dev : Safir2026!DevCapacity)`);
+  console.log(`✓ Utilisateur HEAD créé : ${aliko.email}`);
 
-  console.log("🚀 Seed terminé avec succès !");
+  // 6. Les 8 Développeurs de la SME Business Unit
+  const devsConfig = [
+    {
+      email: "marc.dupont@safirconsulting.net",
+      firstName: "Marc",
+      lastName: "Dupont",
+      jobTitle: "Lead Développeur SAP Business One",
+      skills: [
+        { name: "SAP Business One — Service Layer", level: 5 },
+        { name: "SAP Business One — UI / DI API", level: 5 },
+        { name: "SAP HANA & SQL", level: 4 },
+      ],
+    },
+    {
+      email: "sarah.lambert@safirconsulting.net",
+      firstName: "Sarah",
+      lastName: "Lambert",
+      jobTitle: "Senior Développeuse SAP S/4HANA",
+      skills: [
+        { name: "SAP S/4HANA — ABAP & CDS", level: 5 },
+        { name: "SAP Fiori / UI5", level: 4 },
+        { name: "SAP HANA & SQL", level: 4 },
+      ],
+    },
+    {
+      email: "thomas.bernard@safirconsulting.net",
+      firstName: "Thomas",
+      lastName: "Bernard",
+      jobTitle: "Développeur Full-Stack Web & API",
+      skills: [
+        { name: "Next.js & React", level: 5 },
+        { name: "NestJS & Node.js", level: 4 },
+        { name: "PostgreSQL & Prisma", level: 4 },
+      ],
+    },
+    {
+      email: "amina.kone@safirconsulting.net",
+      firstName: "Amina",
+      lastName: "Kone",
+      jobTitle: "Ingénieure Intégration Systèmes & Webhooks",
+      skills: [
+        { name: "SAP Business One — Service Layer", level: 4 },
+        { name: "Architecture & Intégration API", level: 5 },
+        { name: "NestJS & Node.js", level: 4 },
+      ],
+    },
+    {
+      email: "julien.mercier@safirconsulting.net",
+      firstName: "Julien",
+      lastName: "Mercier",
+      jobTitle: "Développeur Backend & Base de données",
+      skills: [
+        { name: "NestJS & Node.js", level: 4 },
+        { name: "PostgreSQL & Prisma", level: 4 },
+        { name: "SAP HANA & SQL", level: 3 },
+        { name: "Docker & Déploiement SAP", level: 4 },
+      ],
+    },
+    {
+      email: "elena.rossi@safirconsulting.net",
+      firstName: "Elena",
+      lastName: "Rossi",
+      jobTitle: "Développeuse SAP Fiori & UX",
+      skills: [
+        { name: "SAP Fiori / UI5", level: 5 },
+        { name: "Next.js & React", level: 4 },
+        { name: "SAP S/4HANA — ABAP & CDS", level: 3 },
+      ],
+    },
+    {
+      email: "karim.vasseur@safirconsulting.net",
+      firstName: "Karim",
+      lastName: "Vasseur",
+      jobTitle: "Développeur Addons SAP B1",
+      skills: [
+        { name: "SAP Business One — UI / DI API", level: 4 },
+        { name: "SAP Business One — Service Layer", level: 4 },
+        { name: "SAP HANA & SQL", level: 3 },
+      ],
+    },
+    {
+      email: "lucas.petit@safirconsulting.net",
+      firstName: "Lucas",
+      lastName: "Petit",
+      jobTitle: "Développeur Junior SAP & Web",
+      skills: [
+        { name: "SAP Business One — Service Layer", level: 3 },
+        { name: "Next.js & React", level: 3 },
+        { name: "SAP HANA & SQL", level: 2 },
+      ],
+    },
+  ];
+
+  for (const d of devsConfig) {
+    const user = await prisma.user.upsert({
+      where: { email: d.email },
+      update: { firstName: d.firstName, lastName: d.lastName, roles: [Role.DEVELOPER], isActive: true },
+      create: {
+        email: d.email,
+        firstName: d.firstName,
+        lastName: d.lastName,
+        roles: [Role.DEVELOPER],
+        isActive: true,
+        passwordHash: devPasswordHash,
+        timezone: "Europe/Paris",
+      },
+    });
+
+    const devProfile = await prisma.developerProfile.upsert({
+      where: { userId: user.id },
+      update: { jobTitle: d.jobTitle, weeklyCapacityHours: 40, profileStatus: ProfileStatus.ACTIVE },
+      create: {
+        userId: user.id,
+        jobTitle: d.jobTitle,
+        weeklyCapacityHours: 40,
+        weeklySchedule: { mon: 8, tue: 8, wed: 8, thu: 8, fri: 8, sat: 0, sun: 0 },
+        planningFactor: 1.0,
+        timezone: "Europe/Paris",
+        profileStatus: ProfileStatus.ACTIVE,
+      },
+    });
+
+    for (const sk of d.skills) {
+      const skillId = skillMap.get(sk.name);
+      if (skillId) {
+        await prisma.developerSkill.upsert({
+          where: { developerId_skillId: { developerId: devProfile.id, skillId } },
+          update: { proficiencyLevel: sk.level, validatedAt: new Date(), validationSource: "Validation initiale HEAD" },
+          create: {
+            developerId: devProfile.id,
+            skillId,
+            proficiencyLevel: sk.level,
+            validatedAt: new Date(),
+            validationSource: "Validation initiale HEAD",
+          },
+        });
+      }
+    }
+  }
+  console.log("✓ Les 8 profils développeurs et leurs compétences ont été créés");
+
+  // 7. Clients & Projets initiaux
+  const clientOmega = await prisma.client.upsert({
+    where: { reference: "CLI-OMEGA" },
+    update: { name: "Omega Logistics" },
+    create: {
+      name: "Omega Logistics",
+      reference: "CLI-OMEGA",
+      emailDomains: ["client-omega.com"],
+      contactInformation: "Contact DSI SAP : Christian Durand",
+    },
+  });
+
+  const projectOmega = await prisma.project.upsert({
+    where: { reference: "PRJ-OMEGA-WMS" },
+    update: { name: "Addon WMS Sync SAP B1" },
+    create: {
+      clientId: clientOmega.id,
+      name: "Addon WMS Sync SAP B1",
+      reference: "PRJ-OMEGA-WMS",
+      description: "Passerelle Service Layer pour synchroniser les stocks entrepôt WMS avec SAP Business One",
+    },
+  });
+
+  await prisma.clientContact.upsert({
+    where: { email: "c.durand@client-omega.com" },
+    update: { name: "Christian Durand" },
+    create: {
+      clientId: clientOmega.id,
+      name: "Christian Durand",
+      email: "c.durand@client-omega.com",
+      jobTitle: "Directeur Informatique",
+      isPersonalEmail: false,
+    },
+  });
+
+  const clientHorizon = await prisma.client.upsert({
+    where: { reference: "CLI-HORIZON" },
+    update: { name: "Groupe Horizon" },
+    create: {
+      name: "Groupe Horizon",
+      reference: "CLI-HORIZON",
+      emailDomains: ["groupe-horizon.fr"],
+      contactInformation: "Consultant externe référent : Julien Martin",
+    },
+  });
+
+  const projectHorizon = await prisma.project.upsert({
+    where: { reference: "PRJ-HORIZON-FI" },
+    update: { name: "Comptabilité S/4HANA & CDS Views" },
+    create: {
+      clientId: clientHorizon.id,
+      name: "Comptabilité S/4HANA & CDS Views",
+      reference: "PRJ-HORIZON-FI",
+      description: "Module financier S/4HANA pour génération automatisée des écritures comptables",
+    },
+  });
+
+  await prisma.clientContact.upsert({
+    where: { email: "j.martin.consultant@gmail.com" },
+    update: { name: "Julien Martin" },
+    create: {
+      clientId: clientHorizon.id,
+      name: "Julien Martin",
+      email: "j.martin.consultant@gmail.com",
+      jobTitle: "Consultant Externe SAP",
+      isPersonalEmail: true,
+      validatedAt: new Date(),
+      validatedById: aliko.id,
+    },
+  });
+  console.log("✓ Clients (Omega Logistics, Groupe Horizon) et Projets initialisés");
+
+  // 8. Tickets initiaux réels
+  const addonType = await prisma.ticketType.findUniqueOrThrow({ where: { code: "ADDON" } });
+  const bugType = await prisma.ticketType.findUniqueOrThrow({ where: { code: "BUG" } });
+  const highPriority = await prisma.priority.findUniqueOrThrow({ where: { code: "HIGH" } });
+  const criticalPriority = await prisma.priority.findUniqueOrThrow({ where: { code: "CRITICAL" } });
+
+  const ticket1 = await prisma.ticket.upsert({
+    where: { reference: "ADD-2026-0001" },
+    update: {},
+    create: {
+      reference: "ADD-2026-0001",
+      title: "Addon de synchronisation des stocks entrepôt WMS via Service Layer",
+      description: "Automatisation de la remontée des stocks WMS vers SAP Business One via Service Layer REST API.",
+      typeId: addonType.id,
+      priorityId: highPriority.id,
+      status: TicketStatus.READY,
+      source: TicketSource.EMAIL,
+      clientId: clientOmega.id,
+      projectId: projectOmega.id,
+      estimatedHours: 24,
+      remainingEstimatedHours: 24,
+      requestedDueDate: new Date(Date.now() + 14 * 24 * 3600 * 1000),
+      committedDueDate: new Date(Date.now() + 14 * 24 * 3600 * 1000),
+    },
+  });
+
+  // Compétence requise pour Ticket 1 : Service Layer (Niveau min: 4)
+  const serviceLayerSkillId = skillMap.get("SAP Business One — Service Layer");
+  if (serviceLayerSkillId) {
+    await prisma.ticketSkillRequirement.upsert({
+      where: { ticketId_skillId: { ticketId: ticket1.id, skillId: serviceLayerSkillId } },
+      update: { minimumLevel: 4 },
+      create: {
+        ticketId: ticket1.id,
+        skillId: serviceLayerSkillId,
+        minimumLevel: 4,
+        isMandatory: true,
+      },
+    });
+  }
+
+  const ticket2 = await prisma.ticket.upsert({
+    where: { reference: "BUG-2026-0001" },
+    update: {},
+    create: {
+      reference: "BUG-2026-0001",
+      title: "Correction anomalie écriture comptable sur CDS Views S/4HANA",
+      description: "Erreur de lettrage constatée lors de la clôture périodique suite à mise à jour SAP.",
+      typeId: bugType.id,
+      priorityId: criticalPriority.id,
+      status: TicketStatus.TO_QUALIFY,
+      source: TicketSource.EMAIL,
+      clientId: clientHorizon.id,
+      projectId: projectHorizon.id,
+      estimatedHours: 8,
+      remainingEstimatedHours: 8,
+      requestedDueDate: new Date(Date.now() + 3 * 24 * 3600 * 1000),
+    },
+  });
+
+  console.log("✓ Tickets initiaux créés (ADD-2026-0001, BUG-2026-0001)");
+
+  // 9. Boîte e-mail d'Aliko (Microsoft Graph) et Messages entrants en Inbox
+  const mailbox = await prisma.mailboxConnection.upsert({
+    where: { provider_mailboxAddress: { provider: MailProviderKind.MICROSOFT_GRAPH, mailboxAddress: "aliko.getheme@safirconsulting.net" } },
+    update: { isEnabled: true, lastSyncAt: new Date(), lastSyncStatus: "SUCCESS" },
+    create: {
+      provider: MailProviderKind.MICROSOFT_GRAPH,
+      mailboxAddress: "aliko.getheme@safirconsulting.net",
+      isEnabled: true,
+      lastSyncAt: new Date(),
+      lastSyncStatus: "SUCCESS",
+    },
+  });
+
+  await prisma.emailMessage.upsert({
+    where: { provider_mailboxId_providerMessageId: { provider: MailProviderKind.MICROSOFT_GRAPH, mailboxId: mailbox.id, providerMessageId: "MSG-M365-001" } },
+    update: {},
+    create: {
+      mailboxId: mailbox.id,
+      provider: MailProviderKind.MICROSOFT_GRAPH,
+      direction: EmailDirection.INBOUND,
+      providerMessageId: "MSG-M365-001",
+      internetMessageId: "<msg001@client-omega.com>",
+      senderEmail: "c.durand@client-omega.com",
+      senderName: "Christian Durand",
+      senderKind: SenderKind.CLIENT_CONTACT,
+      isPersonalDomain: false,
+      toRecipients: ["aliko.getheme@safirconsulting.net"],
+      subject: "Nouvelle demande : module passerelle facturation SAP B1",
+      bodyPreview: "Bonjour Aliko, suite à notre échange, nous aimerions chiffrer l'addon d'import automatique des factures fournisseurs dans SAP B1...",
+      bodyText: "Bonjour Aliko, suite à notre échange, nous aimerions chiffrer l'addon d'import automatique des factures fournisseurs dans SAP B1 via le Service Layer.",
+      receivedAt: new Date(Date.now() - 3600 * 1000),
+      processingStatus: EmailProcessingStatus.PENDING_QUALIFICATION,
+    },
+  });
+
+  console.log("✓ Boîte Outlook M365 et e-mails entrants initialisés");
+  console.log("🚀 Base de données 100% alimentée avec succès !");
 }
 
 main()
