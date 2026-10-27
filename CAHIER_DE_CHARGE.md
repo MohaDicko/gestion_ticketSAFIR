@@ -99,7 +99,7 @@ sequenceDiagram
     autonumber
     actor Client as Client / Consultant
     participant M365 as Boîte Outlook Aliko
-    participant App as DevCapacity Manager
+    participant App as Ticket Manager
     actor Aliko as Aliko Getheme (HEAD)
     actor Dev as Développeur Affecté
 
@@ -259,7 +259,7 @@ Pour répondre aux contraintes d'infrastructure de Safir Consulting, le système
 ### Les 4 Garanties d'Étage Technique :
 1. **Étanchéité Logicielle** : Fonctionnement sous conteneurs légers Docker / Podman.
 2. **Indépendance des Données** : Base de données **PostgreSQL 16** dédiée (actuellement connectée sur Supabase en cloud, déployable localement sur le serveur SAP via `docker-compose.yml`).
-3. **Aucun Conflit de Ports** : Les ports de DevCapacity Manager (`3000` et `4000`) sont totalement disjoints des ports réservés SAP.
+3. **Aucun Conflit de Ports** : Les ports de Ticket Manager (`3000` et `4000`) sont totalement disjoints des ports réservés SAP.
 4. **Fiabilité des Notifications (Outbox Pattern)** : Tout envoi d'e-mail est consigné en base avant expédition. En cas d'indisponibilité momentanée du réseau, le message n'est jamais perdu et part dès le rétablissement.
 
 ---
@@ -284,12 +284,14 @@ L'accès est régi par un modèle de droits fondé sur les rôles :
 
 ## 11. PLAN DE DÉPLOIEMENT & LIVRABLES
 
-### 11.1. État Actuel du Projet (Prêt pour Démonstration)
-- ✅ **Base de Données Supabase** : 22 tables créées, schéma Prisma appliqué, relations et contraintes d'intégrité en place.
-- ✅ **Jeu de Données Initial (Seed)** : 8 développeurs réels, compétences SAP, clients (Omega Logistics, Groupe Horizon) et tickets de test enregistrés.
-- ✅ **Backend API REST NestJS** : Opérationnel sur `http://localhost:4000/api/v1` avec contrôleurs d'authentification, de tickets, d'e-mails et moteur de scoring.
-- ✅ **Frontend Next.js 15 App Router** : Opérationnel sur `http://localhost:3000` avec tableau de bord interactif, jauges de charge, simulation de recommandation et Kanban.
-- ✅ **Dépôt Git** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
+### 11.1. État Actuel du Projet (Prêt pour Démonstration & Exploitation)
+- ✅ **Base de Données Supabase PostgreSQL 16** : 22 tables créées, schéma Prisma appliqué, relations et contraintes d'intégrité en place.
+- ✅ **Jeu de Données Initial (Seed)** : 7 développeurs réels Safir Consulting (Moha Dicko, Anoop Pandimukkula, Hassane Bocoum, Nevrit Ahua, Fatoumata Traore, Korotoumou Thiam, Jean-Philippe Ebrottié), consultante Mélissa Diakité, compétences SAP et tickets enregistrés.
+- ✅ **Backend API REST NestJS** : Opérationnel sur `http://localhost:4000/api/v1` avec contrôleurs de tickets, qualification d'expéditeurs (Consultant Safir, Contact Client, Externe, Alerte anti-usurpation Gmail) et moteur de scoring.
+- ✅ **Frontend Next.js 15 App Router** : Opérationnel sur `http://localhost:3000` avec interface entreprise authentique, sobre et ergonomique (Tableau de bord de synthèse, Grand tableau des tickets SAP, Fiches de capacité de l'équipe, Boîte de réception Outlook M365 connectée).
+- ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas).
+- ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
+- ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 
 ### 11.2. Feuille de Route pour Mise en Production
 1. **Revue & Validation par Aliko** : Démonstration sur le poste de travail des flux d'affectation et de qualification.
