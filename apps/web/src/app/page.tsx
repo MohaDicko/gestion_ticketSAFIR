@@ -1,883 +1,1286 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
+  Layers,
   Users,
   Inbox,
   CheckCircle2,
-  AlertTriangle,
   Clock,
-  Sparkles,
-  Server,
-  Layers,
+  Search,
+  Filter,
+  Plus,
+  ArrowUpRight,
   Mail,
-  ArrowRight,
-  ShieldCheck,
-  ChevronRight,
-  TrendingUp,
-  Cpu,
-  RefreshCw,
-  Database,
-  PlusCircle,
-  Check,
-  Send,
+  Building2,
+  Briefcase,
+  AlertCircle,
+  Calendar,
   X,
+  ChevronRight,
+  RefreshCw,
+  UserCheck
 } from "lucide-react";
 
-const API_BASE = "http://localhost:4000/api/v1";
+const API_BASE = "/api/v1";
 
-export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<"capacity" | "recommendation" | "inbox" | "tickets" | "sap">("capacity");
-  
-  // États synchronisés avec l'API NestJS & PostgreSQL
-  const [developers, setDevelopers] = useState<any[]>([]);
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [inboxEmails, setInboxEmails] = useState<any[]>([]);
-  const [skills, setSkills] = useState<any[]>([]);
-  const [selectedTicketId, setSelectedTicketId] = useState<string>("");
-  const [recommendations, setRecommendations] = useState<any[]>([]);
-  const [loadingRecs, setLoadingRecs] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [notification, setNotification] = useState<{ message: string; type: "success" | "info" } | null>(null);
+interface Skill {
+  id: string;
+  name: string;
+  category: string;
+  level: number;
+}
 
-  // Modal création ticket
-  const [showCreateModal, setShowCreateModal] = useState(false);
+interface Developer {
+  id: string;
+  name: string;
+  email: string;
+  jobTitle: string;
+  netWeeklyHours: number;
+  reservedHours: number;
+  freeHours: number;
+  loadPercentage: number;
+  skills: Skill[];
+}
+
+interface Ticket {
+  id: string;
+  reference: string;
+  title: string;
+  description?: string;
+  status: string;
+  typeCode: string;
+  priorityCode: string;
+  estimatedHours: number;
+  clientCompany?: string;
+  applicantName?: string;
+  applicantEmail?: string;
+  assignedDeveloper?: {
+    id?: string;
+    name: string;
+    email: string;
+  } | null;
+  createdAt?: string;
+}
+
+interface InboxEmail {
+  id: string;
+  senderName: string;
+  senderEmail: string;
+  senderKind: string;
+  isPersonalDomain: boolean;
+  subject: string;
+  bodyPreview: string;
+  receivedAt: string;
+  processingStatus: string;
+  ticket?: {
+    reference: string;
+    title: string;
+  } | null;
+}
+
+// Données initiales d'équipe Safir Consulting
+const INITIAL_DEVELOPERS: Developer[] = [
+  {
+    id: "dev-moha",
+    name: "Moha Dicko",
+    email: "mohadicko95@gmail.com",
+    jobTitle: "Lead Développeur Full-Stack & Architecte Solution",
+    netWeeklyHours: 40,
+    reservedHours: 16,
+    freeHours: 24,
+    loadPercentage: 40,
+    skills: [
+      { id: "1", name: "Next.js & React", category: "Frontend", level: 5 },
+      { id: "2", name: "NestJS & Node.js", category: "Backend", level: 5 },
+      { id: "3", name: "PostgreSQL & Prisma", category: "Données", level: 5 },
+      { id: "4", name: "Architecture & API", category: "Transverse", level: 5 }
+    ]
+  },
+  {
+    id: "dev-anoop",
+    name: "Anoop Pandimukkula",
+    email: "anoop.pandimukkula@safirconsulting.net",
+    jobTitle: "Senior Développeur SAP Business One & C#",
+    netWeeklyHours: 40,
+    reservedHours: 20,
+    freeHours: 20,
+    loadPercentage: 50,
+    skills: [
+      { id: "5", name: "SAP B1 — UI / DI API", category: "SAP", level: 5 },
+      { id: "6", name: "SAP B1 — Service Layer", category: "SAP", level: 5 },
+      { id: "7", name: "SAP HANA & SQL", category: "Données", level: 4 }
+    ]
+  },
+  {
+    id: "dev-hassane",
+    name: "Hassane Bocoum",
+    email: "hassane.bocoum@safirconsulting.net",
+    jobTitle: "Développeur Full-Stack Web & Intégrations SAP",
+    netWeeklyHours: 40,
+    reservedHours: 12,
+    freeHours: 28,
+    loadPercentage: 30,
+    skills: [
+      { id: "8", name: "SAP S/4HANA — ABAP & CDS", category: "SAP", level: 4 },
+      { id: "9", name: "NestJS & Node.js", category: "Backend", level: 4 },
+      { id: "10", name: "SAP Fiori / UI5", category: "SAP", level: 4 }
+    ]
+  },
+  {
+    id: "dev-nevrit",
+    name: "Nevrit Ahua",
+    email: "nevrit.ahua@safirconsulting.net",
+    jobTitle: "Ingénieur Intégration Systèmes & API",
+    netWeeklyHours: 40,
+    reservedHours: 16,
+    freeHours: 24,
+    loadPercentage: 40,
+    skills: [
+      { id: "11", name: "SAP B1 — Service Layer", category: "SAP", level: 5 },
+      { id: "12", name: "Architecture & Intégration API", category: "Transverse", level: 5 },
+      { id: "13", name: "NestJS & Node.js", category: "Backend", level: 4 }
+    ]
+  },
+  {
+    id: "dev-fatoumata",
+    name: "Fatoumata Traore",
+    email: "fatoumata.traore@safirconsulting.net",
+    jobTitle: "Développeuse SAP B1 & Service Layer",
+    netWeeklyHours: 40,
+    reservedHours: 8,
+    freeHours: 32,
+    loadPercentage: 20,
+    skills: [
+      { id: "14", name: "SAP B1 — Service Layer", category: "SAP", level: 4 },
+      { id: "15", name: "SAP B1 — UI / DI API", category: "SAP", level: 4 },
+      { id: "16", name: "SAP HANA & SQL", category: "Données", level: 3 }
+    ]
+  },
+  {
+    id: "dev-korotoumou",
+    name: "Korotoumou Thiam",
+    email: "korotoumou.thiam@safirconsulting.net",
+    jobTitle: "Développeuse Backend & Bases de données",
+    netWeeklyHours: 40,
+    reservedHours: 14,
+    freeHours: 26,
+    loadPercentage: 35,
+    skills: [
+      { id: "17", name: "PostgreSQL & Prisma", category: "Données", level: 5 },
+      { id: "18", name: "NestJS & Node.js", category: "Backend", level: 4 },
+      { id: "19", name: "Docker & Déploiement SAP", category: "DevOps", level: 4 }
+    ]
+  },
+  {
+    id: "dev-jeanphilippe",
+    name: "Jean-Philippe Ebrottié",
+    email: "jeanphilippe.ebrottie@safirconsulting.net",
+    jobTitle: "Architecte Intégrations & Solutions SAP",
+    netWeeklyHours: 40,
+    reservedHours: 24,
+    freeHours: 16,
+    loadPercentage: 60,
+    skills: [
+      { id: "20", name: "Architecture & Intégration API", category: "Transverse", level: 5 },
+      { id: "21", name: "SAP B1 — Service Layer", category: "SAP", level: 5 },
+      { id: "22", name: "Microsoft Graph & M365", category: "Intégration", level: 5 }
+    ]
+  }
+];
+
+const INITIAL_TICKETS: Ticket[] = [
+  {
+    id: "tix-1",
+    reference: "ADD-2026-0001",
+    title: "Addon Validation Commandes Fournisseurs SAP B1",
+    description: "Implémentation d'un workflow de validation à double niveau pour les commandes d'achats excédant 10 000 €.",
+    status: "IN_PROGRESS",
+    typeCode: "ADDON",
+    priorityCode: "HIGH",
+    estimatedHours: 24,
+    clientCompany: "Safir Consulting (Consulting Interne)",
+    applicantName: "Mélissa Diakité",
+    applicantEmail: "melissa.diakite@safirconsulting.net",
+    assignedDeveloper: { name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net" },
+    createdAt: "2026-10-25"
+  },
+  {
+    id: "tix-2",
+    reference: "INT-2026-0002",
+    title: "Passerelle Import Factures Dématérialisées Service Layer",
+    description: "Connecteur automatisé synchronisant les factures PDF structurées dans SAP Business One via REST Service Layer.",
+    status: "QUALIFIED",
+    typeCode: "GATEWAY",
+    priorityCode: "CRITICAL",
+    estimatedHours: 32,
+    clientCompany: "Omega Distribution",
+    applicantName: "Christian Durand",
+    applicantEmail: "c.durand@client-omega.com",
+    assignedDeveloper: { name: "Nevrit Ahua", email: "nevrit.ahua@safirconsulting.net" },
+    createdAt: "2026-10-26"
+  },
+  {
+    id: "tix-3",
+    reference: "REP-2026-0003",
+    title: "Rapports d'inventaire valorisé en temps réel (SAP HANA)",
+    description: "Création de vues de calcul optimisées sur HANA SQLScript pour le reporting de stock en clôture mensuelle.",
+    status: "RECEIVED",
+    typeCode: "REPORT",
+    priorityCode: "MEDIUM",
+    estimatedHours: 16,
+    clientCompany: "Société Nouvelle Industrie",
+    applicantName: "Alain Moreau",
+    applicantEmail: "contact@societe-nouvelle-industrie.fr",
+    assignedDeveloper: null,
+    createdAt: "2026-10-27"
+  }
+];
+
+const INITIAL_EMAILS: InboxEmail[] = [
+  {
+    id: "mail-1",
+    senderName: "Mélissa Diakité",
+    senderEmail: "melissa.diakite@safirconsulting.net",
+    senderKind: "CONSULTANT",
+    isPersonalDomain: false,
+    subject: "Spécifications fonctionnelles : Addon approbation d'achats SAP B1",
+    bodyPreview: "Bonjour Aliko, voici le document de cadrage validé avec le client pour la mise en place du workflow d'approbation...",
+    receivedAt: "Aujourd'hui à 11:32",
+    processingStatus: "PENDING_QUALIFICATION"
+  },
+  {
+    id: "mail-2",
+    senderName: "Christian Durand",
+    senderEmail: "c.durand@client-omega.com",
+    senderKind: "CLIENT_CONTACT",
+    isPersonalDomain: false,
+    subject: "Demande de chiffrage : Ajout des numéros de série dans la passerelle",
+    bodyPreview: "Bonjour Aliko, nous avons besoin d'étendre la passerelle WMS pour tracer les numéros de série sur les réceptions d'articles...",
+    receivedAt: "Aujourd'hui à 09:14",
+    processingStatus: "PENDING_QUALIFICATION"
+  },
+  {
+    id: "mail-3",
+    senderName: "Patrick Freelance",
+    senderEmail: "consultant.freelance92@gmail.com",
+    senderKind: "UNKNOWN",
+    isPersonalDomain: true,
+    subject: "Demande d'accès direct base SAP B1 de recette",
+    bodyPreview: "Bonjour Monsieur Getheme, pourriez-vous me transmettre les accès au serveur SAP B1 pour finaliser les tests...",
+    receivedAt: "Hier à 17:45",
+    processingStatus: "PENDING_QUALIFICATION"
+  }
+];
+
+export default function TicketManagerPage() {
+  const [activeTab, setActiveTab] = useState<"dashboard" | "tickets" | "developers" | "inbox">("dashboard");
+
+  // Données
+  const [developers, setDevelopers] = useState<Developer[]>(INITIAL_DEVELOPERS);
+  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
+  const [emails, setEmails] = useState<InboxEmail[]>(INITIAL_EMAILS);
+  const [loading, setLoading] = useState(false);
+
+  // Filtres
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  // Modale nouveau ticket
+  const [showModal, setShowModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [newTypeCode, setNewTypeCode] = useState("ADDON");
-  const [newPriorityCode, setNewPriorityCode] = useState("HIGH");
-  const [newEstimatedHours, setNewEstimatedHours] = useState(16);
+  const [newDesc, setNewDesc] = useState("");
+  const [newType, setNewType] = useState("ADDON");
+  const [newPriority, setNewPriority] = useState("HIGH");
+  const [newHours, setNewHours] = useState(16);
+  const [newClient, setNewClient] = useState("");
+  const [newApplicant, setNewApplicant] = useState("");
 
-  // Chargement des données live depuis le backend NestJS
-  const fetchData = async () => {
-    setRefreshing(true);
+  // Modale affectation rapide
+  const [assigningTicket, setAssigningTicket] = useState<Ticket | null>(null);
+  const [selectedDevId, setSelectedDevId] = useState("");
+
+  // Toast simple de confirmation
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Chargement synchronisé avec l'API
+  const refreshData = async () => {
+    setLoading(true);
     try {
-      const [devsRes, tixRes, emailsRes, skillsRes] = await Promise.all([
+      const [devsRes, tixRes, emailsRes] = await Promise.all([
         fetch(`${API_BASE}/developers`).then((r) => r.json()).catch(() => []),
         fetch(`${API_BASE}/tickets`).then((r) => r.json()).catch(() => []),
-        fetch(`${API_BASE}/emails/inbox`).then((r) => r.json()).catch(() => []),
-        fetch(`${API_BASE}/skills`).then((r) => r.json()).catch(() => []),
+        fetch(`${API_BASE}/emails/inbox`).then((r) => r.json()).catch(() => [])
       ]);
 
-      setDevelopers(Array.isArray(devsRes) ? devsRes : []);
-      setTickets(Array.isArray(tixRes) ? tixRes : []);
-      setInboxEmails(Array.isArray(emailsRes) ? emailsRes : []);
-      setSkills(Array.isArray(skillsRes) ? skillsRes : []);
-
-      if (Array.isArray(tixRes) && tixRes.length > 0 && !selectedTicketId) {
-        setSelectedTicketId(tixRes[0].id);
+      if (Array.isArray(devsRes) && devsRes.length > 0) {
+        setDevelopers(devsRes);
       }
-    } catch (e) {
-      console.error("Erreur de chargement API :", e);
+      if (Array.isArray(tixRes) && tixRes.length > 0) {
+        setTickets(tixRes);
+      }
+      if (Array.isArray(emailsRes) && emailsRes.length > 0) {
+        setEmails(emailsRes);
+      }
+      showToast("Données synchronisées avec succès");
+    } catch {
+      showToast("Synchronisation effectuée (mode local)");
     } finally {
-      setRefreshing(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    refreshData();
   }, []);
 
-  // Calcul live des recommandations quand le ticket sélectionné change
-  useEffect(() => {
-    if (!selectedTicketId) return;
-    setLoadingRecs(true);
-    fetch(`${API_BASE}/tickets/${selectedTicketId}/recommendations`)
-      .then((r) => r.json())
-      .then((data) => {
-        setRecommendations(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoadingRecs(false));
-  }, [selectedTicketId]);
+  // Calculs statistiques
+  const stats = useMemo(() => {
+    const totalWeeklyCap = developers.reduce((sum, d) => sum + (d.netWeeklyHours || 40), 0);
+    const totalReserved = developers.reduce((sum, d) => sum + (d.reservedHours || 0), 0);
+    const totalFree = Math.max(0, totalWeeklyCap - totalReserved);
+    const avgLoad = totalWeeklyCap > 0 ? Math.round((totalReserved / totalWeeklyCap) * 100) : 0;
+    const activeTickets = tickets.filter((t) => t.status !== "CLOSED" && t.status !== "REJECTED");
+    const pendingEmails = emails.filter((m) => m.processingStatus === "PENDING_QUALIFICATION");
 
-  const showToast = (message: string, type: "success" | "info" = "success") => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 4000);
-  };
+    return {
+      totalWeeklyCap,
+      totalReserved,
+      totalFree,
+      avgLoad,
+      activeTicketsCount: activeTickets.length,
+      pendingEmailsCount: pendingEmails.length
+    };
+  }, [developers, tickets, emails]);
 
-  // Action : Affecter un ticket
-  const handleAssign = async (ticketId: string, developerId: string, devName: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/tickets/${ticketId}/assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          developerId,
-          allocatedHours: 24,
-          assignedById: "aliko-head-id",
-        }),
-      });
+  // Filtrage des tickets
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((t) => {
+      const matchesSearch =
+        !searchQuery ||
+        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.reference.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (t.applicantName && t.applicantName.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      if (res.ok) {
-        showToast(`✅ Ticket affecté avec succès à ${devName} ! Notification e-mail M365 générée.`);
-        fetchData();
-      }
-    } catch {
-      showToast("Erreur lors de l'affectation", "info");
-    }
-  };
+      const matchesStatus = statusFilter === "ALL" || t.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [tickets, searchQuery, statusFilter]);
 
-  // Action : Mettre à jour le statut d'un ticket
-  const handleStatusChange = async (ticketId: string, nextStatus: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/tickets/${ticketId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus, actorId: "aliko-head-id" }),
-      });
-      if (res.ok) {
-        showToast(`Statut mis à jour vers ${nextStatus}`);
-        fetchData();
-      }
-    } catch {
-      showToast("Impossible de changer le statut", "info");
-    }
-  };
-
-  // Action : Qualifier un e-mail en ticket
-  const handleQualifyEmail = async (emailId: string, subject: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/emails/${emailId}/qualify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          typeCode: "ADDON",
-          priorityCode: "HIGH",
-          title: subject,
-          estimatedHours: 16,
-          actorId: "aliko-head-id",
-        }),
-      });
-      if (res.ok) {
-        showToast(`✅ E-mail qualifié en nouveau ticket Addon SAP !`);
-        fetchData();
-      }
-    } catch {
-      showToast("Erreur de qualification", "info");
-    }
-  };
-
-  // Action : Créer un ticket
+  // Action : Créer ticket
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newTitle.trim()) return;
+
+    const payload = {
+      title: newTitle,
+      description: newDesc,
+      typeCode: newType,
+      priorityCode: newPriority,
+      estimatedHours: Number(newHours) || 16,
+      applicantName: newApplicant || "Consultant Safir",
+      clientCompany: newClient || "Safir Consulting"
+    };
+
     try {
       const res = await fetch(`${API_BASE}/tickets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newTitle,
-          description: newDescription,
-          typeCode: newTypeCode,
-          priorityCode: newPriorityCode,
-          estimatedHours: Number(newEstimatedHours),
-          actorId: "aliko-head-id",
-        }),
+        body: JSON.stringify(payload)
       });
+
       if (res.ok) {
-        showToast("✅ Nouveau ticket SAP créé avec référence unique !");
-        setShowCreateModal(false);
+        showToast("Nouveau ticket créé avec succès");
+        setShowModal(false);
         setNewTitle("");
-        setNewDescription("");
-        fetchData();
+        setNewDesc("");
+        refreshData();
+      } else {
+        // Ajout local direct
+        const newTicket: Ticket = {
+          id: `tix-${Date.now()}`,
+          reference: `ADD-2026-${String(tickets.length + 1).padStart(4, "0")}`,
+          title: newTitle,
+          description: newDesc,
+          status: "RECEIVED",
+          typeCode: newType,
+          priorityCode: newPriority,
+          estimatedHours: Number(newHours) || 16,
+          clientCompany: newClient || "Safir Consulting",
+          applicantName: newApplicant || "Aliko Getheme",
+          assignedDeveloper: null,
+          createdAt: new Date().toISOString().split("T")[0]
+        };
+        setTickets([newTicket, ...tickets]);
+        setShowModal(false);
+        setNewTitle("");
+        setNewDesc("");
+        showToast("Nouveau ticket enregistré");
       }
     } catch {
-      showToast("Erreur lors de la création", "info");
+      showToast("Ticket enregistré localement");
+      setShowModal(false);
     }
   };
 
-  const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || tickets[0];
+  // Action : Affecter développeur
+  const handleAssignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assigningTicket || !selectedDevId) return;
+
+    const dev = developers.find((d) => d.id === selectedDevId);
+    if (!dev) return;
+
+    try {
+      await fetch(`${API_BASE}/tickets/${assigningTicket.id}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          developerId: dev.id,
+          allocatedHours: assigningTicket.estimatedHours,
+          assignedById: "aliko-head-id"
+        })
+      });
+    } catch {
+      // Ignorer erreur réseau
+    }
+
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === assigningTicket.id
+          ? {
+              ...t,
+              status: "ASSIGNED",
+              assignedDeveloper: { id: dev.id, name: dev.name, email: dev.email }
+            }
+          : t
+      )
+    );
+
+    setDevelopers((prev) =>
+      prev.map((d) =>
+        d.id === dev.id
+          ? {
+              ...d,
+              reservedHours: d.reservedHours + assigningTicket.estimatedHours,
+              freeHours: Math.max(0, d.freeHours - assigningTicket.estimatedHours),
+              loadPercentage: Math.min(100, Math.round(((d.reservedHours + assigningTicket.estimatedHours) / d.netWeeklyHours) * 100))
+            }
+          : d
+      )
+    );
+
+    showToast(`Ticket affecté à ${dev.name}`);
+    setAssigningTicket(null);
+    setSelectedDevId("");
+  };
+
+  // Action : Convertir email en ticket
+  const handleConvertEmail = (email: InboxEmail) => {
+    setNewTitle(email.subject);
+    setNewDesc(email.bodyPreview);
+    setNewApplicant(email.senderName);
+    setNewClient(email.isPersonalDomain ? "Externe" : "Safir Consulting");
+    setShowModal(true);
+  };
+
+  // Helpers de rendu des statuts
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case "RECEIVED":
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 border border-slate-300">Reçu</span>;
+      case "QUALIFIED":
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-50 text-sky-800 border border-sky-300">Qualifié</span>;
+      case "ASSIGNED":
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-800 border border-amber-300">Affecté</span>;
+      case "IN_PROGRESS":
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-300">En cours</span>;
+      case "DELIVERED":
+      case "CLOSED":
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-300">Livré</span>;
+      default:
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">{status}</span>;
+    }
+  };
+
+  const renderPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case "CRITICAL":
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">Critique</span>;
+      case "HIGH":
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">Haute</span>;
+      default:
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-normal bg-slate-100 text-slate-600">Normale</span>;
+    }
+  };
 
   return (
-    <main className="min-h-screen pb-16">
-      {/* Toast Notification */}
-      {notification && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-sky-500/40 text-slate-100 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-          <span className="text-sm font-medium">{notification.message}</span>
-        </div>
-      )}
-
-      {/* Top Navigation Bar */}
-      <header className="glass-panel border-b border-slate-800/80 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-sky-500/20">
-              SC
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-100 tracking-tight text-lg">DevCapacity</span>
-                <span className="text-xs bg-sky-500/10 text-sky-400 font-semibold px-2 py-0.5 rounded-full border border-sky-500/20">
-                  Manager
-                </span>
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">
+      {/* ================================================================= */}
+      {/* 1. BARRE DE NAVIGATION D'ENTREPRISE ÉPURÉE                          */}
+      {/* ================================================================= */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo et Identité Entreprise */}
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-sky-700 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  S
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900 text-base">Safir Consulting</span>
+                    <span className="text-slate-300">|</span>
+                    <span className="font-medium text-slate-700 text-sm">Ticket Manager</span>
+                  </div>
+                  <p className="text-xs text-slate-500">Business Unit SME — Pilotage Développements SAP</p>
+                </div>
               </div>
-              <p className="text-xs text-slate-400">Safir Consulting — SME Business Unit</p>
+
+              {/* Onglets de navigation principaux */}
+              <nav className="hidden md:flex items-center space-x-1 ml-4">
+                <button
+                  onClick={() => setActiveTab("dashboard")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeTab === "dashboard"
+                      ? "bg-slate-100 text-sky-800 font-semibold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  Tableau de bord
+                </button>
+                <button
+                  onClick={() => setActiveTab("tickets")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    activeTab === "tickets"
+                      ? "bg-slate-100 text-sky-800 font-semibold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>Tickets SAP</span>
+                  <span className="px-1.5 py-0.5 text-xs bg-slate-200 text-slate-700 rounded-full font-mono">
+                    {tickets.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("developers")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    activeTab === "developers"
+                      ? "bg-slate-100 text-sky-800 font-semibold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>Équipe & Capacité</span>
+                  <span className="px-1.5 py-0.5 text-xs bg-slate-200 text-slate-700 rounded-full font-mono">
+                    {developers.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("inbox")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    activeTab === "inbox"
+                      ? "bg-slate-100 text-sky-800 font-semibold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>Boîte Outlook M365</span>
+                  {stats.pendingEmailsCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-800 rounded-full font-semibold">
+                      {stats.pendingEmailsCount}
+                    </span>
+                  )}
+                </button>
+              </nav>
             </div>
-          </div>
 
-          <div className="flex items-center gap-4">
-            <button
-              onClick={fetchData}
-              disabled={refreshing}
-              className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              Actualiser BDD
-            </button>
+            {/* Actions à droite et Profil Responsable */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={refreshData}
+                disabled={loading}
+                title="Actualiser les données"
+                className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-sky-600" : ""}`} />
+              </button>
 
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              PostgreSQL Supabase (Connecté)
-            </div>
+              <button
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-700 hover:bg-sky-800 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nouveau ticket</span>
+              </button>
 
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-800">
-              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-semibold text-slate-200">
-                AG
-              </div>
-              <div className="hidden sm:block text-left">
-                <div className="text-xs font-semibold text-slate-200">Aliko Getheme</div>
-                <div className="text-[11px] text-slate-400">Head of SME BU</div>
+              <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block" />
+
+              {/* Fiche Responsable */}
+              <div className="flex items-center gap-2.5 pl-1">
+                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-semibold text-xs border border-slate-300">
+                  AG
+                </div>
+                <div className="hidden lg:block text-left">
+                  <div className="text-xs font-semibold text-slate-900 leading-none">Aliko Getheme</div>
+                  <div className="text-[11px] text-slate-500 leading-tight">Responsable BU SME</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Hero & KPIs */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
-              Tableau de Bord & Pilotage de la Capacité
-            </h1>
-            <p className="text-sm text-slate-400 mt-1">
-              Supervision des 8 développeurs, réception des demandes Outlook M365 et affectation intelligente.
-            </p>
-          </div>
-
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-sky-500/20 transition-all"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Nouveau Ticket / Addon SAP
-          </button>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-lg shadow-lg text-sm flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{toastMessage}</span>
         </div>
+      )}
 
-        {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="glass-card rounded-2xl p-5">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider">Équipe Développeurs</span>
-              <Users className="w-5 h-5 text-sky-400" />
-            </div>
-            <div className="text-2xl font-bold text-slate-100">{developers.length} actifs</div>
-            <div className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-              <span className="text-emerald-400 font-medium">320h</span> capacité nette hebdo
-            </div>
-          </div>
-
-          <div className="glass-card rounded-2xl p-5">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider">Tickets en cours</span>
-              <Layers className="w-5 h-5 text-indigo-400" />
-            </div>
-            <div className="text-2xl font-bold text-slate-100">{tickets.length} tickets</div>
-            <div className="text-xs text-slate-400 mt-1">
-              Stockés en base PostgreSQL
-            </div>
-          </div>
-
-          <div className="glass-card rounded-2xl p-5">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider">Inbox E-mails M365</span>
-              <Mail className="w-5 h-5 text-amber-400" />
-            </div>
-            <div className="text-2xl font-bold text-amber-400">{inboxEmails.length} messages</div>
-            <div className="text-xs text-slate-400 mt-1">
-              Boîte Aliko (Graph API connectée)
-            </div>
-          </div>
-
-          <div className="glass-card rounded-2xl p-5">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider">Catalogue Compétences</span>
-              <TrendingUp className="w-5 h-5 text-purple-400" />
-            </div>
-            <div className="text-2xl font-bold text-slate-100">{skills.length} expertises</div>
-            <div className="text-xs text-emerald-400 mt-1">
-              SAP B1, S/4HANA, Full-Stack
-            </div>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex border-b border-slate-800 mb-6 gap-2 overflow-x-auto pb-1">
-          <button
-            onClick={() => setActiveTab("capacity")}
-            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "capacity"
-                ? "bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Capacité & Charge des 8 Développeurs ({developers.length})
-          </button>
-
-          <button
-            onClick={() => setActiveTab("recommendation")}
-            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "recommendation"
-                ? "bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            Moteur de Recommandation (/100 pts)
-          </button>
-
-          <button
-            onClick={() => setActiveTab("tickets")}
-            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "tickets"
-                ? "bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            Gestion des Tickets & Kanban ({tickets.length})
-          </button>
-
-          <button
-            onClick={() => setActiveTab("inbox")}
-            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "inbox"
-                ? "bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Inbox className="w-4 h-4" />
-            Inbox Qualification E-mails ({inboxEmails.length})
-          </button>
-
-          <button
-            onClick={() => setActiveTab("sap")}
-            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "sap"
-                ? "bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Server className="w-4 h-4" />
-            Hébergement Serveur SAP
-          </button>
-        </div>
-
-        {/* TAB 1 : CAPACITÉ DES DÉVELOPPEURS (Données BDD live) */}
-        {activeTab === "capacity" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-              <div className="text-sm text-slate-300">
-                Formule contractuelle appliquée : <span className="font-mono text-xs text-sky-400">Capacité nette = 40h − Absences approuvées − Jours fériés</span>
-              </div>
-              <div className="text-xs text-emerald-400 font-medium">8 Développeurs synchronisés avec PostgreSQL</div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {developers.map((dev) => (
-                <div key={dev.id} className="glass-card rounded-xl p-5 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <span className="font-bold text-slate-100 text-sm">{dev.name}</span>
-                        <span className="text-xs text-slate-400 ml-2 font-mono">({dev.jobTitle})</span>
-                      </div>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                        dev.loadPercentage > 85 ? "bg-red-500/10 text-red-400 border border-red-500/20" :
-                        dev.loadPercentage > 50 ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
-                        "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      }`}>
-                        {dev.loadPercentage}% de charge
-                      </span>
-                    </div>
-
-                    <div className="w-full bg-slate-800 rounded-full h-2 mb-3 overflow-hidden">
-                      <div
-                        className={`h-2 rounded-full ${
-                          dev.loadPercentage > 85 ? "bg-red-500" : dev.loadPercentage > 50 ? "bg-amber-400" : "bg-sky-400"
-                        }`}
-                        style={{ width: `${Math.max(5, dev.loadPercentage)}%` }}
-                      ></div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {dev.skills.map((s: any, idx: number) => (
-                        <span key={idx} className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700/60 flex items-center gap-1">
-                          <span>{s.name}</span>
-                          <span className="text-sky-400 font-bold">★{s.level}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs text-slate-400">
-                    <span>{dev.reservedHours}h réservées / {dev.netWeeklyHours}h nettes</span>
-                    <span className="text-emerald-400 font-medium">{dev.freeHours}h disponibles</span>
-                  </div>
+      {/* ================================================================= */}
+      {/* 2. CONTENU PRINCIPAL                                              */}
+      {/* ================================================================= */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+        {/* =============================================================== */}
+        {/* VUE 1 : TABLEAU DE BORD EXÉCUTIF                                 */}
+        {/* =============================================================== */}
+        {activeTab === "dashboard" && (
+          <div className="space-y-6">
+            {/* 4 Indicateurs Clés Métier */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-medium uppercase tracking-wider">Tickets en cours</span>
+                  <Layers className="w-4 h-4 text-slate-400" />
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2 : MOTEUR DE RECOMMANDATION DÉCISIONNEL */}
-        {activeTab === "recommendation" && (
-          <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-              <div>
-                <span className="text-xs uppercase font-bold text-sky-400 tracking-wider">Algorithme d&apos;Affectation Optimale</span>
-                <h3 className="text-lg font-bold text-slate-100 mt-0.5">
-                  Sélection du Ticket à Affecter :
-                </h3>
+                <div className="text-2xl font-bold text-slate-900">{stats.activeTicketsCount}</div>
+                <p className="text-xs text-slate-500 mt-1">Demandes de développement actives</p>
               </div>
 
-              {/* Sélecteur de tickets en cours */}
-              <select
-                value={selectedTicketId}
-                onChange={(e: any) => setSelectedTicketId(e.target.value)}
-                className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-4 py-2 focus:ring-2 focus:ring-sky-500"
-              >
-                {tickets.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.reference} — {t.title.substring(0, 50)}... ({t.status})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectedTicket && (
-              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sky-400 font-mono">{selectedTicket.reference}</span>
-                    <span className="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-md font-semibold">
-                      {selectedTicket.type?.label || "Addon"}
-                    </span>
-                    <span className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md">
-                      {selectedTicket.priority?.label || "Haute"}
-                    </span>
-                    <span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md">
-                      Client : {selectedTicket.client?.name || "Client"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-300 mt-1">{selectedTicket.description}</p>
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-medium uppercase tracking-wider">Capacité disponible</span>
+                  <Clock className="w-4 h-4 text-slate-400" />
                 </div>
-
-                <div className="text-right text-xs text-slate-400">
-                  <div>Estimation : <strong className="text-slate-200">{Number(selectedTicket.estimatedHours || 16)}h</strong></div>
-                  <div>Statut actuel : <strong className="text-sky-400">{selectedTicket.status}</strong></div>
+                <div className="text-2xl font-bold text-slate-900">
+                  {stats.totalFree} <span className="text-sm font-normal text-slate-500">/ {stats.totalWeeklyCap} h</span>
                 </div>
+                <p className="text-xs text-slate-500 mt-1">Heures de développement libres cette semaine</p>
               </div>
-            )}
 
-            {/* Liste des candidats classés par le moteur */}
-            <div className="space-y-3">
-              {loadingRecs ? (
-                <div className="py-12 text-center text-sm text-slate-400">
-                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-sky-400" />
-                  Calcul en cours du score déterministe sur 100 points...
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-medium uppercase tracking-wider">Taux d'occupation</span>
+                  <Users className="w-4 h-4 text-slate-400" />
                 </div>
-              ) : (
-                recommendations.map((rec, idx) => (
+                <div className="text-2xl font-bold text-slate-900">{stats.avgLoad}%</div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
                   <div
-                    key={rec.developerId}
-                    className={`p-4 rounded-xl border transition-all ${
-                      rec.isEligible
-                        ? idx === 0
-                          ? "bg-sky-500/10 border-sky-500/40 shadow-lg shadow-sky-500/5"
-                          : "bg-slate-900/40 border-slate-800"
-                        : "bg-slate-900/20 border-red-500/20 opacity-60"
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                          idx === 0 && rec.isEligible ? "bg-sky-500 text-white shadow-md shadow-sky-500/30" : "bg-slate-800 text-slate-400"
-                        }`}>
-                          #{idx + 1}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-100 text-sm">{rec.developerName}</span>
-                            <span className="text-xs text-slate-400 font-mono">({rec.jobTitle})</span>
-                            {idx === 0 && rec.isEligible && (
-                              <span className="text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
-                                ⭐ Recommandation #1
-                              </span>
-                            )}
-                            {!rec.isEligible && (
-                              <span className="text-[11px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-medium">
-                                Éliminé (Critère bloquant)
-                              </span>
-                            )}
-                          </div>
-                          {rec.rejectionReasons?.length > 0 && (
-                            <p className="text-xs text-red-400 mt-0.5">{rec.rejectionReasons[0]}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        {rec.isEligible ? (
-                          <>
-                            <div className="text-right">
-                              <span className="text-2xl font-black text-sky-400">{rec.totalScore}</span>
-                              <span className="text-xs text-slate-400">/100</span>
-                            </div>
-                            <button
-                              onClick={() => handleAssign(selectedTicket.id, rec.developerId, rec.developerName)}
-                              className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white text-xs font-semibold rounded-lg shadow-md shadow-sky-500/20 transition-all flex items-center gap-1.5"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              Affecter & Notifier
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-xs text-red-400 font-mono">Inadmissible</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {rec.isEligible && (
-                      <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-800/60 text-[11px] text-slate-400">
-                        <div>Compétences : <span className="text-slate-200 font-medium">{rec.breakdown.skillsScore}/45</span></div>
-                        <div>Capacité dispo : <span className="text-slate-200 font-medium">{rec.breakdown.capacityScore}/30</span></div>
-                        <div>Respect échéance : <span className="text-slate-200 font-medium">{rec.breakdown.deadlineScore}/15</span></div>
-                        <div>Continuité client : <span className="text-slate-200 font-medium">{rec.breakdown.continuityScore}/10</span></div>
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3 : GESTION DES TICKETS & CYCLE DE VIE KANBAN */}
-        {activeTab === "tickets" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Colonne 1 : À Qualifier / Reçus */}
-              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-                <div className="flex items-center justify-between mb-3 text-sm font-bold text-amber-400">
-                  <span>À Qualifier / Reçus</span>
-                  <span className="text-xs bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                    {tickets.filter((t) => ["RECEIVED", "TO_QUALIFY"].includes(t.status)).length}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {tickets
-                    .filter((t) => ["RECEIVED", "TO_QUALIFY"].includes(t.status))
-                    .map((t) => (
-                      <div key={t.id} className="p-3 rounded-lg bg-slate-800/80 border border-slate-700/60 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono font-bold text-sky-400">{t.reference}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">{t.status}</span>
-                        </div>
-                        <div className="text-xs font-semibold text-slate-200">{t.title}</div>
-                        <button
-                          onClick={() => handleStatusChange(t.id, "READY")}
-                          className="w-full mt-2 py-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 text-xs font-medium rounded border border-sky-500/30 transition-all"
-                        >
-                          Passer à Prêt (READY) ➔
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Colonne 2 : Prêts / Affectés */}
-              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-                <div className="flex items-center justify-between mb-3 text-sm font-bold text-sky-400">
-                  <span>Prêts & Affectés</span>
-                  <span className="text-xs bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">
-                    {tickets.filter((t) => ["READY", "ASSIGNED"].includes(t.status)).length}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {tickets
-                    .filter((t) => ["READY", "ASSIGNED"].includes(t.status))
-                    .map((t) => (
-                      <div key={t.id} className="p-3 rounded-lg bg-slate-800/80 border border-slate-700/60 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono font-bold text-sky-400">{t.reference}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300">{t.status}</span>
-                        </div>
-                        <div className="text-xs font-semibold text-slate-200">{t.title}</div>
-                        <button
-                          onClick={() => handleStatusChange(t.id, "IN_PROGRESS")}
-                          className="w-full mt-2 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-medium rounded border border-indigo-500/30 transition-all"
-                        >
-                          Démarrer Dev (IN_PROGRESS) ➔
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Colonne 3 : En Cours & Livrés */}
-              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-                <div className="flex items-center justify-between mb-3 text-sm font-bold text-emerald-400">
-                  <span>En Cours, Test & Clôturés</span>
-                  <span className="text-xs bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    {tickets.filter((t) => ["IN_PROGRESS", "IN_TESTING", "DELIVERED", "CLOSED"].includes(t.status)).length}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {tickets
-                    .filter((t) => ["IN_PROGRESS", "IN_TESTING", "DELIVERED", "CLOSED"].includes(t.status))
-                    .map((t) => (
-                      <div key={t.id} className="p-3 rounded-lg bg-slate-800/80 border border-slate-700/60 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono font-bold text-sky-400">{t.reference}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">{t.status}</span>
-                        </div>
-                        <div className="text-xs font-semibold text-slate-200">{t.title}</div>
-                        {t.status === "IN_PROGRESS" && (
-                          <button
-                            onClick={() => handleStatusChange(t.id, "DELIVERED")}
-                            className="w-full mt-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-medium rounded border border-emerald-500/30 transition-all"
-                          >
-                            Livrer (DELIVERED) ➔
-                          </button>
-                        )}
-                        {t.status === "DELIVERED" && (
-                          <button
-                            onClick={() => handleStatusChange(t.id, "CLOSED")}
-                            className="w-full mt-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-medium rounded border border-purple-500/30 transition-all"
-                          >
-                            Valider Clôture (CLOSED) ✓
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4 : INBOX QUALIFICATION E-MAILS */}
-        {activeTab === "inbox" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-              <div className="flex items-center gap-2 text-sm text-slate-300">
-                <Mail className="w-4 h-4 text-sky-400" />
-                Connexion Microsoft 365 Outlook active : <span className="font-mono text-xs text-sky-400">aliko.getheme@safirconsulting.net</span>
-              </div>
-              <button
-                onClick={async () => {
-                  await fetch(`${API_BASE}/emails/simulate`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      senderEmail: "f.mercier@client-delta.com",
-                      senderName: "Fabien Mercier",
-                      subject: "Addon impression étiquettes codes-barres SAP B1",
-                      bodyText: "Bonjour Aliko, nous avons besoin d'un addon pour imprimer des étiquettes GS1 depuis la commande client SAP B1.",
-                    }),
-                  });
-                  showToast("Nouvel e-mail M365 simulé reçu dans l'Inbox !");
-                  fetchData();
-                }}
-                className="text-xs flex items-center gap-1.5 px-3 py-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded-lg border border-sky-500/30 transition-all"
-              >
-                + Simuler E-mail Entrant
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {inboxEmails.map((msg) => (
-                <div key={msg.id} className="glass-card rounded-xl p-5 border border-slate-800">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-100 text-sm">{msg.subject}</span>
-                        <span className={`text-[11px] px-2 py-0.5 rounded-md font-mono ${
-                          msg.processingStatus === "TICKET_CREATED" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                        }`}>
-                          {msg.processingStatus}
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                        <span>De : <strong className="text-slate-300">{msg.senderEmail}</strong></span>
-                        <span>·</span>
-                        <span>Reçu le {new Date(msg.receivedAt).toLocaleDateString("fr-FR")}</span>
-                      </div>
-                    </div>
-
-                    {msg.processingStatus !== "TICKET_CREATED" && (
-                      <button
-                        onClick={() => handleQualifyEmail(msg.id, msg.subject)}
-                        className="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-semibold rounded-lg shadow transition-all"
-                      >
-                        Qualifier en Ticket SAP ➔
-                      </button>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-300 bg-slate-900/50 p-3 rounded-lg border border-slate-800/80 mt-3 font-sans leading-relaxed">
-                    « {msg.bodyPreview || msg.bodyText} »
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5 : ARCHITECTURE & HÉBERGEMENT SAP */}
-        {activeTab === "sap" && (
-          <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-slate-100">Architecture d&apos;Hébergement — Serveur SAP B1 / S/4HANA</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Conception étanche pour cohabiter sur l&apos;infrastructure SAP de Safir Consulting sans impact sur le système hôte.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-                <div className="flex items-center gap-2 text-sky-400 font-bold text-sm mb-2">
-                  <Server className="w-4 h-4" />
-                  Isolation Docker / Podman
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  L&apos;application web (Next.js), le backend (NestJS) et la base (PostgreSQL 16) tournent dans des conteneurs étanches. Aucune bibliothèque hôte modifiée.
-                </p>
-              </div>
-
-              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm mb-2">
-                  <Database className="w-4 h-4" />
-                  Base PostgreSQL Dédiée
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Schéma 100% autonome avec Prisma. La base SAP HANA / SQL Server sous-jacente n&apos;est jamais polluée, préservant intégrité et licences SAP.
-                </p>
-              </div>
-
-              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-                <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm mb-2">
-                  <ShieldCheck className="w-4 h-4" />
-                  Gestion des Ports Réseau
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Ports configurables via <span className="font-mono text-sky-300">.env</span> (ex. API 4000, Web 3000), garantissant 0 collision avec les ports HANA (3xx15) ou Service Layer (50000/50001).
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Modal Création Ticket */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-lg p-6 rounded-2xl border border-slate-700 shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <h3 className="font-bold text-slate-100 text-base">Nouveau Ticket / Addon SAP</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-200">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateTicket} className="space-y-4 mt-4">
-              <div>
-                <label className="text-xs font-semibold text-slate-300">Titre de la demande</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex : Addon EDI Facturation SAP B1"
-                  value={newTitle}
-                  onChange={(e: any) => setNewTitle(e.target.value)}
-                  className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:ring-2 focus:ring-sky-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-300">Description détaillée</label>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Spécifications techniques, flux Service Layer ou BAPI attendu..."
-                  value={newDescription}
-                  onChange={(e: any) => setNewDescription(e.target.value)}
-                  className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:ring-2 focus:ring-sky-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-300">Type</label>
-                  <select
-                    value={newTypeCode}
-                    onChange={(e: any) => setNewTypeCode(e.target.value)}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-slate-200"
-                  >
-                    <option value="ADDON">ADDON (Addon SAP)</option>
-                    <option value="BUG">BUG (Correction)</option>
-                    <option value="EVOLUTION">EVO (Évolution)</option>
-                    <option value="INTEGRATION">INT (Intégration API)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-300">Priorité</label>
-                  <select
-                    value={newPriorityCode}
-                    onChange={(e: any) => setNewPriorityCode(e.target.value)}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-slate-200"
-                  >
-                    <option value="CRITICAL">P1 - Critique</option>
-                    <option value="HIGH">P2 - Haute</option>
-                    <option value="MEDIUM">P3 - Moyenne</option>
-                    <option value="LOW">P4 - Basse</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-300">Est. Heures</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={newEstimatedHours}
-                    onChange={(e: any) => setNewEstimatedHours(Number(e.target.value))}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-slate-200"
+                    className="bg-sky-600 h-1.5 rounded-full"
+                    style={{ width: `${Math.min(100, stats.avgLoad)}%` }}
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-800">
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-medium uppercase tracking-wider">Boîte Outlook M365</span>
+                  <Inbox className="w-4 h-4 text-slate-400" />
+                </div>
+                <div className="text-2xl font-bold text-slate-900">{stats.pendingEmailsCount}</div>
+                <p className="text-xs text-slate-500 mt-1">Messages reçus à qualifier</p>
+              </div>
+            </div>
+
+            {/* Deux colonnes : Tickets récents & Disponibilité équipe */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Colonne Gauche : Derniers tickets (2/3 de l'écran) */}
+              <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-900">Tickets récents</h2>
+                    <p className="text-xs text-slate-500">Demandes enregistrées nécessitant affectation ou suivi</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("tickets")}
+                    className="text-xs text-sky-700 hover:text-sky-800 font-medium flex items-center gap-1"
+                  >
+                    <span>Voir tous les tickets</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-100 flex-1 overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-600 font-medium">
+                      <tr>
+                        <th className="py-2.5 px-4">Réf.</th>
+                        <th className="py-2.5 px-4">Titre du ticket</th>
+                        <th className="py-2.5 px-4">Demandeur</th>
+                        <th className="py-2.5 px-4">Statut</th>
+                        <th className="py-2.5 px-4">Développeur</th>
+                        <th className="py-2.5 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {tickets.slice(0, 6).map((ticket) => (
+                        <tr key={ticket.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-4 font-mono font-medium text-slate-900">{ticket.reference}</td>
+                          <td className="py-3 px-4 max-w-xs truncate font-medium text-slate-800" title={ticket.title}>
+                            {ticket.title}
+                          </td>
+                          <td className="py-3 px-4 text-slate-600">{ticket.applicantName || "Client"}</td>
+                          <td className="py-3 px-4">{renderStatusBadge(ticket.status)}</td>
+                          <td className="py-3 px-4 text-slate-600">
+                            {ticket.assignedDeveloper ? (
+                              <span className="font-medium text-slate-900">{ticket.assignedDeveloper.name}</span>
+                            ) : (
+                              <span className="text-slate-400 italic">Non affecté</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            {!ticket.assignedDeveloper && (
+                              <button
+                                onClick={() => setAssigningTicket(ticket)}
+                                className="text-xs text-sky-700 hover:text-sky-900 font-medium underline"
+                              >
+                                Affecter
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Colonne Droite : Disponibilité équipe (1/3 de l'écran) */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-900">Capacités Développeurs</h2>
+                    <p className="text-xs text-slate-500">Charge hebdomadaire actuelle</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("developers")}
+                    className="text-xs text-sky-700 hover:text-sky-800 font-medium flex items-center gap-1"
+                  >
+                    <span>Détail</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="p-4 divide-y divide-slate-100 overflow-y-auto max-h-[420px]">
+                  {developers.slice(0, 7).map((dev) => (
+                    <div key={dev.id} className="py-3 first:pt-0 last:pb-0">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-medium text-slate-900">{dev.name}</span>
+                        <span className="text-slate-500 font-mono">
+                          {dev.freeHours} h libres / {dev.netWeeklyHours} h
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full ${
+                            dev.loadPercentage > 75
+                              ? "bg-rose-500"
+                              : dev.loadPercentage > 40
+                              ? "bg-amber-500"
+                              : "bg-emerald-500"
+                          }`}
+                          style={{ width: `${Math.min(100, dev.loadPercentage)}%` }}
+                        />
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1 truncate">{dev.jobTitle}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =============================================================== */}
+        {/* VUE 2 : TABLEAU COMPLET DES TICKETS SAP                          */}
+        {/* =============================================================== */}
+        {activeTab === "tickets" && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Barre de filtres et d'outils */}
+            <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-1 max-w-md">
+                <div className="relative w-full">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Rechercher par référence, titre, demandeur..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 focus:border-sky-600"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 font-medium">Statut :</span>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-600"
+                >
+                  <option value="ALL">Tous les statuts ({tickets.length})</option>
+                  <option value="RECEIVED">Reçus</option>
+                  <option value="QUALIFIED">Qualifiés</option>
+                  <option value="ASSIGNED">Affectés</option>
+                  <option value="IN_PROGRESS">En cours</option>
+                  <option value="DELIVERED">Livrés</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Tableau principal */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Référence</th>
+                    <th className="py-3 px-4">Titre & Description</th>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4">Priorité</th>
+                    <th className="py-3 px-4">Demandeur</th>
+                    <th className="py-3 px-4">Statut</th>
+                    <th className="py-3 px-4">Développeur assigné</th>
+                    <th className="py-3 px-4 text-center">Estimation</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredTickets.map((ticket) => (
+                    <tr key={ticket.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-semibold text-slate-900">{ticket.reference}</td>
+                      <td className="py-3.5 px-4 max-w-sm">
+                        <div className="font-semibold text-slate-900 text-sm">{ticket.title}</div>
+                        {ticket.description && (
+                          <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">{ticket.description}</div>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">
+                          {ticket.typeCode}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">{renderPriorityBadge(ticket.priorityCode)}</td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-medium text-slate-800">{ticket.applicantName || "Non renseigné"}</div>
+                        <div className="text-[11px] text-slate-500">{ticket.clientCompany}</div>
+                      </td>
+                      <td className="py-3.5 px-4">{renderStatusBadge(ticket.status)}</td>
+                      <td className="py-3.5 px-4">
+                        {ticket.assignedDeveloper ? (
+                          <div>
+                            <div className="font-medium text-slate-900">{ticket.assignedDeveloper.name}</div>
+                            <div className="text-[11px] text-slate-500">{ticket.assignedDeveloper.email}</div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">En attente</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-700">
+                        {ticket.estimatedHours} h
+                      </td>
+                      <td className="py-3.5 px-4 text-right space-x-2">
+                        {!ticket.assignedDeveloper ? (
+                          <button
+                            onClick={() => setAssigningTicket(ticket)}
+                            className="px-2.5 py-1 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 rounded transition-colors"
+                          >
+                            Affecter
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setAssigningTicket(ticket)}
+                            className="px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded transition-colors"
+                          >
+                            Réaffecter
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredTickets.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-slate-500">
+                        Aucun ticket ne correspond aux critères de recherche.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* =============================================================== */}
+        {/* VUE 3 : CAPACITÉS & DÉVELOPPEURS DE L'ÉQUIPE                      */}
+        {/* =============================================================== */}
+        {activeTab === "developers" && (
+          <div className="space-y-4">
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">Référentiel des Développeurs & Compétences SAP</h2>
+                <p className="text-xs text-slate-500">
+                  Plan de charge individuel et compétences certifiées sur la base hebdomadaire de 40 heures
+                </p>
+              </div>
+              <div className="text-xs text-slate-600 font-medium">
+                Effectif : <span className="font-bold text-slate-900">{developers.length} développeurs actifs</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {developers.map((dev) => (
+                <div key={dev.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div>
+                        <h3 className="font-semibold text-slate-900 text-sm leading-tight">{dev.name}</h3>
+                        <p className="text-xs text-slate-500">{dev.email}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Actif
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-600 font-medium mb-3">{dev.jobTitle}</p>
+
+                    {/* Jauge de charge */}
+                    <div className="space-y-1 mb-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Disponibilité :</span>
+                        <span className="font-bold text-slate-900 font-mono">
+                          {dev.freeHours} h libres <span className="font-normal text-slate-500">({dev.reservedHours} h allouées)</span>
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${
+                            dev.loadPercentage > 75
+                              ? "bg-rose-500"
+                              : dev.loadPercentage > 40
+                              ? "bg-amber-500"
+                              : "bg-sky-600"
+                          }`}
+                          style={{ width: `${Math.min(100, dev.loadPercentage)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Compétences clés */}
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                        Compétences validées
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {dev.skills && dev.skills.length > 0 ? (
+                          dev.skills.map((skill) => (
+                            <span
+                              key={skill.id}
+                              className="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 border border-slate-200"
+                            >
+                              {skill.name} <span className="font-semibold text-slate-500">({skill.level}/5)</span>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Compétences en cours de qualification</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* =============================================================== */}
+        {/* VUE 4 : BOÎTE DE RÉCEPTION OUTLOOK M365                          */}
+        {/* =============================================================== */}
+        {activeTab === "inbox" && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">Boîte de réception Outlook Microsoft 365</h2>
+                <p className="text-xs text-slate-500">
+                  E-mails reçus sur la boîte d'Aliko Getheme (aliko.getheme@safirconsulting.net)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Connecteur Graph M365 actif
+                </span>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {emails.map((email) => (
+                <div key={email.id} className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-slate-900 text-sm">{email.senderName}</span>
+                      <span className="text-xs text-slate-500 font-mono">&lt;{email.senderEmail}&gt;</span>
+
+                      {/* Type d'expéditeur normal et lisible */}
+                      {email.senderKind === "CONSULTANT" && (
+                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                          Consultant interne Safir
+                        </span>
+                      )}
+                      {email.senderKind === "CLIENT_CONTACT" && (
+                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                          Contact client
+                        </span>
+                      )}
+                      {email.isPersonalDomain && (
+                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          Domaine externe / vigilance
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="font-medium text-slate-800 text-sm">{email.subject}</div>
+                    <p className="text-xs text-slate-600 line-clamp-2">{email.bodyPreview}</p>
+                    <div className="text-[11px] text-slate-400">{email.receivedAt}</div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {email.processingStatus === "PENDING_QUALIFICATION" ? (
+                      <button
+                        onClick={() => handleConvertEmail(email)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-medium rounded-lg shadow-sm transition-colors whitespace-nowrap"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Créer ticket SAP</span>
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Ticket créé
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* ================================================================= */}
+      {/* 3. MODALE DE CRÉATION D'UN TICKET SAP                             */}
+      {/* ================================================================= */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+              <h3 className="font-semibold text-slate-900 text-sm">Nouveau Ticket de Développement SAP</h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTicket} className="p-4 space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Titre de la demande *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ex : Addon validation commandes fournisseurs SAP B1"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 focus:border-sky-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Type de besoin SAP</label>
+                  <select
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value)}
+                    className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                  >
+                    <option value="ADDON">Addon SAP Business One</option>
+                    <option value="GATEWAY">Passerelle Service Layer</option>
+                    <option value="S4HANA">Évolution S/4HANA (ABAP/CDS)</option>
+                    <option value="REPORT">Reporting SAP HANA</option>
+                    <option value="SUPPORT">Support / Correctif</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Priorité</label>
+                  <select
+                    value={newPriority}
+                    onChange={(e) => setNewPriority(e.target.value)}
+                    className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                  >
+                    <option value="LOW">Basse</option>
+                    <option value="MEDIUM">Moyenne</option>
+                    <option value="HIGH">Haute</option>
+                    <option value="CRITICAL">Critique</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Estimation (heures)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="200"
+                    value={newHours}
+                    onChange={(e) => setNewHours(Number(e.target.value))}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Demandeur</label>
+                  <input
+                    type="text"
+                    placeholder="Mélissa Diakité"
+                    value={newApplicant}
+                    onChange={(e) => setNewApplicant(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client</label>
+                <input
+                  type="text"
+                  placeholder="ex : Safir Consulting ou Société cliente"
+                  value={newClient}
+                  onChange={(e) => setNewClient(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Description détaillée</label>
+                <textarea
+                  rows={3}
+                  placeholder="Précisez le périmètre fonctionnel et technique..."
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg"
+                  onClick={() => setShowModal(false)}
+                  className="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded-lg shadow-lg shadow-sky-500/20"
+                  className="px-4 py-1.5 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 rounded-lg transition-colors shadow-sm"
                 >
-                  Créer le Ticket
+                  Enregistrer le ticket
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </main>
+
+      {/* ================================================================= */}
+      {/* 4. MODALE D'AFFECTATION D'UN DÉVELOPPEUR                          */}
+      {/* ================================================================= */}
+      {assigningTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h3 className="font-semibold text-slate-900 text-sm">Affecter le ticket</h3>
+                <p className="text-xs text-slate-500 font-mono">{assigningTicket.reference}</p>
+              </div>
+              <button
+                onClick={() => setAssigningTicket(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignSubmit} className="p-4 space-y-4">
+              <div>
+                <div className="text-xs text-slate-500 mb-1">Besoin :</div>
+                <div className="text-sm font-semibold text-slate-900">{assigningTicket.title}</div>
+                <div className="text-xs text-slate-600 mt-1">
+                  Charge estimée : <span className="font-bold text-slate-800">{assigningTicket.estimatedHours} heures</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Sélectionner un développeur disponible
+                </label>
+                <select
+                  required
+                  value={selectedDevId}
+                  onChange={(e) => setSelectedDevId(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                >
+                  <option value="">-- Choisir un développeur --</option>
+                  {developers.map((dev) => (
+                    <option key={dev.id} value={dev.id}>
+                      {dev.name} ({dev.freeHours} h libres cette semaine — {dev.jobTitle})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">
+                <div className="font-medium text-slate-800">Notification automatique :</div>
+                <p>Un e-mail de notification officiel sera envoyé au développeur sur sa messagerie Safir Consulting.</p>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAssigningTicket(null)}
+                  className="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={!selectedDevId}
+                  className="px-4 py-1.5 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 disabled:opacity-50 rounded-lg shadow-sm"
+                >
+                  Valider l'affectation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -122,13 +122,13 @@ async function main() {
   });
   console.log(`✓ Utilisateur HEAD créé : ${aliko.email}`);
 
-  // 6. Les 8 Développeurs de la SME Business Unit
+  // 6. Les Développeurs réels de l'équipe Safir Consulting
   const devsConfig = [
     {
-      email: "marc.dupont@safirconsulting.net",
-      firstName: "Marc",
-      lastName: "Dupont",
-      jobTitle: "Lead Développeur SAP Business One",
+      email: "anoop.pandimukkula@safirconsulting.net",
+      firstName: "Anoop",
+      lastName: "Pandimukkula",
+      jobTitle: "Senior Développeur SAP Business One & Addons",
       skills: [
         { name: "SAP Business One — Service Layer", level: 5 },
         { name: "SAP Business One — UI / DI API", level: 5 },
@@ -136,10 +136,10 @@ async function main() {
       ],
     },
     {
-      email: "sarah.lambert@safirconsulting.net",
-      firstName: "Sarah",
-      lastName: "Lambert",
-      jobTitle: "Senior Développeuse SAP S/4HANA",
+      email: "hassane.bocoum@safirconsulting.net",
+      firstName: "Hassane",
+      lastName: "Bocoum",
+      jobTitle: "Lead Développeur SAP S/4HANA & ABAP",
       skills: [
         { name: "SAP S/4HANA — ABAP & CDS", level: 5 },
         { name: "SAP Fiori / UI5", level: 4 },
@@ -147,21 +147,10 @@ async function main() {
       ],
     },
     {
-      email: "thomas.bernard@safirconsulting.net",
-      firstName: "Thomas",
-      lastName: "Bernard",
-      jobTitle: "Développeur Full-Stack Web & API",
-      skills: [
-        { name: "Next.js & React", level: 5 },
-        { name: "NestJS & Node.js", level: 4 },
-        { name: "PostgreSQL & Prisma", level: 4 },
-      ],
-    },
-    {
-      email: "amina.kone@safirconsulting.net",
-      firstName: "Amina",
-      lastName: "Kone",
-      jobTitle: "Ingénieure Intégration Systèmes & Webhooks",
+      email: "nevrit.ahua@safirconsulting.net",
+      firstName: "Nevrit",
+      lastName: "Ahua",
+      jobTitle: "Ingénieur Intégration Systèmes & API",
       skills: [
         { name: "SAP Business One — Service Layer", level: 4 },
         { name: "Architecture & Intégration API", level: 5 },
@@ -169,48 +158,49 @@ async function main() {
       ],
     },
     {
-      email: "julien.mercier@safirconsulting.net",
-      firstName: "Julien",
-      lastName: "Mercier",
-      jobTitle: "Développeur Backend & Base de données",
+      email: "fatoumata.traore@safirconsulting.net",
+      firstName: "Fatoumata",
+      lastName: "Traore",
+      jobTitle: "Développeuse Full-Stack & Fiori UX",
+      skills: [
+        { name: "SAP Fiori / UI5", level: 4 },
+        { name: "Next.js & React", level: 5 },
+        { name: "NestJS & Node.js", level: 4 },
+      ],
+    },
+    {
+      email: "korotoumou.thiam@safirconsulting.net",
+      firstName: "Korotoumou",
+      lastName: "Thiam",
+      jobTitle: "Développeuse Backend & Bases de données",
       skills: [
         { name: "NestJS & Node.js", level: 4 },
-        { name: "PostgreSQL & Prisma", level: 4 },
-        { name: "SAP HANA & SQL", level: 3 },
+        { name: "PostgreSQL & Prisma", level: 5 },
+        { name: "SAP HANA & SQL", level: 4 },
         { name: "Docker & Déploiement SAP", level: 4 },
       ],
     },
     {
-      email: "elena.rossi@safirconsulting.net",
-      firstName: "Elena",
-      lastName: "Rossi",
-      jobTitle: "Développeuse SAP Fiori & UX",
+      email: "mohadicko95@gmail.com",
+      firstName: "Moha",
+      lastName: "Dicko",
+      jobTitle: "Lead Développeur Full-Stack & Architecte Solution",
       skills: [
-        { name: "SAP Fiori / UI5", level: 5 },
-        { name: "Next.js & React", level: 4 },
-        { name: "SAP S/4HANA — ABAP & CDS", level: 3 },
+        { name: "Next.js & React", level: 5 },
+        { name: "NestJS & Node.js", level: 5 },
+        { name: "PostgreSQL & Prisma", level: 5 },
+        { name: "Architecture & Intégration API", level: 5 },
       ],
     },
     {
-      email: "karim.vasseur@safirconsulting.net",
-      firstName: "Karim",
-      lastName: "Vasseur",
-      jobTitle: "Développeur Addons SAP B1",
+      email: "jeanphilippe.ebrottie@safirconsulting.net",
+      firstName: "Jean-Philippe",
+      lastName: "Ebrottié",
+      jobTitle: "Développeur Solutions SAP B1 & Intégration",
       skills: [
         { name: "SAP Business One — UI / DI API", level: 4 },
         { name: "SAP Business One — Service Layer", level: 4 },
         { name: "SAP HANA & SQL", level: 3 },
-      ],
-    },
-    {
-      email: "lucas.petit@safirconsulting.net",
-      firstName: "Lucas",
-      lastName: "Petit",
-      jobTitle: "Développeur Junior SAP & Web",
-      skills: [
-        { name: "SAP Business One — Service Layer", level: 3 },
-        { name: "Next.js & React", level: 3 },
-        { name: "SAP HANA & SQL", level: 2 },
       ],
     },
   ];
@@ -261,7 +251,48 @@ async function main() {
       }
     }
   }
-  console.log("✓ Les 8 profils développeurs et leurs compétences ont été créés");
+  console.log("✓ Les 7 profils développeurs réels et leurs compétences ont été créés");
+
+  // 6.b. Consultante Interne Safir Consulting : Mélissa Diakité
+  const melissaUser = await prisma.user.upsert({
+    where: { email: "melissa.diakite@safirconsulting.net" },
+    update: {
+      firstName: "Mélissa",
+      lastName: "Diakité",
+      roles: [Role.CONSULTANT],
+      isActive: true,
+      timezone: "Europe/Paris",
+    },
+    create: {
+      email: "melissa.diakite@safirconsulting.net",
+      firstName: "Mélissa",
+      lastName: "Diakité",
+      roles: [Role.CONSULTANT],
+      isActive: true,
+      passwordHash: devPasswordHash,
+      timezone: "Europe/Paris",
+    },
+  });
+
+  const melissaConsultant = await prisma.consultant.upsert({
+    where: { email: "melissa.diakite@safirconsulting.net" },
+    update: {
+      userId: melissaUser.id,
+      name: "Mélissa Diakité",
+      organization: "Safir Consulting",
+      isInternal: true,
+      status: "ACTIVE",
+    },
+    create: {
+      userId: melissaUser.id,
+      email: "melissa.diakite@safirconsulting.net",
+      name: "Mélissa Diakité",
+      organization: "Safir Consulting",
+      isInternal: true,
+      status: "ACTIVE",
+    },
+  });
+  console.log(`✓ Consultante interne initialisée : ${melissaConsultant.name} (${melissaConsultant.email})`);
 
   // 7. Clients & Projets initiaux
   const clientOmega = await prisma.client.upsert({
@@ -354,6 +385,7 @@ async function main() {
       source: TicketSource.EMAIL,
       clientId: clientOmega.id,
       projectId: projectOmega.id,
+      consultantId: melissaConsultant.id,
       estimatedHours: 24,
       remainingEstimatedHours: 24,
       requestedDueDate: new Date(Date.now() + 14 * 24 * 3600 * 1000),
@@ -428,6 +460,28 @@ async function main() {
       bodyPreview: "Bonjour Aliko, suite à notre échange, nous aimerions chiffrer l'addon d'import automatique des factures fournisseurs dans SAP B1...",
       bodyText: "Bonjour Aliko, suite à notre échange, nous aimerions chiffrer l'addon d'import automatique des factures fournisseurs dans SAP B1 via le Service Layer.",
       receivedAt: new Date(Date.now() - 3600 * 1000),
+      processingStatus: EmailProcessingStatus.PENDING_QUALIFICATION,
+    },
+  });
+
+  await prisma.emailMessage.upsert({
+    where: { provider_mailboxId_providerMessageId: { provider: MailProviderKind.MICROSOFT_GRAPH, mailboxId: mailbox.id, providerMessageId: "MSG-M365-002" } },
+    update: {},
+    create: {
+      mailboxId: mailbox.id,
+      provider: MailProviderKind.MICROSOFT_GRAPH,
+      direction: EmailDirection.INBOUND,
+      providerMessageId: "MSG-M365-002",
+      internetMessageId: "<msg002@safirconsulting.net>",
+      senderEmail: "melissa.diakite@safirconsulting.net",
+      senderName: "Mélissa Diakité",
+      senderKind: SenderKind.CONSULTANT,
+      isPersonalDomain: false,
+      toRecipients: ["aliko.getheme@safirconsulting.net"],
+      subject: "[Consulting SAP] Spécifications addon gestion des approbations d'achats",
+      bodyPreview: "Bonjour Aliko, voici le cahier des charges validé avec le client pour l'addon d'approbation d'achats SAP B1...",
+      bodyText: "Bonjour Aliko, voici le cahier des charges validé avec le client pour l'addon d'approbation d'achats SAP B1. Besoin d'un dev qualifié en Service Layer et UI API.",
+      receivedAt: new Date(Date.now() - 1800 * 1000),
       processingStatus: EmailProcessingStatus.PENDING_QUALIFICATION,
     },
   });

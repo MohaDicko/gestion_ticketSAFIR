@@ -1,6 +1,6 @@
-# DevCapacity Manager — Documentation du Projet
+# Ticket Manager — Documentation du Projet
 
-Bienvenue dans le dépôt du projet **DevCapacity Manager**, la plateforme intelligente de gestion des tickets, des addons et de la capacité de développement conçue pour l'équipe SME Business Unit de **Safir Consulting**.
+Bienvenue dans le dépôt du projet **Ticket Manager**, la plateforme intelligente de gestion des tickets, des addons et de la capacité de développement conçue pour l'équipe SME Business Unit de **Safir Consulting**.
 
 ---
 

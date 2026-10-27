@@ -1,11 +1,11 @@
-# 📋 CAHIER DES CHARGES — DEVCAPACITY MANAGER
+# 📋 CAHIER DES CHARGES — TICKET MANAGER
 ## Plateforme Intelligente de Gestion des Tickets, des Addons SAP et de la Capacité de Développement
 
 ---
 
 | **Document** | **Cahier des Charges Fonctionnel & Technique** |
 |---|---|
-| **Projet** | **DevCapacity Manager** (Plateforme de pilotage BU SME) |
+| **Projet** | **Ticket Manager** (Plateforme de pilotage BU SME) |
 | **Entreprise** | **Safir Consulting** |
 | **Destinataire / Validateur** | **Aliko Getheme** — *Head of SME Business Unit & Development Team* |
 | **Version** | **1.0 (Référence de Présentation Direction)** |
@@ -112,29 +112,49 @@ sequenceDiagram
     App->>Dev: Envoi automatique de l'e-mail d'affectation avec détails
 ```
 
-### 4.1. Règles de Rapprochement des Expéditeurs
-1. **Consultants internes** : Reconnaissance automatique via le domaine `@safirconsulting.net`.
-2. **Clients externes autorisés** : Rapprochement automatique avec le compte client via les domaines d'entreprises connus (ex: `@client-omega.com`).
-3. **Adresses personnelles (Gmail, Yahoo, etc.)** :
-   - Fréquentes chez certains consultants externes ou dirigeants de PME.
-   - **Règle de sécurité stricte** : Pour éviter l'usurpation d'identité, une adresse personnelle n'est acceptée que si Aliko l'a préalablement enregistrée et validée comme contact officiel du client. À défaut, une alerte visuelle de vigilance s'affiche dans l'Inbox.
+### 4.1. Règles de Rapprochement et Typologie des Expéditeurs
+
+La boîte de réception d'Aliko centralise des demandes issues d'acteurs aux statuts variés. Le système applique un aiguillage strict selon 4 catégories d'expéditeurs :
+
+1. **Consultants & Collaborateurs Internes Safir** (`SenderKind.CONSULTANT` / `INTERNAL_TEAM`) :
+   - Reconnaissance automatique via le nom de domaine de messagerie d'entreprise `@safirconsulting.net`.
+   - Tout consultant interne (comme **Mélissa Diakité** ou d'autres consultants Safir) peut adresser des besoins, spécifications ou cahiers des charges directement à Aliko sans risque de blocage.
+   - L'e-mail est instantanément qualifié avec un niveau de confiance maximal (**Badge « 🏢 Consultante / Équipe Safir »**).
+
+2. **Contacts Clients Officiels Référencés** (`SenderKind.CLIENT_CONTACT`) :
+   - Rapprochement immédiat avec la fiche du compte client grâce au domaine d'entreprise enregistré (ex: `@client-omega.com` pour Omega Logistics).
+   - Le message est directement lié au compte client et à ses projets actifs (**Badge « 🤝 Contact Client Officiel »**).
+
+3. **Personnes Extérieures à l'Entreprise / Nouveaux Contacts** (`SenderKind.UNKNOWN`) :
+   - Tout tiers externe à Safir Consulting n'appartenant pas à un domaine client connu (ex: nouveaux prospects, partenaires, sous-traitants, autres sociétés).
+   - L'e-mail est accueilli dans l'Inbox avec le statut d'attente (**Badge « 🌐 Personne Extérieure »**).
+   - Aliko dispose d'actions guidées en un clic :
+     - *Créer un nouveau compte Client & Contact* et qualifier le ticket.
+     - *Rattacher l'expéditeur à un Client existant* (nouveau collaborateur chez le client).
+     - *Classer sans suite / Archiver / Rejeter* (prospection commerciale non sollicitée ou SPAM).
+
+4. **Adresses Personnelles (Gmail, Yahoo, Hotmail, etc.) & Bouclier Anti-usurpation** :
+   - Couramment utilisées par certains consultants externes indépendants ou dirigeants de PME.
+   - **Contrôle de sécurité strict** : Si l'adresse personnelle a déjà été explicitement validée par Aliko dans la fiche du client, elle est acceptée en toute confiance. À défaut, le système affiche un **Badge d'alerte rouge « ⚠️ Vigilance : Domaine personnel non validé »** afin d'empêcher toute modification non autorisée ou ingénierie sociale.
 
 ---
 
-## 5. RÉFÉRENTIEL ÉQUIPE DES 8 DÉVELOPPEURS & COMPÉTENCES
+## 5. RÉFÉRENTIEL ÉQUIPE DES 7 DÉVELOPPEURS & COMPÉTENCES
 
-L'effectif initial est formalisé avec des fiches de compétences individuelles évaluées de **1 (Notions)** à **5 (Expert Référent)** :
+L'effectif de l'équipe de développement Safir Consulting est formalisé avec des fiches individuelles évaluées de **1 (Notions)** à **5 (Expert Référent)** :
 
-| # | Développeur | Rôle Principal | Compétences Clés & Niveaux | Capacité Hebdo |
-|:---:|---|---|---|:---:|
-| 1 | **Marc Dupont** | Lead Développeur SAP B1 | Service Layer (5), UI/DI API (5), HANA SQL (4) | 40 h / sem |
-| 2 | **Sarah Lambert** | Senior Développeuse S/4HANA | ABAP & CDS (5), SAP Fiori/UI5 (4), HANA SQL (4) | 40 h / sem |
-| 3 | **Thomas Bernard** | Full-Stack Web & API | Next.js/React (5), NestJS (4), PostgreSQL (4) | 40 h / sem |
-| 4 | **Amina Kone** | Ingénieure Intégration API | Architecture API (5), Service Layer (4), Node.js (4) | 40 h / sem |
-| 5 | **Julien Mercier** | Backend & Base de données | NestJS (4), PostgreSQL (4), Docker (4), HANA (3) | 40 h / sem |
-| 6 | **Elena Rossi** | Développeuse SAP Fiori & UX | Fiori/UI5 (5), Next.js (4), ABAP/CDS (3) | 40 h / sem |
-| 7 | **Karim Vasseur** | Développeur Addons SAP B1 | UI/DI API (4), Service Layer (4), HANA SQL (3) | 40 h / sem |
-| 8 | **Lucas Petit** | Développeur Junior SAP | Service Layer (3), Next.js (3), SQL (2) | 40 h / sem |
+| # | Développeur | E-mail | Rôle Principal | Compétences Clés & Niveaux | Capacité Hebdo |
+|:---:|---|---|---|---|:---:|
+| 1 | **Anoop Pandimukkula** | `anoop.pandimukkula@safirconsulting.net` | Senior Développeur SAP B1 & Addons | Service Layer (5), UI/DI API (5), HANA SQL (4) | 40 h / sem |
+| 2 | **Hassane Bocoum** | `hassane.bocoum@safirconsulting.net` | Lead Développeur SAP S/4HANA & ABAP | S/4HANA ABAP & CDS (5), Fiori/UI5 (4), HANA SQL (4) | 40 h / sem |
+| 3 | **Nevrit Ahua** | `nevrit.ahua@safirconsulting.net` | Ingénieur Intégration Systèmes & API | Architecture API (5), Service Layer (4), NestJS (4) | 40 h / sem |
+| 4 | **Fatoumata Traore** | `fatoumata.traore@safirconsulting.net` | Développeuse Full-Stack & Fiori UX | Next.js/React (5), Fiori/UI5 (4), NestJS (4) | 40 h / sem |
+| 5 | **Korotoumou Thiam** | `korotoumou.thiam@safirconsulting.net` | Développeuse Backend & Bases de données | PostgreSQL/Prisma (5), NestJS (4), HANA SQL (4), Docker (4) | 40 h / sem |
+| 6 | **Moha Dicko** | `mohadicko95@gmail.com` | Lead Full-Stack & Architecte Solution | React/Next.js (5), NestJS (5), PostgreSQL (5), Architecture API (5) | 40 h / sem |
+| 7 | **Jean-Philippe Ebrottié** | `jeanphilippe.ebrottie@safirconsulting.net` | Développeur Solutions SAP B1 & Intégration | UI/DI API (4), Service Layer (4), HANA SQL (3) | 40 h / sem |
+
+### 5.1. Consultants Fonctionnels Référents
+- **Mélissa Diakité** (`melissa.diakite@safirconsulting.net`) : Consultante Fonctionnelle SAP (Safir Consulting) — interlocutrice métier émettrice des besoins, interlocutrice pour les spécifications fonctionnelles et la recette applicative.
 
 ---
 

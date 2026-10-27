@@ -97,6 +97,77 @@ export class EmailsService {
     return { success: true };
   }
 
+  /**
+   * Résolution intelligente du type d'expéditeur :
+   * 1. Consultants & Collaborateurs Safir (@safirconsulting.net)
+   * 2. Contacts clients officiels (domaine entreprise ou fiche client)
+   * 3. Personnes extérieures / Nouveaux contacts inconnus (UNKNOWN)
+   * 4. Adresses personnelles (détection de vigilance)
+   */
+  async resolveSender(senderEmail: string): Promise<{ senderKind: SenderKind; isPersonalDomain: boolean; suggestedClientId?: string }> {
+    const emailLower = senderEmail.toLowerCase().trim();
+    const domain = emailLower.split("@")[1] || "";
+
+    const personalDomains = [
+      "gmail.com",
+      "yahoo.com",
+      "yahoo.fr",
+      "hotmail.com",
+      "hotmail.fr",
+      "outlook.com",
+      "live.com",
+      "icloud.com",
+      "orange.fr",
+      "sfr.fr",
+      "free.fr",
+    ];
+    const isPersonalDomain = personalDomains.includes(domain);
+
+    // 1. Domaine Safir Consulting -> Consultant(e) ou Équipe interne
+    if (domain === "safirconsulting.net" || domain === "safir.test") {
+      const consultant = await this.prisma.consultant.findUnique({ where: { email: emailLower } });
+      return {
+        senderKind: consultant ? SenderKind.CONSULTANT : SenderKind.INTERNAL_TEAM,
+        isPersonalDomain: false,
+      };
+    }
+
+    // 2. Contact client enregistré
+    const contact = await this.prisma.clientContact.findUnique({
+      where: { email: emailLower },
+      include: { client: true },
+    });
+    if (contact) {
+      return {
+        senderKind: SenderKind.CLIENT_CONTACT,
+        isPersonalDomain: contact.isPersonalEmail,
+        suggestedClientId: contact.clientId,
+      };
+    }
+
+    // 3. Domaine correspondant à un client existant
+    if (!isPersonalDomain && domain) {
+      const client = await this.prisma.client.findFirst({
+        where: {
+          emailDomains: { has: domain },
+        },
+      });
+      if (client) {
+        return {
+          senderKind: SenderKind.CLIENT_CONTACT,
+          isPersonalDomain: false,
+          suggestedClientId: client.id,
+        };
+      }
+    }
+
+    // 4. Personne extérieure inconnue / Nouveau prospect / Tiers externe
+    return {
+      senderKind: SenderKind.UNKNOWN,
+      isPersonalDomain,
+    };
+  }
+
   async simulateInboundEmail(data: {
     senderEmail: string;
     senderName: string;
@@ -108,6 +179,7 @@ export class EmailsService {
     if (!mailbox) throw new NotFoundException("Boîte e-mail non configurée");
 
     const messageId = `SIM-${Date.now()}`;
+    const resolved = await this.resolveSender(data.senderEmail);
 
     return this.prisma.emailMessage.create({
       data: {
@@ -118,8 +190,8 @@ export class EmailsService {
         internetMessageId: `<${messageId}@safir.test>`,
         senderEmail: data.senderEmail,
         senderName: data.senderName,
-        senderKind: data.isPersonalDomain ? SenderKind.CLIENT_CONTACT : SenderKind.INTERNAL_TEAM,
-        isPersonalDomain: !!data.isPersonalDomain,
+        senderKind: resolved.senderKind,
+        isPersonalDomain: data.isPersonalDomain !== undefined ? data.isPersonalDomain : resolved.isPersonalDomain,
         toRecipients: [mailbox.mailboxAddress],
         subject: data.subject,
         bodyPreview: data.bodyText.substring(0, 160),

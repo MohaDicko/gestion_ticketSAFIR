@@ -8,7 +8,7 @@ export class TicketsService {
 
   async generateReference(prefix: string): Promise<string> {
     const year = new Date().getFullYear();
-    const sequence = await this.prisma.ticketSequence.upsert({
+    let sequence = await this.prisma.ticketSequence.upsert({
       where: {
         prefix_year: { prefix, year },
       },
@@ -22,8 +22,22 @@ export class TicketsService {
       },
     });
 
-    const paddedNumber = String(sequence.lastValue).padStart(4, "0");
-    return `${prefix}-${year}-${paddedNumber}`;
+    let paddedNumber = String(sequence.lastValue).padStart(4, "0");
+    let candidate = `${prefix}-${year}-${paddedNumber}`;
+
+    // Sécurité anti-collision si des tickets ont été insérés en seed
+    let exists = await this.prisma.ticket.findUnique({ where: { reference: candidate } });
+    while (exists) {
+      sequence = await this.prisma.ticketSequence.update({
+        where: { prefix_year: { prefix, year } },
+        data: { lastValue: { increment: 1 } },
+      });
+      paddedNumber = String(sequence.lastValue).padStart(4, "0");
+      candidate = `${prefix}-${year}-${paddedNumber}`;
+      exists = await this.prisma.ticket.findUnique({ where: { reference: candidate } });
+    }
+
+    return candidate;
   }
 
   async findAll(filters?: { status?: TicketStatus; typeId?: string; clientId?: string; search?: string }) {
