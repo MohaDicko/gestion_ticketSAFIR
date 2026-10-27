@@ -29,9 +29,10 @@ export interface CandidateRecommendation {
 export class RecommendationService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getRecommendationsForTicket(ticketId: string): Promise<CandidateRecommendation[]> {
-    const ticket = await this.prisma.ticket.findUnique({
-      where: { id: ticketId },
+  async getRecommendationsForTicket(ticketIdOrRef: string): Promise<CandidateRecommendation[]> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketIdOrRef);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: isUuid ? { id: ticketIdOrRef } : { reference: ticketIdOrRef },
       include: {
         skillRequirements: {
           include: { skill: true },
@@ -42,7 +43,7 @@ export class RecommendationService {
     });
 
     if (!ticket) {
-      throw new NotFoundException(`Ticket non trouvé`);
+      throw new NotFoundException(`Ticket '${ticketIdOrRef}' non trouvé`);
     }
 
     const devs = await this.prisma.developerProfile.findMany({
@@ -172,20 +173,25 @@ export class RecommendationService {
   }
 
   async assignTicket(
-    ticketId: string,
+    ticketIdOrRef: string,
     developerId: string,
     allocatedHours: number,
     assignedById: string,
     isOverride = false,
     overrideReason?: string,
   ) {
-    const ticket = await this.prisma.ticket.findUniqueOrThrow({ where: { id: ticketId } });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketIdOrRef);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: isUuid ? { id: ticketIdOrRef } : { reference: ticketIdOrRef },
+    });
+    if (!ticket) throw new NotFoundException(`Ticket '${ticketIdOrRef}' introuvable`);
+
     const dev = await this.prisma.developerProfile.findUniqueOrThrow({
       where: { id: developerId },
       include: { user: true },
     });
 
-    const recommendations = await this.getRecommendationsForTicket(ticketId);
+    const recommendations = await this.getRecommendationsForTicket(ticket.id);
     const candidateRec = recommendations.find((r) => r.developerId === developerId);
 
     const plannedStartDate = new Date();
@@ -195,7 +201,7 @@ export class RecommendationService {
       // 1. Créer l'affectation
       const assignment = await tx.assignment.create({
         data: {
-          ticketId,
+          ticketId: ticket.id,
           developerId,
           allocatedHours,
           remainingHours: allocatedHours,
@@ -211,7 +217,7 @@ export class RecommendationService {
 
       // 2. Mettre à jour le ticket vers ASSIGNED
       await tx.ticket.update({
-        where: { id: ticketId },
+        where: { id: ticket.id },
         data: {
           status: TicketStatus.ASSIGNED,
           plannedStartDate,
@@ -221,7 +227,7 @@ export class RecommendationService {
       // 3. Enregistrer l'historique
       await tx.ticketStatusHistory.create({
         data: {
-          ticketId,
+          ticketId: ticket.id,
           fromStatus: ticket.status,
           toStatus: TicketStatus.ASSIGNED,
           actorId: assignedById,

@@ -70,9 +70,10 @@ export class TicketsService {
     });
   }
 
-  async findOne(id: string) {
-    const ticket = await this.prisma.ticket.findUnique({
-      where: { id },
+  async findOne(idOrRef: string) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrRef);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: isUuid ? { id: idOrRef } : { reference: idOrRef },
       include: {
         type: true,
         priority: true,
