@@ -335,7 +335,19 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
    - Le consultant est alerté sur son espace, apporte sa réponse et peut lever automatiquement le blocage (`status: IN_PROGRESS`).
    - Aliko (Direction BU SME) supervise l'intégralité du dialogue dans sa modale de supervision pour arbitrer si nécessaire tout en conservant l'historique complet.
 
-5. **Sélecteur de Session Interactif (1-Clic)** :
+5. **Affectation Multi-Développeurs par Brique Technique SAP (Lots Spécialisés)** :
+   - **Répartition multi-niveaux par Aliko** : Capacité d'affecter plusieurs développeurs sur un même ticket complexe avec répartition par spécialité technique SAP :
+     - *Addon SAP B1 (UI / DI API / C# .NET)*
+     - *Intégration HANA & Vues SQLScript*
+     - *API & Service Layer (Node.js / OData / REST)*
+     - *ABAP Core & Extensions Cloud*
+     - *Architecture Fullstack & Intégration Système*
+     - *Recette Technique & Assurance Qualité (QA)*
+   - **Pilotage Individualisé du Reste à Faire (RAF)** : Chaque développeur affecté à son lot visualise sa brique dédiée sur son espace, déclare son RAF spécifique, qui met à jour instantanément la charge consolidée du projet.
+   - **Supervision 360° par Aliko** : Affichage d'un tableau synthétique de l'équipe mobilisée, des heures allouées et du pourcentage d'avancement par brique technique.
+   - **Transparence Consultant** : La consultante (Mélissa) visualise l'ensemble des développeurs mobilisés et leurs domaines techniques respectifs.
+
+6. **Sélecteur de Session Interactif (1-Clic)** :
    - Sélecteur de profil corporate intégré dans l'en-tête permettant de basculer instantanément entre Aliko, Anoop, Moha et Mélissa pour les besoins de validation, tests et démonstrations.
 
 ---
@@ -351,7 +363,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 - ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas des variables d'environnement).
 - ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
 - ✅ **Banc de Tests Unitaires & Métier Vitest** : 36 tests automatisés validés à 100% (36 PASS / 0 FAIL) couvrant le scoring sur 100 points, le calcul de capacité nette, la classification e-mails, la machine à états finis, le provisioning de consultants (login = email pro, hachage Argon2id) et l'onboarding dynamique de développeurs.
-- ✅ **Banc de Tests E2E Navigateur Playwright** : 11 scénarios complets sous Chromium (11 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC, les filtres, l'onboarding, la supervision continue d'Aliko, la visibilité du développeur dédié et de la progression par la consultante, ainsi que le dialogue direct avec déblocage automatique.
+- ✅ **Banc de Tests E2E Navigateur Playwright** : 12 scénarios complets sous Chromium (12 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC, les filtres, l'onboarding, la supervision continue d'Aliko, la visibilité du développeur dédié et de la progression par la consultante, le dialogue direct avec déblocage automatique, ainsi que l'affectation multi-développeurs par lot technique avec pilotage du reste à faire par brique.
 - ✅ **Audit de Sécurité OWASP ZAP & Top 10** : 11 contrôles validés à 100% (étanchéité des grants RBAC pour la création de comptes, absence de fuite de hachage de mot de passe, protection anti-usurpation Gmail, requêtage paramétré Prisma contre les injections SQL, en-têtes défensifs, script `run_owasp_zap_scan.ps1` et profil `zap-baseline.conf`).
 - ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 

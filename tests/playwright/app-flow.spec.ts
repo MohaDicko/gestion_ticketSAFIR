@@ -269,4 +269,49 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     // 8. Vérifier la prise en compte et le déblocage du ticket
     await expect(page.locator("body")).toContainText("Précision apportée par la consultante");
   });
+
+  test("12. Collaboration Multi-Développeurs par brique technique : Aliko affecte plusieurs devs à différents niveaux (Addon, HANA) et chaque dev pilote son lot", async ({ page }) => {
+    // 1. Connexion directe en tant que Hassane Bocoum (DEVELOPER — Spécialiste HANA)
+    await page.goto("/");
+    const userMenuBtn = page.getByRole("button", { name: /Connecter/i }).first();
+    await page.fill("input[type='email']", "hassane.bocoum@safirconsulting.net");
+    await page.fill("input[type='password']", "Safir2026!Hassane");
+    await page.getByRole("button", { name: /Se connecter à mon portail/i }).click();
+
+    // 2. Vérifier que Hassane est dans son espace développeur
+    await expect(page.locator("body")).toContainText("Espace Développeur — Hassane Bocoum");
+
+    // 3. Vérifier que Hassane voit le projet multi-développeurs avec sa brique HANA spécifique
+    await expect(page.locator("body")).toContainText("Multi-Développeurs");
+    await expect(page.locator("body")).toContainText("Votre Brique SAP");
+    await expect(page.locator("body")).toContainText("Intégration HANA & Vues SQLScript");
+    await expect(page.locator("body")).toContainText("Anoop Pandimukkula");
+
+    // 4. Hassane saisit le reste à faire sur son lot technique
+    await page.getByRole("button", { name: /Saisir Reste à Faire/i }).first().click();
+    await expect(page.getByText("Votre Lot")).toBeVisible();
+    await expect(page.locator("form").getByText("Intégration HANA & Vues SQLScript")).toBeVisible();
+
+    const rafInput = page.locator("input[type='number']");
+    await rafInput.fill("5");
+    await page.getByRole("button", { name: /Enregistrer/i }).click();
+    await expect(page.locator("body")).toContainText("Reste à faire mis à jour");
+
+    // 5. Déconnexion et Reconnexion en tant qu'Aliko (Direction HEAD)
+    const logoutBtn = page.getByRole("button", { name: /Déconnexion/i });
+    await logoutBtn.click();
+    await loginAsAliko(page);
+
+    // 6. Aliko ouvre la supervision du ticket collaboratif
+    const followBtn = page.getByRole("button", { name: /Suivre/i }).first();
+    await followBtn.click();
+
+    // 7. Vérifier la répartition par brique technique visible par Aliko
+    await expect(page.getByText("Équipe Projet Mobilisée & Lots Techniques")).toBeVisible();
+    const modal = page.locator(".fixed");
+    await expect(modal.getByText("Anoop Pandimukkula").first()).toBeVisible();
+    await expect(modal.getByText("Hassane Bocoum").first()).toBeVisible();
+    await expect(modal.getByText("Addon SAP B1 (UI/DI API)").first()).toBeVisible();
+    await expect(modal.getByText("Intégration HANA & Vues SQLScript").first()).toBeVisible();
+  });
 });

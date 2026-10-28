@@ -69,6 +69,18 @@ interface Developer {
   skills: Skill[];
 }
 
+interface TicketLotContributor {
+  id: string;
+  developerId: string;
+  developerName: string;
+  developerEmail: string;
+  lotRole: string;
+  lotLabel: string;
+  estimatedHours: number;
+  remainingHours: number;
+  status?: "ASSIGNED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETED";
+}
+
 interface Ticket {
   id: string;
   reference: string;
@@ -90,6 +102,7 @@ interface Ticket {
   } | null;
   createdAt?: string;
   messages?: TicketMessage[];
+  contributors?: TicketLotContributor[];
 }
 
 interface InboxEmail {
@@ -117,6 +130,16 @@ interface AuthUser {
   developerId?: string;
   initials: string;
 }
+
+// Rôles et Briques Techniques pour la multi-affectation par lot
+const TECHNICAL_LOT_ROLES = [
+  { value: "ADDON_B1", label: "Addon SAP Business One (UI/DI API)", defaultHours: 14 },
+  { value: "HANA_DB", label: "Intégration HANA & Vues SQLScript", defaultHours: 10 },
+  { value: "SERVICE_LAYER", label: "Passerelle REST Service Layer & API", defaultHours: 12 },
+  { value: "ABAP_CORE", label: "Développement ABAP Core & CDS Views", defaultHours: 12 },
+  { value: "FULLSTACK_ARCH", label: "Architecture Solution & Frontend React/Next", defaultHours: 10 },
+  { value: "TESTING_QA", label: "Recette Technique & Tests d'Intégration", defaultHours: 6 }
+];
 
 // Référentiel des utilisateurs pour le contrôle d'accès RBAC
 interface ConsultantProfile {
@@ -328,6 +351,30 @@ const INITIAL_TICKETS: Ticket[] = [
         message: "Bien noté Mélissa ! La maquette UI API est en place, nous branchons la validation Service Layer.",
         timestamp: "2026-10-26 à 10:15"
       }
+    ],
+    contributors: [
+      {
+        id: "contrib-1-1",
+        developerId: "dev-anoop",
+        developerName: "Anoop Pandimukkula",
+        developerEmail: "anoop.pandimukkula@safirconsulting.net",
+        lotRole: "ADDON_B1",
+        lotLabel: "Addon SAP B1 (UI/DI API)",
+        estimatedHours: 14,
+        remainingHours: 6,
+        status: "IN_PROGRESS"
+      },
+      {
+        id: "contrib-1-2",
+        developerId: "dev-hassane",
+        developerName: "Hassane Bocoum",
+        developerEmail: "hassane.bocoum@safirconsulting.net",
+        lotRole: "HANA_DB",
+        lotLabel: "Intégration HANA & Vues SQLScript",
+        estimatedHours: 10,
+        remainingHours: 8,
+        status: "IN_PROGRESS"
+      }
     ]
   },
   {
@@ -467,6 +514,13 @@ export default function TicketManagerPage() {
 
   const [assigningTicket, setAssigningTicket] = useState<Ticket | null>(null);
   const [selectedDevId, setSelectedDevId] = useState("");
+  // Affectation Multi-Développeurs par lot technique
+  const [isMultiDevAssignment, setIsMultiDevAssignment] = useState(false);
+  const [leadLotRole, setLeadLotRole] = useState("ADDON_B1");
+  const [leadHours, setLeadHours] = useState(14);
+  const [coDevId, setCoDevId] = useState("");
+  const [coDevLotRole, setCoDevLotRole] = useState("HANA_DB");
+  const [coDevHours, setCoDevHours] = useState(10);
 
   // Modale Reste à Faire (RAF)
   const [editingRafTicket, setEditingRafTicket] = useState<Ticket | null>(null);
@@ -595,14 +649,22 @@ export default function TicketManagerPage() {
     };
   }, [developers, tickets, emails]);
 
-  // Tickets filtrés pour le développeur connecté
+  // Tickets filtrés pour le développeur connecté (Affectation directe ou Lot multi-développeurs)
   const myAssignedTickets = useMemo(() => {
     if (!currentUser || currentUser.role !== "DEVELOPER") return [];
-    return tickets.filter(
-      (t) =>
+    return tickets.filter((t) => {
+      const isLead =
         t.assignedDeveloper?.email?.toLowerCase() === currentUser.email.toLowerCase() ||
-        t.assignedDeveloper?.id === currentUser.developerId
-    );
+        t.assignedDeveloper?.id === currentUser.developerId;
+      const isContributor =
+        t.contributors &&
+        t.contributors.some(
+          (c) =>
+            c.developerEmail.toLowerCase() === currentUser.email.toLowerCase() ||
+            c.developerId === currentUser.developerId
+        );
+      return isLead || isContributor;
+    });
   }, [tickets, currentUser]);
 
   // Tickets émis par la consultante
@@ -627,22 +689,48 @@ export default function TicketManagerPage() {
     });
   }, [tickets, searchQuery, statusFilter]);
 
-  // Actions métier Développeur : Mise à jour du Reste à Faire (RAF)
+  // Actions métier Développeur : Mise à jour du Reste à Faire (RAF Mono ou Lot Multi-Développeurs)
   const handleUpdateRaf = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRafTicket) return;
 
     setTickets((prev) =>
-      prev.map((t) =>
-        t.id === editingRafTicket.id
-          ? {
-              ...t,
-              remainingHours: newRemainingHours,
-              status: t.status === "ASSIGNED" ? "IN_PROGRESS" : t.status
-            }
-          : t
-      )
+      prev.map((t) => {
+        if (t.id !== editingRafTicket.id) return t;
+
+        let updatedContributors = t.contributors;
+        let updatedRemainingHours = newRemainingHours;
+
+        if (t.contributors && currentUser) {
+          const userContrib = t.contributors.find(
+            (c) =>
+              c.developerId === currentUser.developerId ||
+              c.developerEmail.toLowerCase() === currentUser.email.toLowerCase()
+          );
+          if (userContrib) {
+            updatedContributors = t.contributors.map((c) =>
+              c.id === userContrib.id
+                ? {
+                    ...c,
+                    remainingHours: newRemainingHours,
+                    status: newRemainingHours === 0 ? ("COMPLETED" as const) : ("IN_PROGRESS" as const)
+                  }
+                : c
+            );
+            // Recalcul du reste à faire global consolidé
+            updatedRemainingHours = updatedContributors.reduce((sum, c) => sum + (c.remainingHours || 0), 0);
+          }
+        }
+
+        return {
+          ...t,
+          remainingHours: updatedRemainingHours,
+          contributors: updatedContributors,
+          status: t.status === "ASSIGNED" ? "IN_PROGRESS" : t.status
+        };
+      })
     );
+
     showToast(`Reste à faire mis à jour : ${newRemainingHours} h sur ${editingRafTicket.reference}`);
     setEditingRafTicket(null);
   };
@@ -965,7 +1053,7 @@ export default function TicketManagerPage() {
     showToast(`Compte Consultant créé ! Login : ${emailLower} | Mot de passe : ${initialPass}`);
   };
 
-  // Action HEAD : Affecter développeur
+  // Action HEAD : Affecter développeur (Support Mono-développeur ou Équipe Multi-développeurs par lot)
   const handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!assigningTicket || !selectedDevId) return;
@@ -973,34 +1061,93 @@ export default function TicketManagerPage() {
     const dev = developers.find((d) => d.id === selectedDevId);
     if (!dev) return;
 
+    const leadLotObj = TECHNICAL_LOT_ROLES.find((r) => r.value === leadLotRole);
+    const coLotObj = TECHNICAL_LOT_ROLES.find((r) => r.value === coDevLotRole);
+    const coDev = isMultiDevAssignment && coDevId ? developers.find((d) => d.id === coDevId) : null;
+
+    const totalEstHours = isMultiDevAssignment && coDev
+      ? Number(leadHours) + Number(coDevHours)
+      : assigningTicket.estimatedHours;
+
+    const contributorsList: TicketLotContributor[] | undefined = isMultiDevAssignment && coDev
+      ? [
+          {
+            id: `contrib-${Date.now()}-1`,
+            developerId: dev.id,
+            developerName: dev.name,
+            developerEmail: dev.email,
+            lotRole: leadLotRole,
+            lotLabel: leadLotObj?.label || "Lead Développeur SAP",
+            estimatedHours: Number(leadHours) || 14,
+            remainingHours: Number(leadHours) || 14,
+            status: "IN_PROGRESS"
+          },
+          {
+            id: `contrib-${Date.now()}-2`,
+            developerId: coDev.id,
+            developerName: coDev.name,
+            developerEmail: coDev.email,
+            lotRole: coDevLotRole,
+            lotLabel: coLotObj?.label || "Spécialiste Brique SAP",
+            estimatedHours: Number(coDevHours) || 10,
+            remainingHours: Number(coDevHours) || 10,
+            status: "IN_PROGRESS"
+          }
+        ]
+      : undefined;
+
     setTickets((prev) =>
       prev.map((t) =>
         t.id === assigningTicket.id
           ? {
               ...t,
               status: "ASSIGNED",
-              assignedDeveloper: { id: dev.id, name: dev.name, email: dev.email }
+              estimatedHours: totalEstHours,
+              remainingHours: totalEstHours,
+              assignedDeveloper: { id: dev.id, name: dev.name, email: dev.email },
+              contributors: contributorsList
             }
           : t
       )
     );
 
+    // Mettre à jour la capacité réservée des développeurs
     setDevelopers((prev) =>
-      prev.map((d) =>
-        d.id === dev.id
-          ? {
-              ...d,
-              reservedHours: d.reservedHours + assigningTicket.estimatedHours,
-              freeHours: Math.max(0, d.freeHours - assigningTicket.estimatedHours),
-              loadPercentage: Math.min(100, Math.round(((d.reservedHours + assigningTicket.estimatedHours) / d.netWeeklyHours) * 100))
-            }
-          : d
-      )
+      prev.map((d) => {
+        if (d.id === dev.id) {
+          const addedHours = isMultiDevAssignment && coDev ? Number(leadHours) : assigningTicket.estimatedHours;
+          const newRes = d.reservedHours + addedHours;
+          return {
+            ...d,
+            reservedHours: newRes,
+            freeHours: Math.max(0, d.freeHours - addedHours),
+            loadPercentage: Math.min(100, Math.round((newRes / d.netWeeklyHours) * 100))
+          };
+        }
+        if (coDev && d.id === coDev.id) {
+          const addedHours = Number(coDevHours);
+          const newRes = d.reservedHours + addedHours;
+          return {
+            ...d,
+            reservedHours: newRes,
+            freeHours: Math.max(0, d.freeHours - addedHours),
+            loadPercentage: Math.min(100, Math.round((newRes / d.netWeeklyHours) * 100))
+          };
+        }
+        return d;
+      })
     );
 
-    showToast(`Ticket ${assigningTicket.reference} affecté à ${dev.name}`);
+    if (isMultiDevAssignment && coDev) {
+      showToast(`Projet ${assigningTicket.reference} affecté à l'équipe : ${dev.name} (${leadLotObj?.label.split(" ")[0]}) + ${coDev.name} (${coLotObj?.label.split(" ")[0]})`);
+    } else {
+      showToast(`Ticket ${assigningTicket.reference} affecté à ${dev.name}`);
+    }
+
     setAssigningTicket(null);
     setSelectedDevId("");
+    setIsMultiDevAssignment(false);
+    setCoDevId("");
   };
 
   // Calcul de la progression visuelle du ticket jusqu'à résolution complète
@@ -1554,52 +1701,97 @@ export default function TicketManagerPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {myAssignedTickets.map((ticket) => (
-                    <div key={ticket.id} className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="space-y-1.5 flex-1 max-w-2xl">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono font-bold text-slate-900 text-sm">{ticket.reference}</span>
-                          <span className="px-2 py-0.5 rounded text-xs font-mono bg-slate-100 text-slate-700">
-                            {ticket.typeCode}
-                          </span>
-                          {renderStatusBadge(ticket.status)}
-                        </div>
+                  {myAssignedTickets.map((ticket) => {
+                    const myContributorLot = ticket.contributors?.find(
+                      (c) =>
+                        c.developerId === currentUser.developerId ||
+                        c.developerEmail.toLowerCase() === currentUser.email.toLowerCase()
+                    );
+                    const otherContributors = ticket.contributors?.filter(
+                      (c) => c.id !== myContributorLot?.id
+                    );
 
-                        <div className="font-semibold text-slate-900 text-sm">{ticket.title}</div>
-                        {ticket.description && (
-                          <p className="text-xs text-slate-600">{ticket.description}</p>
-                        )}
-
-                        {/* Motif de blocage si présent */}
-                        {ticket.status === "BLOCKED" && ticket.blockerReason && (
-                          <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
-                            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                            <div>
-                              <span className="font-semibold">Blocage signalé : </span>
-                              {ticket.blockerReason}
-                            </div>
+                    return (
+                      <div key={ticket.id} className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="space-y-2 flex-1 max-w-2xl">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-slate-900 text-sm">{ticket.reference}</span>
+                            <span className="px-2 py-0.5 rounded text-xs font-mono bg-slate-100 text-slate-700">
+                              {ticket.typeCode}
+                            </span>
+                            {renderStatusBadge(ticket.status)}
+                            {ticket.contributors && ticket.contributors.length > 1 && (
+                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                👥 Multi-Développeurs ({ticket.contributors.length} lots)
+                              </span>
+                            )}
                           </div>
-                        )}
 
-                        <div className="text-xs text-slate-500 flex items-center gap-4 pt-1">
-                          <span>Demandeur : <strong className="text-slate-700">{ticket.applicantName}</strong></span>
-                          <span>Client : <strong className="text-slate-700">{ticket.clientCompany}</strong></span>
-                          <span>Estimation initiale : <strong className="text-slate-700">{ticket.estimatedHours} h</strong></span>
-                          <span>Reste à faire : <strong className="text-sky-700">{ticket.remainingHours ?? ticket.estimatedHours} h</strong></span>
+                          <div className="font-semibold text-slate-900 text-sm">{ticket.title}</div>
+                          {ticket.description && (
+                            <p className="text-xs text-slate-600">{ticket.description}</p>
+                          )}
+
+                          {/* Cartouche Brique / Lot attribué au développeur connecté */}
+                          {myContributorLot && (
+                            <div className="p-2.5 rounded-lg bg-indigo-50/80 border border-indigo-200 text-xs text-indigo-950 space-y-1">
+                              <div className="flex items-center justify-between flex-wrap gap-1">
+                                <span className="font-bold flex items-center gap-1.5">
+                                  <span className="px-1.5 py-0.5 rounded bg-indigo-200 text-indigo-950 text-[10px] font-mono font-bold uppercase">
+                                    Votre Brique SAP
+                                  </span>
+                                  <span>{myContributorLot.lotLabel}</span>
+                                </span>
+                                <span className="font-mono font-bold text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200">
+                                  RAF Lot : {myContributorLot.remainingHours} h / {myContributorLot.estimatedHours} h
+                                </span>
+                              </div>
+                              {otherContributors && otherContributors.length > 0 && (
+                                <div className="text-[11px] text-indigo-700 flex items-center gap-1 pt-0.5">
+                                  <span>Co-développeur(s) sur ce projet :</span>
+                                  <strong className="text-indigo-950">
+                                    {otherContributors.map((c) => `${c.developerName} (${c.lotLabel.split(" ")[0]})`).join(", ")}
+                                  </strong>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Motif de blocage si présent */}
+                          {ticket.status === "BLOCKED" && ticket.blockerReason && (
+                            <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-semibold">Blocage signalé : </span>
+                                {ticket.blockerReason}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="text-xs text-slate-500 flex items-center gap-4 pt-1 flex-wrap">
+                            <span>Demandeur : <strong className="text-slate-700">{ticket.applicantName}</strong></span>
+                            <span>Client : <strong className="text-slate-700">{ticket.clientCompany}</strong></span>
+                            <span>Charge totale : <strong className="text-slate-700">{ticket.estimatedHours} h</strong></span>
+                            <span>RAF global : <strong className="text-sky-700">{ticket.remainingHours ?? ticket.estimatedHours} h</strong></span>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Actions Développeur */}
-                      <div className="flex items-center gap-2 flex-wrap md:flex-nowrap shrink-0">
-                        <button
-                          onClick={() => {
-                            setEditingRafTicket(ticket);
-                            setNewRemainingHours(ticket.remainingHours ?? ticket.estimatedHours);
-                          }}
-                          className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors border border-slate-200"
-                        >
-                          Saisir Reste à Faire (RAF)
-                        </button>
+                        {/* Actions Développeur */}
+                        <div className="flex items-center gap-2 flex-wrap md:flex-nowrap shrink-0">
+                          <button
+                            onClick={() => {
+                              setEditingRafTicket(ticket);
+                              const myLot = ticket.contributors?.find(
+                                (c) =>
+                                  c.developerId === currentUser.developerId ||
+                                  c.developerEmail.toLowerCase() === currentUser.email.toLowerCase()
+                              );
+                              setNewRemainingHours(myLot ? myLot.remainingHours : (ticket.remainingHours ?? ticket.estimatedHours));
+                            }}
+                            className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors border border-slate-200 cursor-pointer"
+                          >
+                            Saisir Reste à Faire (RAF)
+                          </button>
 
                         {ticket.status === "BLOCKED" ? (
                           <button
@@ -1635,7 +1827,8 @@ export default function TicketManagerPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
               )}
             </div>
@@ -1755,19 +1948,33 @@ export default function TicketManagerPage() {
 
                         {/* Cartouche Développeur Dédié & Progression en temps réel */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                          {/* 1. Développeur en charge */}
+                          {/* 1. Développeur(s) en charge */}
                           <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-800 font-bold flex items-center justify-center text-xs shrink-0 border border-sky-200">
-                              {ticket.assignedDeveloper ? ticket.assignedDeveloper.name.split(" ").map((n) => n[0]).join("") : "?"}
+                              {ticket.contributors && ticket.contributors.length > 1
+                                ? "👥"
+                                : ticket.assignedDeveloper
+                                ? ticket.assignedDeveloper.name.split(" ").map((n) => n[0]).join("")
+                                : "?"}
                             </div>
                             <div className="min-w-0">
-                              <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Développeur Dédié</div>
-                              <div className="text-xs font-bold text-slate-900 truncate">
-                                {ticket.assignedDeveloper ? ticket.assignedDeveloper.name : "En cours d'affectation par Aliko"}
+                              <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
+                                {ticket.contributors && ticket.contributors.length > 1
+                                  ? `Équipe Multi-Développeurs (${ticket.contributors.length} briques)`
+                                  : "Développeur Dédié"}
                               </div>
-                              {ticket.assignedDeveloper && (
-                                <div className="text-[11px] text-slate-500 truncate">{ticket.assignedDeveloper.email}</div>
-                              )}
+                              <div className="text-xs font-bold text-slate-900 truncate">
+                                {ticket.contributors && ticket.contributors.length > 1
+                                  ? ticket.contributors.map((c) => `${c.developerName.split(" ")[0]} (${c.lotLabel.split(" ")[0]})`).join(" + ")
+                                  : ticket.assignedDeveloper
+                                  ? ticket.assignedDeveloper.name
+                                  : "En cours d'affectation par Aliko"}
+                              </div>
+                              <div className="text-[11px] text-slate-500 truncate">
+                                {ticket.contributors && ticket.contributors.length > 1
+                                  ? ticket.contributors.map((c) => c.developerEmail).join(", ")
+                                  : ticket.assignedDeveloper?.email}
+                              </div>
                             </div>
                           </div>
 
@@ -2521,9 +2728,32 @@ export default function TicketManagerPage() {
                 <div className="text-slate-700 font-medium truncate mt-0.5">{editingRafTicket.title}</div>
               </div>
 
+              {editingRafTicket.contributors && currentUser && (
+                (() => {
+                  const myLot = editingRafTicket.contributors.find(
+                    (c) =>
+                      c.developerId === currentUser.developerId ||
+                      c.developerEmail.toLowerCase() === currentUser.email.toLowerCase()
+                  );
+                  return myLot ? (
+                    <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs text-indigo-950 space-y-0.5">
+                      <div className="font-bold flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.2 rounded bg-indigo-200 text-indigo-950 text-[10px] font-mono uppercase">
+                          Votre Lot
+                        </span>
+                        <span>{myLot.lotLabel}</span>
+                      </div>
+                      <div className="text-[11px] text-indigo-700">
+                        Charge initiale allouée : <strong>{myLot.estimatedHours} heures</strong>
+                      </div>
+                    </div>
+                  ) : null;
+                })()
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nombre d'heures restantes estimées :
+                  Nombre d'heures restantes estimées (RAF) :
                 </label>
                 <input
                   type="number"
@@ -2762,7 +2992,7 @@ export default function TicketManagerPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Sélectionner un développeur disponible
+                  {isMultiDevAssignment ? "Lead Développeur (Pilote technique) *" : "Sélectionner un développeur disponible *"}
                 </label>
                 <select
                   required
@@ -2779,9 +3009,125 @@ export default function TicketManagerPage() {
                 </select>
               </div>
 
+              {/* Option Multi-Développeurs / Répartition par Lots */}
+              <div className="pt-2 border-t border-slate-200">
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isMultiDevAssignment}
+                    onChange={(e) => setIsMultiDevAssignment(e.target.checked)}
+                    className="rounded text-sky-600 focus:ring-sky-500"
+                  />
+                  <span>👥 Affectation Multi-Développeurs (Répartir en plusieurs briques techniques)</span>
+                </label>
+                <p className="text-[11px] text-slate-500 mt-0.5 ml-5">
+                  Associez plusieurs développeurs sur des spécialités distinctes (Addon, HANA, API...).
+                </p>
+              </div>
+
+              {isMultiDevAssignment && (
+                <div className="p-3.5 bg-sky-50/70 border border-sky-200 rounded-xl space-y-3 animate-in fade-in">
+                  {/* Brique du Lead Développeur */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-sky-950 mb-1">
+                        Brique Lead Développeur
+                      </label>
+                      <select
+                        value={leadLotRole}
+                        onChange={(e) => setLeadLotRole(e.target.value)}
+                        className="w-full text-xs p-1.5 border border-sky-300 rounded-lg bg-white"
+                      >
+                        {TECHNICAL_LOT_ROLES.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-sky-950 mb-1">
+                        Heures Lead
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={leadHours}
+                        onChange={(e) => setLeadHours(Number(e.target.value))}
+                        className="w-full text-xs p-1.5 border border-sky-300 rounded-lg bg-white font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Co-développeur 2 */}
+                  <div className="space-y-2 pt-2 border-t border-sky-200">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-sky-950 mb-1">
+                        Second Développeur Collaborateur *
+                      </label>
+                      <select
+                        required={isMultiDevAssignment}
+                        value={coDevId}
+                        onChange={(e) => setCoDevId(e.target.value)}
+                        className="w-full text-xs p-1.5 border border-sky-300 rounded-lg bg-white"
+                      >
+                        <option value="">-- Choisir le 2ᵉ développeur --</option>
+                        {developers
+                          .filter((d) => d.id !== selectedDevId)
+                          .map((dev) => (
+                            <option key={dev.id} value={dev.id}>
+                              {dev.name} ({dev.freeHours} h libres — {dev.jobTitle})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-sky-950 mb-1">
+                          Brique Technique Dédiée
+                        </label>
+                        <select
+                          value={coDevLotRole}
+                          onChange={(e) => setCoDevLotRole(e.target.value)}
+                          className="w-full text-xs p-1.5 border border-sky-300 rounded-lg bg-white"
+                        >
+                          {TECHNICAL_LOT_ROLES.map((r) => (
+                            <option key={r.value} value={r.value}>
+                              {r.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-sky-950 mb-1">
+                          Heures Allouées
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={coDevHours}
+                          onChange={(e) => setCoDevHours(Number(e.target.value))}
+                          className="w-full text-xs p-1.5 border border-sky-300 rounded-lg bg-white font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] font-semibold text-sky-900 flex justify-between items-center pt-1">
+                      <span>Total Charge Consolidée :</span>
+                      <span className="font-mono bg-sky-200/80 px-2 py-0.5 rounded text-sky-950 font-bold">
+                        {Number(leadHours) + Number(coDevHours)} heures
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">
                 <div className="font-medium text-slate-800">Notification automatique :</div>
-                <p>Un e-mail de notification officiel sera envoyé au développeur sur sa messagerie Safir Consulting.</p>
+                <p>Un e-mail de notification officiel sera envoyé à chaque collaborateur sur sa messagerie Safir Consulting.</p>
               </div>
 
               <div className="pt-2 border-t border-slate-200 flex items-center justify-end gap-2">
@@ -2794,8 +3140,8 @@ export default function TicketManagerPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!selectedDevId}
-                  className="px-4 py-1.5 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 disabled:opacity-50 rounded-lg shadow-sm"
+                  disabled={!selectedDevId || (isMultiDevAssignment && !coDevId)}
+                  className="px-4 py-1.5 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 disabled:opacity-50 rounded-lg shadow-sm cursor-pointer"
                 >
                   Valider l'affectation
                 </button>
@@ -3293,6 +3639,46 @@ export default function TicketManagerPage() {
                   <strong className="text-slate-800">{supervisingTicket.clientCompany || "Safir Consulting"}</strong>
                 </div>
               </div>
+
+              {/* Répartition de l'Équipe Projet par Brique Technique */}
+              {supervisingTicket.contributors && supervisingTicket.contributors.length > 0 && (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-sky-700" />
+                      <span>Équipe Projet Mobilisée & Lots Techniques ({supervisingTicket.contributors.length} Développeurs)</span>
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-sky-900 bg-sky-100 px-2 py-0.5 rounded border border-sky-200">
+                      Multi-Lots SAP
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {supervisingTicket.contributors.map((contrib) => {
+                      const done = Math.max(0, contrib.estimatedHours - contrib.remainingHours);
+                      const pct = contrib.estimatedHours > 0 ? Math.round((done / contrib.estimatedHours) * 100) : 0;
+                      return (
+                        <div key={contrib.id} className="p-3 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900 text-xs">{contrib.developerName}</span>
+                            <span className="font-mono text-[10px] font-bold text-sky-800 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
+                              {pct}%
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-700 font-medium">{contrib.lotLabel}</div>
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
+                            <div className="bg-sky-600 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
+                            <span>Estimé : {contrib.estimatedHours} h</span>
+                            <span>RAF : <strong className="text-sky-700">{contrib.remainingHours} h</strong></span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Fil d'Échange Développeur ↔ Consultant & Direction dans la Modale de Supervision */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
