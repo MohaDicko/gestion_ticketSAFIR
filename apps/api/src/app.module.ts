@@ -13,6 +13,8 @@ import { RecommendationService } from "./recommendation/recommendation.service";
 import { RecommendationController } from "./recommendation/recommendation.controller";
 import { EmailsService } from "./emails/emails.service";
 import { EmailsController } from "./emails/emails.controller";
+import { ConsultantsService } from "./consultants/consultants.service";
+import { ConsultantsController } from "./consultants/consultants.controller";
 
 @Module({
   imports: [
@@ -31,6 +33,7 @@ import { EmailsController } from "./emails/emails.controller";
     TicketsController,
     RecommendationController,
     EmailsController,
+    ConsultantsController,
   ],
   providers: [
     AuthService,
@@ -38,6 +41,7 @@ import { EmailsController } from "./emails/emails.controller";
     TicketsService,
     RecommendationService,
     EmailsService,
+    ConsultantsService,
   ],
 })
 export class AppModule {}

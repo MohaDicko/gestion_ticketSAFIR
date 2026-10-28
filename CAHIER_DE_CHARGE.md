@@ -164,6 +164,13 @@ Pour accompagner l'agrandissement futur de la SME Business Unit, la plateforme p
 - Évaluation de la compétence clé d'entrée (Niveaux 1 à 5).
 Le profil est instantanément injecté dans le référentiel d'équipe, mis à jour dans le tableau de bord de capacité et éligible au moteur de scoring d'affectation.
 
+### 5.3. Création & Provisioning des Profils Consultants Fonctionnels
+Aliko Getheme dispose également de l'habilitation exclusive pour intégrer de nouveaux **Consultants Fonctionnels** dans l'application :
+- **Attribution des identifiants (Login)** : L'adresse e-mail professionnelle déclarée (ex: `@safirconsulting.net`) constitue le login unique de connexion par défaut.
+- **Mot de passe initial sécurisé** : Saisie d'un mot de passe initial de connexion (chiffré via l'algorithme robuste **Argon2id**).
+- **Rattachement organisationnel & Spécialité** : Précision de l'organisation (*Safir Consulting* ou cabinet partenaire) et de sa spécialité SAP (ex: *FI/CO, Supply Chain, WMS, Achats*).
+Dès sa création, le consultant peut se connecter immédiatement à son espace dédié pour émettre de nouveaux besoins SAP, transmettre des spécifications fonctionnelles et suivre en temps réel la réalisation technique par l'équipe de développement.
+
 ---
 
 ## 6. MOTEUR DE CALCUL DE CAPACITÉ NETTE (SANS DOUBLE DÉCOMPTE)
@@ -290,6 +297,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 | **Suivi Transparent de ses Demandes Émises** | ✅ | ❌ | ✅ | ✅ |
 | **Formulaire de Soumission Directe de Nouveau Besoin** | ✅ | ❌ | ✅ | ✅ |
 | **Intégration d'un Nouveau Développeur (Onboarding Équipe)** | ✅ | ❌ | ❌ | ✅ |
+| **Création de Profils Consultants & Attribution des Logins** | ✅ | ❌ | ❌ | ✅ |
 | **Validation Clôture Définitive (`CLOSED`)** | ✅ | ❌ | ❌ | ❌ |
 | **Pondération des Critères de Scoring & Règle Métier** | ✅ | ❌ | ❌ | ✅ |
 | **Journal d'Audit Immuable & Traçabilité** | ✅ | ❌ | ❌ | ✅ |

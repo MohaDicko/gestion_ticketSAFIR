@@ -109,8 +109,8 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
     await page.goto("/");
     await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
 
-    // Vérifier présence du bouton Ajouter un Développeur
-    const addDevBtn = page.getByRole("button", { name: /Ajouter un Développeur/i });
+    // Vérifier présence du bouton + Développeur
+    const addDevBtn = page.getByRole("button", { name: /\+ Développeur/i });
     await expect(addDevBtn).toBeVisible();
     await addDevBtn.click();
 
@@ -128,5 +128,34 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
     // Vérifier la présence du nouveau développeur dans la grille
     await expect(page.locator("body")).toContainText("Amadou Coulibaly");
     await expect(page.locator("body")).toContainText("amadou.coulibaly@safirconsulting.net");
+  });
+
+  test("8. Permet à Aliko (HEAD) de créer un profil Consultant avec login et mot de passe", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+
+    // Clic sur le bouton + Consultant
+    const addConsultantBtn = page.getByRole("button", { name: /\+ Consultant/i });
+    await expect(addConsultantBtn).toBeVisible();
+    await addConsultantBtn.click();
+
+    // Vérifier l'apparition de la modale de création consultant
+    await expect(page.getByText("Créer un Profil Consultant SAP")).toBeVisible();
+    await expect(page.getByText(/Login de connexion/i)).toBeVisible();
+
+    // Remplir les informations du nouveau consultant
+    await page.getByPlaceholder("ex : Ibrahima").fill("Ibrahima");
+    await page.getByPlaceholder("ex : Koné").fill("Koné");
+    await page.getByPlaceholder("ibrahima.kone@safirconsulting.net").fill("ibrahima.kone@safirconsulting.net");
+
+    // Valider la création
+    await page.getByRole("button", { name: /Créer le Compte Consultant/i }).click();
+
+    // Basculer sur la sous-vue Consultants
+    await page.getByRole("button", { name: /Consultants Fonctionnels/i }).click();
+
+    // Vérifier l'affichage du consultant et de son login
+    await expect(page.locator("body")).toContainText("Ibrahima Koné");
+    await expect(page.locator("body")).toContainText("ibrahima.kone@safirconsulting.net");
   });
 });

@@ -27,7 +27,8 @@ import {
   Play,
   Check,
   ChevronDown,
-  UserPlus
+  UserPlus,
+  Key
 } from "lucide-react";
 
 const API_BASE = "/api/v1";
@@ -100,6 +101,26 @@ interface AuthUser {
 }
 
 // Référentiel des utilisateurs pour le contrôle d'accès RBAC
+interface ConsultantProfile {
+  id: string;
+  name: string;
+  email: string;
+  organization: string;
+  speciality: string;
+  demandsCount: number;
+}
+
+const INITIAL_CONSULTANTS: ConsultantProfile[] = [
+  {
+    id: "consultant-melissa",
+    name: "Mélissa Diakité",
+    email: "melissa.diakite@safirconsulting.net",
+    organization: "Safir Consulting",
+    speciality: "Consultante Fonctionnelle SAP B1 & S/4HANA",
+    demandsCount: 2
+  }
+];
+
 const SYSTEM_USERS: AuthUser[] = [
   {
     id: "user-aliko",
@@ -362,6 +383,7 @@ const INITIAL_EMAILS: InboxEmail[] = [
 
 export default function TicketManagerPage() {
   // Gestion de la session et authentification RBAC
+  const [systemUsers, setSystemUsers] = useState<AuthUser[]>(SYSTEM_USERS);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(SYSTEM_USERS[0]); // Aliko par défaut
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -373,9 +395,11 @@ export default function TicketManagerPage() {
 
   // Navigation
   const [activeTab, setActiveTab] = useState<"dashboard" | "tickets" | "developers" | "inbox" | "my-tickets" | "my-demands">("dashboard");
+  const [teamSubTab, setTeamSubTab] = useState<"devs" | "consultants">("devs");
 
   // Données
   const [developers, setDevelopers] = useState<Developer[]>(INITIAL_DEVELOPERS);
+  const [consultants, setConsultants] = useState<ConsultantProfile[]>(INITIAL_CONSULTANTS);
   const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
   const [emails, setEmails] = useState<InboxEmail[]>(INITIAL_EMAILS);
   const [loading, setLoading] = useState(false);
@@ -415,6 +439,15 @@ export default function TicketManagerPage() {
   const [newDevSkillCategory, setNewDevSkillCategory] = useState("SAP");
   const [newDevSkillName, setNewDevSkillName] = useState("SAP Business One — Service Layer");
   const [newDevSkillLevel, setNewDevSkillLevel] = useState(4);
+
+  // Modale Ajout de Consultant (Direction HEAD)
+  const [showAddConsultantModal, setShowAddConsultantModal] = useState(false);
+  const [newConsultantFirstName, setNewConsultantFirstName] = useState("");
+  const [newConsultantLastName, setNewConsultantLastName] = useState("");
+  const [newConsultantEmail, setNewConsultantEmail] = useState("");
+  const [newConsultantOrg, setNewConsultantOrg] = useState("Safir Consulting");
+  const [newConsultantSpeciality, setNewConsultantSpeciality] = useState("Consultante Fonctionnelle SAP Supply Chain & FI/CO");
+  const [newConsultantPassword, setNewConsultantPassword] = useState("Safir2026!Consultant");
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -464,7 +497,7 @@ export default function TicketManagerPage() {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
-    const found = SYSTEM_USERS.find(
+    const found = systemUsers.find(
       (u) => u.email.toLowerCase() === loginEmail.trim().toLowerCase()
     );
     if (!found) {
@@ -681,6 +714,62 @@ export default function TicketManagerPage() {
     setNewDevLastName("");
     setNewDevEmail("");
     showToast(`Développeur ${newDevObj.name} intégré avec succès dans l'équipe Safir !`);
+  };
+
+  // Action HEAD : Intégrer un nouveau Consultant avec identifiants (Login/Password)
+  const handleAddConsultant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newConsultantFirstName.trim() || !newConsultantLastName.trim() || !newConsultantEmail.trim()) {
+      showToast("Veuillez renseigner le prénom, nom et l'e-mail professionnel");
+      return;
+    }
+
+    const emailLower = newConsultantEmail.trim().toLowerCase();
+    const fullName = `${newConsultantFirstName.trim()} ${newConsultantLastName.trim()}`;
+    const initialPass = newConsultantPassword.trim() || "Safir2026!Consultant";
+
+    const newConsultantObj: ConsultantProfile = {
+      id: `consultant-${Date.now()}`,
+      name: fullName,
+      email: emailLower,
+      organization: newConsultantOrg.trim() || "Safir Consulting",
+      speciality: newConsultantSpeciality.trim(),
+      demandsCount: 0,
+    };
+
+    const newAuthUser: AuthUser = {
+      id: `user-${Date.now()}`,
+      name: fullName,
+      email: emailLower,
+      role: "CONSULTANT",
+      roleLabel: newConsultantSpeciality.trim(),
+      initials: `${newConsultantFirstName[0]}${newConsultantLastName[0]}`.toUpperCase(),
+    };
+
+    try {
+      await fetch(`${API_BASE}/consultants`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: newConsultantFirstName.trim(),
+          lastName: newConsultantLastName.trim(),
+          email: emailLower,
+          organization: newConsultantOrg.trim(),
+          passwordPlain: initialPass,
+        }),
+      });
+    } catch {
+      // Mode local connecté
+    }
+
+    setConsultants((prev) => [...prev, newConsultantObj]);
+    setSystemUsers((prev) => [...prev, newAuthUser]);
+    setShowAddConsultantModal(false);
+    setNewConsultantFirstName("");
+    setNewConsultantLastName("");
+    setNewConsultantEmail("");
+    setNewConsultantPassword("Safir2026!Consultant");
+    showToast(`Compte Consultant créé ! Login : ${emailLower} | Mot de passe : ${initialPass}`);
   };
 
   // Action HEAD : Affecter développeur
@@ -914,7 +1003,7 @@ export default function TicketManagerPage() {
                     </div>
 
                     <div className="py-1">
-                      {SYSTEM_USERS.map((user) => (
+                      {systemUsers.map((user) => (
                         <button
                           key={user.id}
                           onClick={() => switchUser(user)}
@@ -1426,89 +1515,193 @@ export default function TicketManagerPage() {
         )}
 
         {/* =============================================================== */}
-        {/* VUE 5 : ÉQUIPE & CAPACITÉ (Rôle HEAD)                            */}
+        {/* VUE 5 : ÉQUIPE, CONSULTANTS & CAPACITÉ (Rôle HEAD)               */}
         {/* =============================================================== */}
         {currentUser?.role === "HEAD" && activeTab === "developers" && (
           <div className="space-y-4">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Référentiel des Développeurs & Compétences SAP</h2>
-                <p className="text-xs text-slate-500">Plan de charge individuel calculé sur 40h/semaine (Extensible)</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-xs text-slate-600 font-medium">
-                  Effectif : <span className="font-bold text-slate-900">{developers.length} développeurs actifs</span>
+                <h2 className="text-sm font-semibold text-slate-900">Ressources & Gouvernance BU SME</h2>
+                <p className="text-xs text-slate-500">Pilotage de la capacité Développeurs et des accès Consultants</p>
+                
+                {/* Sélecteur de sous-vue : Développeurs vs Consultants */}
+                <div className="flex items-center gap-2 mt-2.5">
+                  <button
+                    onClick={() => setTeamSubTab("devs")}
+                    className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+                      teamSubTab === "devs"
+                        ? "bg-sky-100 text-sky-800 font-semibold border border-sky-200"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span>Développeurs SAP</span>
+                    <span className="px-1.5 py-0.2 bg-white/80 rounded-full font-mono text-[10px]">
+                      {developers.length}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setTeamSubTab("consultants")}
+                    className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+                      teamSubTab === "consultants"
+                        ? "bg-purple-100 text-purple-800 font-semibold border border-purple-200"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span>Consultants Fonctionnels</span>
+                    <span className="px-1.5 py-0.2 bg-white/80 rounded-full font-mono text-[10px]">
+                      {consultants.length}
+                    </span>
+                  </button>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setShowAddDevModal(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
-                  <span>Ajouter un Développeur</span>
+                  <span>+ Développeur</span>
+                </button>
+                <button
+                  onClick={() => setShowAddConsultantModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>+ Consultant</span>
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {developers.map((dev) => (
-                <div key={dev.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <h3 className="font-semibold text-slate-900 text-sm leading-tight">{dev.name}</h3>
-                        <p className="text-xs text-slate-500">{dev.email}</p>
-                      </div>
-                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Actif
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-slate-600 font-medium mb-3">{dev.jobTitle}</p>
-
-                    <div className="space-y-1 mb-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Disponibilité :</span>
-                        <span className="font-bold text-slate-900 font-mono">
-                          {dev.freeHours} h libres ({dev.reservedHours} h réservées)
+            {/* GRILLE 1 : DÉVELOPPEURS */}
+            {teamSubTab === "devs" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {developers.map((dev) => (
+                  <div key={dev.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <h3 className="font-semibold text-slate-900 text-sm leading-tight">{dev.name}</h3>
+                          <p className="text-xs text-slate-500">{dev.email}</p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Actif
                         </span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full ${
-                            dev.loadPercentage > 75
-                              ? "bg-rose-500"
-                              : dev.loadPercentage > 40
-                              ? "bg-amber-500"
-                              : "bg-sky-600"
-                          }`}
-                          style={{ width: `${Math.min(100, dev.loadPercentage)}%` }}
-                        />
-                      </div>
-                    </div>
 
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                        Compétences validées
+                      <p className="text-xs text-slate-600 font-medium mb-3">{dev.jobTitle}</p>
+
+                      <div className="space-y-1 mb-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Disponibilité :</span>
+                          <span className="font-bold text-slate-900 font-mono">
+                            {dev.freeHours} h libres ({dev.reservedHours} h réservées)
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${
+                              dev.loadPercentage > 75
+                                ? "bg-rose-500"
+                                : dev.loadPercentage > 40
+                                ? "bg-amber-500"
+                                : "bg-sky-600"
+                            }`}
+                            style={{ width: `${Math.min(100, dev.loadPercentage)}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {dev.skills && dev.skills.length > 0 ? (
-                          dev.skills.map((skill) => (
-                            <span
-                              key={skill.id}
-                              className="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 border border-slate-200"
-                            >
-                              {skill.name} ({skill.level}/5)
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">En qualification</span>
-                        )}
+
+                      <div className="space-y-1.5">
+                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                          Compétences validées
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {dev.skills && dev.skills.length > 0 ? (
+                            dev.skills.map((skill) => (
+                              <span
+                                key={skill.id}
+                                className="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 border border-slate-200"
+                              >
+                                {skill.name} ({skill.level}/5)
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">En qualification</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {/* GRILLE 2 : CONSULTANTS FONCTIONNELS */}
+            {teamSubTab === "consultants" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {consultants.map((c) => (
+                  <div key={c.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-800 font-bold text-xs flex items-center justify-center border border-purple-200">
+                            {c.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-slate-900 text-sm leading-tight">{c.name}</h3>
+                            <p className="text-xs text-slate-500">{c.organization}</p>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                          Consultant
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 space-y-1 my-3">
+                        <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                          <Key className="w-3 h-3 text-slate-400" />
+                          <span>Identifiant de connexion (Login) :</span>
+                        </div>
+                        <div className="text-xs font-mono font-semibold text-slate-800 select-all">
+                          {c.email}
+                        </div>
+                        <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1 pt-0.5">
+                          <Check className="w-3 h-3" />
+                          <span>Compte actif & accès portail validé</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-xs">
+                        <div className="text-slate-600">
+                          Spécialité : <strong className="text-slate-800">{c.speciality}</strong>
+                        </div>
+                        <div className="text-slate-500">
+                          Demandes émises actives : <span className="font-bold text-slate-800">{c.demandsCount}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">Rôle : CONSULTANT</span>
+                      <button
+                        onClick={() => {
+                          const targetUser = systemUsers.find((u) => u.email.toLowerCase() === c.email.toLowerCase());
+                          if (targetUser) {
+                            switchUser(targetUser);
+                          } else {
+                            showToast(`Utilisateur ${c.name} sélectionné`);
+                          }
+                        }}
+                        className="px-2.5 py-1 text-xs text-purple-700 hover:text-purple-900 hover:bg-purple-50 rounded font-semibold transition-colors border border-purple-200"
+                      >
+                        Tester session ➔
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2116,6 +2309,135 @@ export default function TicketManagerPage() {
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>Intégrer le Développeur</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ================================================================= */}
+      {/* MODALE 6 : CRÉATION D'UN PROFIL CONSULTANT PAR ALIKO (HEAD)        */}
+      {/* ================================================================= */}
+      {showAddConsultantModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-purple-50/50">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-purple-100 text-purple-800 rounded-lg">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900 text-sm">Créer un Profil Consultant SAP</h3>
+                  <p className="text-xs text-slate-500">Génération des accès et identifiants de connexion</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAddConsultantModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddConsultant} className="p-4 space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Prénom *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ex : Ibrahima"
+                    value={newConsultantFirstName}
+                    onChange={(e) => setNewConsultantFirstName(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Nom *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ex : Koné"
+                    value={newConsultantLastName}
+                    onChange={(e) => setNewConsultantLastName(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Adresse e-mail professionnelle (Login de connexion) *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ibrahima.kone@safirconsulting.net"
+                  value={newConsultantEmail}
+                  onChange={(e) => setNewConsultantEmail(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-600 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Organisation / Cabinet *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newConsultantOrg}
+                    onChange={(e) => setNewConsultantOrg(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Mot de passe de connexion initial *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newConsultantPassword}
+                    onChange={(e) => setNewConsultantPassword(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-600 font-mono bg-purple-50/30"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Spécialité fonctionnelle SAP *</label>
+                <select
+                  value={newConsultantSpeciality}
+                  onChange={(e) => setNewConsultantSpeciality(e.target.value)}
+                  className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-600"
+                >
+                  <option value="Consultant Fonctionnel SAP Business One">Consultant Fonctionnel SAP Business One</option>
+                  <option value="Consultante Fonctionnelle SAP S/4HANA & Fiori">Consultante Fonctionnelle SAP S/4HANA & Fiori</option>
+                  <option value="Consultant Spécialiste SAP FI/CO & Comptabilité">Consultant Spécialiste SAP FI/CO & Comptabilité</option>
+                  <option value="Consultant Supply Chain & Logistique SAP">Consultant Supply Chain & Logistique SAP</option>
+                  <option value="Consultante Métier WMS & Interfaces E-Commerce">Consultante Métier WMS & Interfaces E-Commerce</option>
+                </select>
+              </div>
+
+              <div className="p-3 bg-purple-50/60 rounded-lg border border-purple-200 text-xs text-purple-900 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5 text-purple-950">
+                  <Key className="w-3.5 h-3.5 text-purple-700" />
+                  <span>Règle d'accès et d'authentification :</span>
+                </div>
+                <p className="text-[11px] text-purple-800 leading-relaxed">
+                  L'adresse e-mail professionnelle servira d'identifiant de connexion (<strong>Login</strong>). Le consultant pourra immédiatement se connecter à son espace portail pour soumettre des demandes et suivre les spécifications transmises à Aliko.
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddConsultantModal(false)}
+                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-800 bg-slate-100 rounded-lg"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 text-xs font-medium text-white bg-purple-700 hover:bg-purple-800 rounded-lg shadow-sm flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Créer le Compte Consultant</span>
                 </button>
               </div>
             </form>
