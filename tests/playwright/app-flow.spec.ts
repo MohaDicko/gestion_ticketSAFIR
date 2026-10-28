@@ -204,4 +204,32 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.locator("body")).toContainText("Connexion à votre Espace");
     await expect(page.getByRole("button", { name: /Se connecter à mon portail/i })).toBeVisible();
   });
+
+  test("10. Permet à Aliko (HEAD) de superviser la progression d'un ticket jusqu'à son règlement complet et sa clôture", async ({ page }) => {
+    await loginAsAliko(page);
+
+    // Clic sur le bouton Suivre du premier ticket dans le Tableau de bord
+    const followBtn = page.getByRole("button", { name: /Suivre/i }).first();
+    await expect(followBtn).toBeVisible();
+    await followBtn.click();
+    await expect(page.getByText("Supervision Métier")).toBeVisible().catch(async () => {
+      await followBtn.click();
+      await expect(page.getByText("Supervision Métier")).toBeVisible();
+    });
+
+    // Vérifier l'ouverture de la modale de supervision avec le stepper de cycle de vie
+    await expect(page.getByText("Supervision Métier")).toBeVisible();
+    await expect(page.getByText("Pipeline d'Avancement du Ticket (Cycle de Vie)")).toBeVisible();
+    await expect(page.getByText("Étape 1")).toBeVisible();
+    await expect(page.getByText("Étape 6")).toBeVisible();
+    await expect(page.getByText("Suivi de Charge & Reste à Faire (RAF)")).toBeVisible();
+
+    // Aliko clôture le ticket (statut réglé)
+    const closeBtn = page.getByRole("button", { name: /Clôturer le Ticket \(Réglé\)|Valider la Clôture Définitive/i });
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.click();
+
+    // Vérifier l'affichage du statut Réglé & Clôturé dans le tableau
+    await expect(page.locator("body")).toContainText("✓ Réglé & Clôturé");
+  });
 });

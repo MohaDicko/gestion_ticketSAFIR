@@ -314,6 +314,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
    - Vision consolidée à 360° : boîte de réception Outlook M365 (e-mails entrants, analyse anti-spoofing, scoring d'urgence).
    - Suivi en temps réel de la capacité de l'équipe (heures disponibles vs heures RAF réelles, taux de saturation).
    - Matrice Kanban et liste complète des tickets pour arbitrages d'affectation et validations.
+   - **Supervision Continue & Œil Direction sur l'Avancement** : Contrôle visuel permanent de la progression de chaque ticket jusqu'à son règlement complet (`CLOSED`), avec barre d'avancement (%), suivi en temps réel du RAF saisi par les développeurs, modale de supervision 360° (`Eye`) avec stepper 6 étapes, levée de blocage et validation finale de clôture.
 
 2. **Espace Développeur (`DEVELOPER` — Anoop, Moha, Hassane, etc.)** :
    - **Isolation stricte** : la boîte e-mail de la direction et les métriques globales d'équipe sont masquées.
@@ -342,7 +343,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 - ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas des variables d'environnement).
 - ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
 - ✅ **Banc de Tests Unitaires & Métier Vitest** : 36 tests automatisés validés à 100% (36 PASS / 0 FAIL) couvrant le scoring sur 100 points, le calcul de capacité nette, la classification e-mails, la machine à états finis, le provisioning de consultants (login = email pro, hachage Argon2id) et l'onboarding dynamique de développeurs.
-- ✅ **Banc de Tests E2E Navigateur Playwright** : 9 scénarios complets sous Chromium (9 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC Direction / Développeur / Consultante, les filtres, l'onboarding et la déconnexion.
+- ✅ **Banc de Tests E2E Navigateur Playwright** : 10 scénarios complets sous Chromium (10 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC Direction / Développeur / Consultante, les filtres, l'onboarding, la supervision de la progression jusqu'à la clôture et la déconnexion.
 - ✅ **Audit de Sécurité OWASP ZAP & Top 10** : 11 contrôles validés à 100% (étanchéité des grants RBAC pour la création de comptes, absence de fuite de hachage de mot de passe, protection anti-usurpation Gmail, requêtage paramétré Prisma contre les injections SQL, en-têtes défensifs, script `run_owasp_zap_scan.ps1` et profil `zap-baseline.conf`).
 - ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 

@@ -28,7 +28,9 @@ import {
   Check,
   ChevronDown,
   UserPlus,
-  Key
+  Key,
+  Eye,
+  TrendingUp
 } from "lucide-react";
 
 const API_BASE = "/api/v1";
@@ -429,6 +431,9 @@ export default function TicketManagerPage() {
   const [blockingTicket, setBlockingTicket] = useState<Ticket | null>(null);
   const [blockerReasonText, setBlockerReasonText] = useState("");
 
+  // Modale de Supervision / Oeil Direction d'Aliko sur la progression
+  const [supervisingTicket, setSupervisingTicket] = useState<Ticket | null>(null);
+
   // Modale Ajout de Développeur (Direction HEAD)
   const [showAddDevModal, setShowAddDevModal] = useState(false);
   const [newDevFirstName, setNewDevFirstName] = useState("");
@@ -636,6 +641,34 @@ export default function TicketManagerPage() {
     showToast("Ticket marqué comme Livré (en attente recette Aliko)");
   };
 
+  // Action Direction (Aliko HEAD) : Clôture définitive du ticket une fois réglé
+  const handleCloseTicket = (ticketId: string) => {
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === ticketId
+          ? { ...t, status: "CLOSED", remainingHours: 0 }
+          : t
+      )
+    );
+    showToast("✓ Ticket validé et clôturé définitivement par Aliko — Statut : Réglé");
+    setSupervisingTicket(null);
+  };
+
+  // Action Direction (Aliko HEAD) : Arbitrer et lever un blocage
+  const handleUnblockByAliko = (ticketId: string) => {
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === ticketId
+          ? { ...t, status: "IN_PROGRESS", blockerReason: undefined }
+          : t
+      )
+    );
+    showToast("Arbitrage Direction effectué : Point de blocage levé par Aliko");
+    if (supervisingTicket?.id === ticketId) {
+      setSupervisingTicket((prev) => prev ? { ...prev, status: "IN_PROGRESS", blockerReason: undefined } : null);
+    }
+  };
+
   // Action HEAD : Créer un ticket
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
@@ -822,6 +855,37 @@ export default function TicketManagerPage() {
     setSelectedDevId("");
   };
 
+  // Calcul de la progression visuelle du ticket jusqu'à résolution complète
+  const getTicketProgress = (ticket: Ticket) => {
+    if (ticket.status === "CLOSED") {
+      return { pct: 100, label: "✓ Réglé & Clôturé", barClass: "bg-emerald-600", badgeClass: "text-emerald-700 bg-emerald-50 border-emerald-300" };
+    }
+    if (ticket.status === "DELIVERED") {
+      return { pct: 100, label: "📦 Livré (À valider)", barClass: "bg-teal-500", badgeClass: "text-teal-700 bg-teal-50 border-teal-300" };
+    }
+    if (ticket.status === "BLOCKED") {
+      const est = ticket.estimatedHours || 1;
+      const rem = ticket.remainingHours !== undefined ? ticket.remainingHours : est;
+      const done = Math.max(0, Math.min(est, est - rem));
+      const pct = Math.min(95, Math.max(10, Math.round((done / est) * 100)));
+      return { pct, label: `🚨 Bloqué (${pct}%)`, barClass: "bg-rose-500", badgeClass: "text-rose-700 bg-rose-50 border-rose-300" };
+    }
+    if (ticket.status === "IN_PROGRESS") {
+      const est = ticket.estimatedHours || 1;
+      const rem = ticket.remainingHours !== undefined ? ticket.remainingHours : est;
+      const done = Math.max(0, Math.min(est, est - rem));
+      const pct = Math.min(95, Math.max(15, Math.round((done / est) * 100)));
+      return { pct, label: `⚡ En cours (${pct}%)`, barClass: "bg-sky-600", badgeClass: "text-sky-700 bg-sky-50 border-sky-300" };
+    }
+    if (ticket.status === "ASSIGNED") {
+      return { pct: 10, label: "Affecté (Démarrage)", barClass: "bg-blue-400", badgeClass: "text-blue-700 bg-blue-50 border-blue-200" };
+    }
+    if (ticket.status === "QUALIFIED") {
+      return { pct: 5, label: "Qualifié", barClass: "bg-slate-300", badgeClass: "text-slate-600 bg-slate-100 border-slate-200" };
+    }
+    return { pct: 0, label: "Reçu", barClass: "bg-slate-200", badgeClass: "text-slate-500 bg-slate-50 border-slate-200" };
+  };
+
   // Helpers de rendu des statuts
   const renderStatusBadge = (status: Ticket["status"]) => {
     switch (status) {
@@ -836,8 +900,9 @@ export default function TicketManagerPage() {
       case "BLOCKED":
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-300 animate-pulse">🚨 Bloqué</span>;
       case "DELIVERED":
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-300">📦 Livré (Recette)</span>;
       case "CLOSED":
-        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-300">Livré</span>;
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-400">✓ Réglé & Clôturé</span>;
       default:
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">{status}</span>;
     }
@@ -1553,44 +1618,71 @@ export default function TicketManagerPage() {
                         <th className="py-2.5 px-4">Demandeur</th>
                         <th className="py-2.5 px-4">Statut</th>
                         <th className="py-2.5 px-4">Développeur</th>
-                        <th className="py-2.5 px-4 text-right">Action</th>
+                        <th className="py-2.5 px-4">Progression</th>
+                        <th className="py-2.5 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {tickets.slice(0, 6).map((ticket) => (
-                        <tr key={ticket.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3 px-4 font-mono font-medium text-slate-900">{ticket.reference}</td>
-                          <td className="py-3 px-4 max-w-xs truncate font-medium text-slate-800" title={ticket.title}>
-                            {ticket.title}
-                          </td>
-                          <td className="py-3 px-4 text-slate-600">{ticket.applicantName || "Client"}</td>
-                          <td className="py-3 px-4">{renderStatusBadge(ticket.status)}</td>
-                          <td className="py-3 px-4 text-slate-600">
-                            {ticket.assignedDeveloper ? (
-                              <span className="font-medium text-slate-900">{ticket.assignedDeveloper.name}</span>
-                            ) : (
-                              <span className="text-slate-400 italic">Non affecté</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            {!ticket.assignedDeveloper ? (
+                      {tickets.slice(0, 6).map((ticket) => {
+                        const progress = getTicketProgress(ticket);
+                        return (
+                          <tr key={ticket.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-4 font-mono font-medium text-slate-900">{ticket.reference}</td>
+                            <td className="py-3 px-4 max-w-xs truncate font-medium text-slate-800" title={ticket.title}>
+                              {ticket.title}
+                            </td>
+                            <td className="py-3 px-4 text-slate-600">{ticket.applicantName || "Client"}</td>
+                            <td className="py-3 px-4">{renderStatusBadge(ticket.status)}</td>
+                            <td className="py-3 px-4 text-slate-600">
+                              {ticket.assignedDeveloper ? (
+                                <span className="font-medium text-slate-900">{ticket.assignedDeveloper.name}</span>
+                              ) : (
+                                <span className="text-slate-400 italic">Non affecté</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 min-w-[130px]">
+                              <div className="flex items-center justify-between text-[11px] mb-1">
+                                <span className="font-medium text-slate-700">{progress.pct}%</span>
+                                <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${progress.badgeClass}`}>
+                                  {progress.label}
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-full ${progress.barClass}`}
+                                  style={{ width: `${progress.pct}%` }}
+                                />
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                               <button
-                                onClick={() => setAssigningTicket(ticket)}
-                                className="text-xs text-sky-700 hover:text-sky-900 font-medium underline"
+                                onClick={() => setSupervisingTicket(ticket)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded transition-colors cursor-pointer"
+                                title="Oeil Direction : superviser la progression jusqu'à résolution"
                               >
-                                Affecter
+                                <Eye className="w-3.5 h-3.5 text-sky-700" />
+                                <span>Suivre</span>
                               </button>
-                            ) : (
-                              <button
-                                onClick={() => setAssigningTicket(ticket)}
-                                className="text-xs text-slate-500 hover:text-slate-800 font-medium underline"
-                              >
-                                Réaffecter
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+
+                              {!ticket.assignedDeveloper ? (
+                                <button
+                                  onClick={() => setAssigningTicket(ticket)}
+                                  className="text-xs text-sky-700 hover:text-sky-900 font-medium underline"
+                                >
+                                  Affecter
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setAssigningTicket(ticket)}
+                                  className="text-xs text-slate-500 hover:text-slate-800 font-medium underline"
+                                >
+                                  Réaffecter
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1689,58 +1781,85 @@ export default function TicketManagerPage() {
                     <th className="py-3 px-4">Demandeur</th>
                     <th className="py-3 px-4">Statut</th>
                     <th className="py-3 px-4">Développeur assigné</th>
+                    <th className="py-3 px-4 min-w-[140px]">Progression</th>
                     <th className="py-3 px-4 text-center">RAF</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredTickets.map((ticket) => (
-                    <tr key={ticket.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-semibold text-slate-900">{ticket.reference}</td>
-                      <td className="py-3.5 px-4 max-w-sm">
-                        <div className="font-semibold text-slate-900 text-sm">{ticket.title}</div>
-                        {ticket.description && (
-                          <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">{ticket.description}</div>
-                        )}
-                        {ticket.blockerReason && (
-                          <div className="text-[11px] text-rose-600 font-medium mt-0.5">
-                            🚨 Motif : {ticket.blockerReason}
+                  {filteredTickets.map((ticket) => {
+                    const progress = getTicketProgress(ticket);
+                    return (
+                      <tr key={ticket.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-semibold text-slate-900">{ticket.reference}</td>
+                        <td className="py-3.5 px-4 max-w-sm">
+                          <div className="font-semibold text-slate-900 text-sm">{ticket.title}</div>
+                          {ticket.description && (
+                            <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">{ticket.description}</div>
+                          )}
+                          {ticket.blockerReason && (
+                            <div className="text-[11px] text-rose-600 font-medium mt-0.5">
+                              🚨 Motif : {ticket.blockerReason}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">
+                            {ticket.typeCode}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="font-medium text-slate-800">{ticket.applicantName || "Non renseigné"}</div>
+                          <div className="text-[11px] text-slate-500">{ticket.clientCompany}</div>
+                        </td>
+                        <td className="py-3.5 px-4">{renderStatusBadge(ticket.status)}</td>
+                        <td className="py-3.5 px-4">
+                          {ticket.assignedDeveloper ? (
+                            <div>
+                              <div className="font-medium text-slate-900">{ticket.assignedDeveloper.name}</div>
+                              <div className="text-[11px] text-slate-500">{ticket.assignedDeveloper.email}</div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic">En attente</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="font-semibold text-slate-700">{progress.pct}%</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${progress.badgeClass}`}>
+                              {progress.label}
+                            </span>
                           </div>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">
-                          {ticket.typeCode}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-medium text-slate-800">{ticket.applicantName || "Non renseigné"}</div>
-                        <div className="text-[11px] text-slate-500">{ticket.clientCompany}</div>
-                      </td>
-                      <td className="py-3.5 px-4">{renderStatusBadge(ticket.status)}</td>
-                      <td className="py-3.5 px-4">
-                        {ticket.assignedDeveloper ? (
-                          <div>
-                            <div className="font-medium text-slate-900">{ticket.assignedDeveloper.name}</div>
-                            <div className="text-[11px] text-slate-500">{ticket.assignedDeveloper.email}</div>
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full ${progress.barClass}`}
+                              style={{ width: `${progress.pct}%` }}
+                            />
                           </div>
-                        ) : (
-                          <span className="text-slate-400 italic">En attente</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-700">
-                        {ticket.remainingHours ?? ticket.estimatedHours} h
-                      </td>
-                      <td className="py-3.5 px-4 text-right space-x-2">
-                        <button
-                          onClick={() => setAssigningTicket(ticket)}
-                          className="px-2.5 py-1 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 rounded transition-colors"
-                        >
-                          {ticket.assignedDeveloper ? "Réaffecter" : "Affecter"}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-700">
+                          {ticket.remainingHours ?? ticket.estimatedHours} h
+                        </td>
+                        <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                          <button
+                            onClick={() => setSupervisingTicket(ticket)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded transition-colors cursor-pointer"
+                            title="Oeil Direction : inspecter l'avancement complet du ticket"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-sky-700" />
+                            <span>Suivre</span>
+                          </button>
+
+                          <button
+                            onClick={() => setAssigningTicket(ticket)}
+                            className="px-2.5 py-1 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 rounded transition-colors"
+                          >
+                            {ticket.assignedDeveloper ? "Réaffecter" : "Affecter"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -2674,6 +2793,279 @@ export default function TicketManagerPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ================================================================= */}
+      {/* MODALE 7 : SUPERVISION DU TICKET & OEIL DIRECTION D'ALIKO (HEAD)   */}
+      {/* ================================================================= */}
+      {supervisingTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Entête de la Modale */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-sky-950 via-slate-900 to-sky-900 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-sky-500/20 text-sky-300 rounded-xl border border-sky-400/20">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-sky-500/30 text-sky-200 border border-sky-400/30">
+                      {supervisingTicket.reference}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-white/10 text-slate-300 font-mono">
+                      {supervisingTicket.typeCode}
+                    </span>
+                    {renderStatusBadge(supervisingTicket.status)}
+                  </div>
+                  <div className="text-[11px] font-semibold text-sky-300 uppercase tracking-wider mt-1">
+                    Supervision Métier Direction BU SME
+                  </div>
+                  <h3 className="font-bold text-sm sm:text-base text-white leading-tight">
+                    {supervisingTicket.title}
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setSupervisingTicket(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenu Déroulant */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+              {/* Stepper Pipeline des 6 Étapes Métier */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-sky-700" />
+                    <span>Pipeline d'Avancement du Ticket (Cycle de Vie)</span>
+                  </span>
+                  <span className="font-mono font-bold text-sky-800 bg-sky-50 px-2.5 py-0.5 rounded border border-sky-200">
+                    {getTicketProgress(supervisingTicket).label}
+                  </span>
+                </div>
+
+                {/* Barre de Progression Globale */}
+                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden mb-4 border border-slate-200">
+                  <div
+                    className={`h-full transition-all duration-500 ${getTicketProgress(supervisingTicket).barClass}`}
+                    style={{ width: `${getTicketProgress(supervisingTicket).pct}%` }}
+                  />
+                </div>
+
+                {/* Les 6 Étapes sous forme de Cartes / Steppers */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { key: "RECEIVED", num: 1, label: "Reçu", sub: "Besoin consigné" },
+                    { key: "QUALIFIED", num: 2, label: "Qualifié", sub: `${supervisingTicket.estimatedHours}h estimées` },
+                    { key: "ASSIGNED", num: 3, label: "Affecté", sub: supervisingTicket.assignedDeveloper ? supervisingTicket.assignedDeveloper.name.split(" ")[0] : "En attente" },
+                    { key: "IN_PROGRESS", num: 4, label: "En cours", sub: supervisingTicket.status === "BLOCKED" ? "Bloqué" : `RAF: ${supervisingTicket.remainingHours ?? supervisingTicket.estimatedHours}h` },
+                    { key: "DELIVERED", num: 5, label: "Livré", sub: "Prêt pour recette" },
+                    { key: "CLOSED", num: 6, label: "Réglé & Clôturé", sub: "Validation Aliko" },
+                  ].map((step) => {
+                    const order = ["RECEIVED", "QUALIFIED", "ASSIGNED", "IN_PROGRESS", "DELIVERED", "CLOSED"];
+                    const normStatus = supervisingTicket.status === "BLOCKED" ? "IN_PROGRESS" : supervisingTicket.status;
+                    const curIdx = order.indexOf(normStatus);
+                    const stepIdx = order.indexOf(step.key);
+                    const isDone = stepIdx < curIdx || (supervisingTicket.status === "CLOSED" && step.key === "CLOSED");
+                    const isCurrent = stepIdx === curIdx && supervisingTicket.status !== "CLOSED";
+                    const isBlocked = isCurrent && supervisingTicket.status === "BLOCKED";
+
+                    return (
+                      <div
+                        key={step.key}
+                        className={`p-2.5 rounded-xl border transition-all ${
+                          isBlocked
+                            ? "bg-rose-50 border-rose-300 ring-1 ring-rose-400"
+                            : isDone
+                            ? "bg-emerald-50/70 border-emerald-200"
+                            : isCurrent
+                            ? "bg-sky-50 border-sky-300 ring-1 ring-sky-400"
+                            : "bg-slate-50/60 border-slate-200 opacity-60"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                            isBlocked
+                              ? "bg-rose-200 text-rose-900"
+                              : isDone
+                              ? "bg-emerald-200 text-emerald-900"
+                              : isCurrent
+                              ? "bg-sky-200 text-sky-900"
+                              : "bg-slate-200 text-slate-700"
+                          }`}>
+                            Étape {step.num}
+                          </span>
+                          {isDone ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : isBlocked ? (
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600 animate-bounce" />
+                          ) : isCurrent ? (
+                            <Clock className="w-3.5 h-3.5 text-sky-600" />
+                          ) : null}
+                        </div>
+                        <div className="font-semibold text-slate-900 text-xs">{step.label}</div>
+                        <div className="text-[10px] text-slate-500 truncate">{step.sub}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Alerte de Blocage si le ticket est bloqué */}
+              {supervisingTicket.status === "BLOCKED" && (
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
+                  <div className="flex items-start gap-2.5 text-rose-800">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Point de blocage signalé par le développeur :</span>
+                      <p className="text-xs text-rose-900 mt-0.5 leading-relaxed">
+                        {supervisingTicket.blockerReason || "En attente de retour d'arbitrage ou de licence"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      onClick={() => handleUnblockByAliko(supervisingTicket.id)}
+                      className="px-3.5 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Arbitrer & Lever le blocage</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Détails Opérationnels : Développeur & Métriques RAF */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Ressource Technique Dédiée
+                  </div>
+                  {supervisingTicket.assignedDeveloper ? (
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm">{supervisingTicket.assignedDeveloper.name}</div>
+                      <div className="text-slate-500 text-xs">{supervisingTicket.assignedDeveloper.email}</div>
+                      <div className="mt-2 text-[11px] text-emerald-700 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>En charge du développement</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-amber-700 text-xs font-medium">⚠️ Aucun développeur n'est encore assigné.</div>
+                      <button
+                        onClick={() => {
+                          const t = supervisingTicket;
+                          setSupervisingTicket(null);
+                          setAssigningTicket(t);
+                        }}
+                        className="px-3 py-1 text-xs bg-sky-700 hover:bg-sky-800 text-white rounded-lg font-medium cursor-pointer"
+                      >
+                        Affecter maintenant
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Suivi de Charge & Reste à Faire (RAF)
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                    <div className="bg-white p-2 rounded-lg border border-slate-200">
+                      <div className="text-[10px] text-slate-500">Estimé</div>
+                      <div className="text-sm font-bold text-slate-900">{supervisingTicket.estimatedHours} h</div>
+                    </div>
+                    <div className="bg-white p-2 rounded-lg border border-slate-200">
+                      <div className="text-[10px] text-slate-500">Réalisé</div>
+                      <div className="text-sm font-bold text-emerald-700">
+                        {Math.max(0, supervisingTicket.estimatedHours - (supervisingTicket.remainingHours ?? supervisingTicket.estimatedHours))} h
+                      </div>
+                    </div>
+                    <div className="bg-white p-2 rounded-lg border border-slate-200">
+                      <div className="text-[10px] text-slate-500">RAF</div>
+                      <div className="text-sm font-bold text-sky-800">
+                        {supervisingTicket.remainingHours ?? supervisingTicket.estimatedHours} h
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Demandeur et Client */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-slate-500">Demandeur : </span>
+                  <strong className="text-slate-800">{supervisingTicket.applicantName || "Client"}</strong>
+                  {supervisingTicket.applicantEmail && (
+                    <span className="text-slate-500 ml-1">({supervisingTicket.applicantEmail})</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-slate-500">Client / Société : </span>
+                  <strong className="text-slate-800">{supervisingTicket.clientCompany || "Safir Consulting"}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Pied de Modale : Arbitrages et Clôture Définitive par Aliko (HEAD) */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs text-slate-500">
+                {supervisingTicket.status === "CLOSED" ? (
+                  <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    Ce ticket a été définitivement réglé et archivé par la Direction.
+                  </span>
+                ) : (
+                  <span>Gouvernance BU SME — Droit de validation et clôture exclusive Aliko.</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSupervisingTicket(null)}
+                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-800 bg-white border border-slate-300 rounded-lg cursor-pointer"
+                >
+                  Fermer
+                </button>
+
+                {supervisingTicket.status !== "CLOSED" && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const t = supervisingTicket;
+                        setSupervisingTicket(null);
+                        setAssigningTicket(t);
+                      }}
+                      className="px-3.5 py-1.5 text-xs text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-lg font-medium cursor-pointer"
+                    >
+                      {supervisingTicket.assignedDeveloper ? "Réaffecter" : "Affecter"}
+                    </button>
+
+                    <button
+                      onClick={() => handleCloseTicket(supervisingTicket.id)}
+                      className={`px-4 py-1.5 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 text-white transition-all cursor-pointer ${
+                        supervisingTicket.status === "DELIVERED"
+                          ? "bg-emerald-700 hover:bg-emerald-800 ring-2 ring-emerald-400"
+                          : "bg-slate-800 hover:bg-slate-900"
+                      }`}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>
+                        {supervisingTicket.status === "DELIVERED"
+                          ? "Valider la Clôture Définitive (Ticket Réglé)"
+                          : "Clôturer le Ticket (Réglé)"}
+                      </span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
