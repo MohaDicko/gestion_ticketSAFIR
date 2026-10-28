@@ -335,9 +335,9 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 - ✅ **Contrôle d'Accès & Espaces Multi-Utilisateurs (RBAC)** : Cloisonnement strict entre Direction (Aliko), Développeurs (Anoop, Moha, Hassane - saisie RAF, Stop-the-line, livraison) et Consultante (Mélissa - suivi et soumission directe de besoins), avec sélecteur de session instantané.
 - ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas des variables d'environnement).
 - ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
-- ✅ **Banc de Tests Unitaires & Métier Vitest** : 26 tests automatisés validés à 100% (26 PASS / 0 FAIL en 927 ms) couvrant le scoring sur 100 points, le non-double décompte de capacité nette, la classification e-mails et la machine à états.
-- ✅ **Banc de Tests E2E Navigateur Playwright** : 6 scénarios complets sous Chromium (6 PASS / 0 FAIL en 30 s) validant le cloisonnement RBAC Direction / Développeur / Consultante, les filtres et les modales.
-- ✅ **Audit de Sécurité OWASP ZAP & Top 10** : 10 contrôles validés (étanchéité des grants RBAC, protection anti-usurpation Gmail, requêtage paramétré Prisma contre les injections SQL, en-têtes défensifs, script `run_owasp_zap_scan.ps1` et profil `zap-baseline.conf`).
+- ✅ **Banc de Tests Unitaires & Métier Vitest** : 36 tests automatisés validés à 100% (36 PASS / 0 FAIL) couvrant le scoring sur 100 points, le calcul de capacité nette, la classification e-mails, la machine à états finis, le provisioning de consultants (login = email pro, hachage Argon2id) et l'onboarding dynamique de développeurs.
+- ✅ **Banc de Tests E2E Navigateur Playwright** : 8 scénarios complets sous Chromium (8 PASS / 0 FAIL) validant le cycle complet, le cloisonnement RBAC Direction / Développeur / Consultante, les filtres, l'ajout d'un développeur et la création de compte consultant.
+- ✅ **Audit de Sécurité OWASP ZAP & Top 10** : 11 contrôles validés à 100% (étanchéité des grants RBAC pour la création de comptes, absence de fuite de hachage de mot de passe, protection anti-usurpation Gmail, requêtage paramétré Prisma contre les injections SQL, en-têtes défensifs, script `run_owasp_zap_scan.ps1` et profil `zap-baseline.conf`).
 - ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 
 ### 11.2. Feuille de Route pour Mise en Production

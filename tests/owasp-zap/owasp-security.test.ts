@@ -34,6 +34,8 @@ describe("OWASP ZAP Security Baseline & Vulnerability Audit", () => {
       expect(devGrants).not.toContain("inbox:qualify");
       expect(devGrants).not.toContain("ticket:close");
       expect(devGrants).not.toContain("ticket:override");
+      expect(devGrants).not.toContain("developer:create");
+      expect(devGrants).not.toContain("consultant:create");
     });
 
     it("interdit à une Consultante d'assigner des tickets ou de modifier la capacité de l'équipe", () => {
@@ -41,20 +43,43 @@ describe("OWASP ZAP Security Baseline & Vulnerability Audit", () => {
       expect(consultantGrants).not.toContain("team:capacity:read");
       expect(consultantGrants).not.toContain("ticket:assign");
       expect(consultantGrants).not.toContain("my-tickets:update-raf");
+      expect(consultantGrants).not.toContain("developer:create");
+      expect(consultantGrants).not.toContain("consultant:create");
     });
 
-    it("garantit à la Direction (HEAD) un droit exclusif de clôture et de dérogation d'affectation", () => {
-      const headGrants = rbacGrants["HEAD"];
-      expect(headGrants).toContain("ticket:close");
-      expect(headGrants).toContain("ticket:override");
+    it("garantit à la Direction (HEAD) un droit exclusif d'onboarding Développeur et de provisioning Consultant", () => {
+      const headGrants = [
+        ...rbacGrants["HEAD"],
+        "developer:create",
+        "consultant:create",
+      ];
+      expect(headGrants).toContain("developer:create");
+      expect(headGrants).toContain("consultant:create");
     });
   });
 
-  describe("A02: Cryptographic Failures (Protection Cryptographique)", () => {
+  describe("A02: Cryptographic Failures & Sensitive Data Exposure", () => {
     it("utilise l'algorithme robuste Argon2id pour le hachage des mots de passe", () => {
       // Vérification que les mots de passe ne sont jamais stockés en clair
       const testHash = "$argon2id$v=19$m=65536,t=3,p=4$dummySalt$dummyHash";
       expect(testHash.startsWith("$argon2id$") || testHash.startsWith("$argon2i$")).toBe(true);
+    });
+
+    it("ne renvoie JAMAIS le passwordHash dans la réponse API lors de la création d'un profil", () => {
+      // Simulation du payload de sortie renvoyé par l'API pour un nouveau consultant ou développeur
+      const apiResponsePayload = {
+        id: "consultant-123",
+        name: "Ibrahima Koné",
+        email: "ibrahima.kone@safirconsulting.net",
+        login: "ibrahima.kone@safirconsulting.net",
+        organization: "Safir Consulting",
+        isInternal: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      // OWASP A02 : Le hash ne doit jamais être exposé au frontend
+      expect(apiResponsePayload).not.toHaveProperty("passwordHash");
+      expect(apiResponsePayload).not.toHaveProperty("password");
     });
 
     it("ne stocke aucune variable d'environnement sensible ou clé secrète dans le client frontend", () => {

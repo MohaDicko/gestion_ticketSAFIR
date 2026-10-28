@@ -107,7 +107,13 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
 
   test("7. Permet à Aliko (HEAD) d'ajouter un nouveau développeur à son équipe et rafraîchit l'effectif", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+    const teamBtn = page.getByRole("button", { name: /Équipe & Capacité/i });
+    await expect(teamBtn).toBeVisible();
+    await teamBtn.click();
+    await expect(page.getByText("Ressources & Gouvernance BU SME")).toBeVisible().catch(async () => {
+      await teamBtn.click();
+      await expect(page.getByText("Ressources & Gouvernance BU SME")).toBeVisible();
+    });
 
     // Vérifier présence du bouton + Développeur
     const addDevBtn = page.getByRole("button", { name: /\+ Développeur/i });
@@ -132,7 +138,13 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
 
   test("8. Permet à Aliko (HEAD) de créer un profil Consultant avec login et mot de passe", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+    const teamBtn = page.getByRole("button", { name: /Équipe & Capacité/i });
+    await expect(teamBtn).toBeVisible();
+    await teamBtn.click();
+    await expect(page.getByText("Ressources & Gouvernance BU SME")).toBeVisible().catch(async () => {
+      await teamBtn.click();
+      await expect(page.getByText("Ressources & Gouvernance BU SME")).toBeVisible();
+    });
 
     // Clic sur le bouton + Consultant
     const addConsultantBtn = page.getByRole("button", { name: /\+ Consultant/i });
