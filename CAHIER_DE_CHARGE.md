@@ -324,10 +324,18 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
    - **Livraison** : passage du ticket en statut *Livré* dès achèvement des travaux.
 
 3. **Espace Métier / Consultante (`CONSULTANT` — Mélissa Diakité)** :
-   - Consultation et suivi en temps réel du cycle de vie de **ses propres demandes fonctionnelles émises**.
-   - Formulaire dédié pour soumettre directement un nouveau ticket dans le système sans transiter par une chaîne de mails informelle.
+   - **Visibilité totale sur le Développeur Dédié** : nom, avatar, e-mail professionnel et statut du développeur assigné à chacun de ses tickets.
+   - **Jauge de progression en temps réel** : pourcentage d'avancement dynamique (`getTicketProgress`), barre visuelle animée et décompte Charge estimée vs Reste à Faire (RAF).
+   - **Bannière d'alerte pour précision requise** : détection immédiate des tickets en pause nécessitant des éléments métier ou un jeu d'écritures.
+   - **Dialogue direct Développeur ↔ Consultante** : fil de discussion contextuel horodaté permettant de répondre aux questions du développeur et de débloquer le ticket en un clic sans goulot d'étranglement.
+   - **Soumission directe** : formulaire dédié pour soumettre directement un nouveau ticket dans le système sans transiter par une chaîne de mails informelle.
 
-4. **Sélecteur de Session Interactif (1-Clic)** :
+4. **Fil de Discussion Tracé & Collaboration Sans Goulot d'Étranglement** :
+   - Le développeur peut poser une question au consultant et signaler le besoin comme bloquant (`status: BLOCKED`).
+   - Le consultant est alerté sur son espace, apporte sa réponse et peut lever automatiquement le blocage (`status: IN_PROGRESS`).
+   - Aliko (Direction BU SME) supervise l'intégralité du dialogue dans sa modale de supervision pour arbitrer si nécessaire tout en conservant l'historique complet.
+
+5. **Sélecteur de Session Interactif (1-Clic)** :
    - Sélecteur de profil corporate intégré dans l'en-tête permettant de basculer instantanément entre Aliko, Anoop, Moha et Mélissa pour les besoins de validation, tests et démonstrations.
 
 ---
@@ -339,11 +347,11 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 - ✅ **Jeu de Données Initial (Seed)** : 7 développeurs réels Safir Consulting (Moha Dicko, Anoop Pandimukkula, Hassane Bocoum, Nevrit Ahua, Fatoumata Traore, Korotoumou Thiam, Jean-Philippe Ebrottié), consultante Mélissa Diakité, compétences SAP et tickets enregistrés.
 - ✅ **Backend API REST NestJS** : Opérationnel sur `http://localhost:4000/api/v1` avec contrôleurs de tickets, qualification d'expéditeurs (Consultant Safir, Contact Client, Externe, Alerte anti-usurpation Gmail) et moteur de scoring.
 - ✅ **Frontend Next.js 15 App Router** : Opérationnel sur `http://localhost:3000` avec interface entreprise authentique, sobre et ergonomique (Page de login d'accueil par défaut, Tableau de bord de synthèse, Grand tableau des tickets SAP, Fiches de capacité de l'équipe, Boîte de réception Outlook M365 connectée).
-- ✅ **Contrôle d'Accès & Espaces Multi-Utilisateurs (RBAC)** : Cloisonnement strict entre Direction (Aliko), Développeurs (Anoop, Moha, Hassane - saisie RAF, Stop-the-line, livraison) et Consultante (Mélissa - suivi et soumission directe de besoins), avec sélecteur de session instantané et déconnexion.
+- ✅ **Contrôle d'Accès & Espaces Multi-Utilisateurs (RBAC)** : Cloisonnement strict entre Direction (Aliko), Développeurs (Anoop, Moha, Hassane - saisie RAF, Stop-the-line, livraison) et Consultante (Mélissa - visibilité dev dédié, barre d'avancement, dialogue direct et soumission de besoins), avec sélecteur de session instantané et déconnexion.
 - ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas des variables d'environnement).
 - ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
 - ✅ **Banc de Tests Unitaires & Métier Vitest** : 36 tests automatisés validés à 100% (36 PASS / 0 FAIL) couvrant le scoring sur 100 points, le calcul de capacité nette, la classification e-mails, la machine à états finis, le provisioning de consultants (login = email pro, hachage Argon2id) et l'onboarding dynamique de développeurs.
-- ✅ **Banc de Tests E2E Navigateur Playwright** : 10 scénarios complets sous Chromium (10 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC Direction / Développeur / Consultante, les filtres, l'onboarding, la supervision de la progression jusqu'à la clôture et la déconnexion.
+- ✅ **Banc de Tests E2E Navigateur Playwright** : 11 scénarios complets sous Chromium (11 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC, les filtres, l'onboarding, la supervision continue d'Aliko, la visibilité du développeur dédié et de la progression par la consultante, ainsi que le dialogue direct avec déblocage automatique.
 - ✅ **Audit de Sécurité OWASP ZAP & Top 10** : 11 contrôles validés à 100% (étanchéité des grants RBAC pour la création de comptes, absence de fuite de hachage de mot de passe, protection anti-usurpation Gmail, requêtage paramétré Prisma contre les injections SQL, en-têtes défensifs, script `run_owasp_zap_scan.ps1` et profil `zap-baseline.conf`).
 - ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 

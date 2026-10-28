@@ -30,10 +30,25 @@ import {
   UserPlus,
   Key,
   Eye,
-  TrendingUp
+  TrendingUp,
+  MessageSquare,
+  Send,
+  HelpCircle,
+  MessageCircle
 } from "lucide-react";
 
 const API_BASE = "/api/v1";
+
+interface TicketMessage {
+  id: string;
+  authorName: string;
+  authorRole: "HEAD" | "DEVELOPER" | "CONSULTANT" | "ADMIN";
+  authorEmail: string;
+  message: string;
+  timestamp: string;
+  isBlockerQuestion?: boolean;
+  isConsultantReply?: boolean;
+}
 
 interface Skill {
   id: string;
@@ -74,6 +89,7 @@ interface Ticket {
     email: string;
   } | null;
   createdAt?: string;
+  messages?: TicketMessage[];
 }
 
 interface InboxEmail {
@@ -294,7 +310,25 @@ const INITIAL_TICKETS: Ticket[] = [
     applicantName: "Mélissa Diakité",
     applicantEmail: "melissa.diakite@safirconsulting.net",
     assignedDeveloper: { id: "dev-anoop", name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net" },
-    createdAt: "2026-10-25"
+    createdAt: "2026-10-25",
+    messages: [
+      {
+        id: "msg-1-1",
+        authorName: "Mélissa Diakité",
+        authorRole: "CONSULTANT",
+        authorEmail: "melissa.diakite@safirconsulting.net",
+        message: "Spécification validée : le workflow d'approbation d'achats doit s'enclencher au-delà de 10 000 € HT sur la base de la devise société.",
+        timestamp: "2026-10-25 à 14:30"
+      },
+      {
+        id: "msg-1-2",
+        authorName: "Anoop Pandimukkula",
+        authorRole: "DEVELOPER",
+        authorEmail: "anoop.pandimukkula@safirconsulting.net",
+        message: "Bien noté Mélissa ! La maquette UI API est en place, nous branchons la validation Service Layer.",
+        timestamp: "2026-10-26 à 10:15"
+      }
+    ]
   },
   {
     id: "tix-2",
@@ -343,7 +377,18 @@ const INITIAL_TICKETS: Ticket[] = [
     applicantName: "Mélissa Diakité",
     applicantEmail: "melissa.diakite@safirconsulting.net",
     assignedDeveloper: { id: "dev-anoop", name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net" },
-    createdAt: "2026-10-27"
+    createdAt: "2026-10-27",
+    messages: [
+      {
+        id: "msg-4-1",
+        authorName: "Anoop Pandimukkula",
+        authorRole: "DEVELOPER",
+        authorEmail: "anoop.pandimukkula@safirconsulting.net",
+        message: "Bonjour Mélissa, l'anomalie de lettrage sur les CDS Views se produit uniquement en multi-devises. Peux-tu me transmettre un extrait de pièces comptables réelles du client Alpha pour reproduire le bug ?",
+        timestamp: "2026-10-27 à 16:45",
+        isBlockerQuestion: true
+      }
+    ]
   }
 ];
 
@@ -433,6 +478,12 @@ export default function TicketManagerPage() {
 
   // Modale de Supervision / Oeil Direction d'Aliko sur la progression
   const [supervisingTicket, setSupervisingTicket] = useState<Ticket | null>(null);
+
+  // Modale Fil de Discussion & Échange Direct Développeur <-> Consultant
+  const [discussingTicket, setDiscussingTicket] = useState<Ticket | null>(null);
+  const [ticketMessageText, setTicketMessageText] = useState("");
+  const [isQuestionBlocker, setIsQuestionBlocker] = useState(false);
+  const [unblockOnReply, setUnblockOnReply] = useState(true);
 
   // Modale Ajout de Développeur (Direction HEAD)
   const [showAddDevModal, setShowAddDevModal] = useState(false);
@@ -667,6 +718,103 @@ export default function TicketManagerPage() {
     if (supervisingTicket?.id === ticketId) {
       setSupervisingTicket((prev) => prev ? { ...prev, status: "IN_PROGRESS", blockerReason: undefined } : null);
     }
+  };
+
+  // Action Collaborative : Envoyer un message dans le fil du ticket (Développeur <-> Consultant <-> Direction)
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!discussingTicket || !ticketMessageText.trim() || !currentUser) return;
+
+    const isQuestion = currentUser.role === "DEVELOPER" && isQuestionBlocker;
+    const isReply = currentUser.role === "CONSULTANT" && (discussingTicket.status === "BLOCKED" || !!discussingTicket.blockerReason);
+
+    const newMsg: TicketMessage = {
+      id: `msg-${Date.now()}`,
+      authorName: currentUser.name,
+      authorRole: currentUser.role,
+      authorEmail: currentUser.email,
+      message: ticketMessageText.trim(),
+      timestamp: "À l'instant",
+      isBlockerQuestion: isQuestion,
+      isConsultantReply: isReply
+    };
+
+    setTickets((prev) =>
+      prev.map((t) => {
+        if (t.id !== discussingTicket.id) return t;
+
+        let updatedStatus = t.status;
+        let updatedBlockerReason = t.blockerReason;
+
+        if (isQuestion) {
+          updatedStatus = "BLOCKED";
+          updatedBlockerReason = `En attente de précision métier de la part de ${t.applicantName || "la consultante"}`;
+        } else if (currentUser.role === "CONSULTANT" && unblockOnReply && (t.status === "BLOCKED" || !!t.blockerReason)) {
+          updatedStatus = "IN_PROGRESS";
+          updatedBlockerReason = undefined;
+        }
+
+        const updatedMessages = [...(t.messages || []), newMsg];
+        return {
+          ...t,
+          status: updatedStatus,
+          blockerReason: updatedBlockerReason,
+          messages: updatedMessages
+        };
+      })
+    );
+
+    // Mettre à jour l'instance locale en cours de consultation
+    setDiscussingTicket((prev) => {
+      if (!prev) return null;
+      let updatedStatus = prev.status;
+      let updatedBlockerReason = prev.blockerReason;
+      if (isQuestion) {
+        updatedStatus = "BLOCKED";
+        updatedBlockerReason = `En attente de précision métier de la part de ${prev.applicantName || "la consultante"}`;
+      } else if (currentUser.role === "CONSULTANT" && unblockOnReply && (prev.status === "BLOCKED" || !!prev.blockerReason)) {
+        updatedStatus = "IN_PROGRESS";
+        updatedBlockerReason = undefined;
+      }
+      return {
+        ...prev,
+        status: updatedStatus,
+        blockerReason: updatedBlockerReason,
+        messages: [...(prev.messages || []), newMsg]
+      };
+    });
+
+    if (supervisingTicket?.id === discussingTicket.id) {
+      setSupervisingTicket((prev) => {
+        if (!prev) return null;
+        let updatedStatus = prev.status;
+        let updatedBlockerReason = prev.blockerReason;
+        if (isQuestion) {
+          updatedStatus = "BLOCKED";
+          updatedBlockerReason = `En attente de précision métier de la part de ${prev.applicantName || "la consultante"}`;
+        } else if (currentUser.role === "CONSULTANT" && unblockOnReply && (prev.status === "BLOCKED" || !!prev.blockerReason)) {
+          updatedStatus = "IN_PROGRESS";
+          updatedBlockerReason = undefined;
+        }
+        return {
+          ...prev,
+          status: updatedStatus,
+          blockerReason: updatedBlockerReason,
+          messages: [...(prev.messages || []), newMsg]
+        };
+      });
+    }
+
+    if (isQuestion) {
+      showToast(`Question transmise au consultant — Ticket marqué en attente d'information`);
+    } else if (isReply && unblockOnReply) {
+      showToast(`Précision transmise au développeur — Point de blocage levé & développement repris !`);
+    } else {
+      showToast(`Message transmis avec succès dans le fil du ticket`);
+    }
+
+    setTicketMessageText("");
+    setIsQuestionBlocker(false);
   };
 
   // Action HEAD : Créer un ticket
@@ -1472,11 +1620,19 @@ export default function TicketManagerPage() {
                         {ticket.status !== "DELIVERED" && ticket.status !== "CLOSED" && (
                           <button
                             onClick={() => handleDeliverTicket(ticket.id)}
-                            className="px-3 py-1.5 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 rounded-lg transition-colors"
+                            className="px-3 py-1.5 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 rounded-lg transition-colors cursor-pointer"
                           >
                             Marquer comme Livré
                           </button>
                         )}
+
+                        <button
+                          onClick={() => setDiscussingTicket(ticket)}
+                          className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200 flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Échanger avec {ticket.applicantName?.split(" ")[0] || "Consultant"} ({ticket.messages?.length || 0})</span>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -1491,6 +1647,7 @@ export default function TicketManagerPage() {
         {/* =============================================================== */}
         {currentUser?.role === "CONSULTANT" && activeTab === "my-demands" && (
           <div className="space-y-6">
+            {/* Bannière de Bienvenue Consultante */}
             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -1500,7 +1657,7 @@ export default function TicketManagerPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Suivez en direct l'avancement des spécifications transmises à Aliko et à l'équipe de développement.
+                  Suivez en direct l'avancement technique de vos besoins SAP, découvrez vos développeurs dédiés et échangez directement avec eux.
                 </p>
               </div>
 
@@ -1510,37 +1667,163 @@ export default function TicketManagerPage() {
                   setNewClient("Safir Consulting (Consulting Interne)");
                   setShowCreateModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-medium rounded-lg shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-medium rounded-lg shadow-sm cursor-pointer transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Soumettre un nouveau besoin SAP</span>
               </button>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-slate-200 bg-slate-50/50">
-                <h2 className="text-sm font-semibold text-slate-900">Mes Demandes Émises ({myConsultantDemands.length})</h2>
-                <p className="text-xs text-slate-500">Transparence en temps réel sur la réalisation technique</p>
-              </div>
-
-              <div className="divide-y divide-slate-100">
-                {myConsultantDemands.map((ticket) => (
-                  <div key={ticket.id} className="p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-slate-900 text-sm">{ticket.reference}</span>
-                        {renderStatusBadge(ticket.status)}
-                      </div>
-                      <div className="font-semibold text-slate-900 text-sm">{ticket.title}</div>
-                      <p className="text-xs text-slate-600">{ticket.description}</p>
-                      <div className="text-xs text-slate-500 flex items-center gap-3 pt-1">
-                        <span>Développeur en charge : <strong className="text-slate-800">{ticket.assignedDeveloper ? ticket.assignedDeveloper.name : "En cours d'affectation par Aliko"}</strong></span>
-                        <span>Charge estimée : <strong className="text-slate-800">{ticket.estimatedHours} h</strong></span>
-                      </div>
+            {/* Bannière d'Alerte : Précision requise pour débloquer un ticket */}
+            {myConsultantDemands.some((t) => t.status === "BLOCKED") && (
+              <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border border-amber-300 rounded-xl p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-100 rounded-lg text-amber-700 shrink-0">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 animate-pulse" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                        Point de Vigilance — Précision Métier Attendue par l'Équipe Technique
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-900 mt-1 leading-relaxed">
+                      L'un de vos développeurs dédiés est actuellement en pause sur un ticket et attend des éléments fonctionnels ou un jeu d'écritures pour reprendre le travail.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {myConsultantDemands
+                        .filter((t) => t.status === "BLOCKED")
+                        .map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setDiscussingTicket(t)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Répondre à {t.assignedDeveloper?.name || "l'équipe"} ({t.reference})</span>
+                          </button>
+                        ))}
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
+            )}
+
+            {/* Liste des Demandes Émises avec Développeur Dédié et Progression */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">Mes Demandes Émises ({myConsultantDemands.length})</h2>
+                  <p className="text-xs text-slate-500">Transparence en direct : Développeur assigné, barre de progression et dialogue direct</p>
+                </div>
+              </div>
+
+              {myConsultantDemands.length === 0 ? (
+                <div className="p-8 text-center text-slate-500 text-sm">
+                  Vous n'avez pas encore émis de demande de développement. Cliquez sur "Soumettre un nouveau besoin SAP".
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {myConsultantDemands.map((ticket) => (
+                    <div key={ticket.id} className="p-5 hover:bg-slate-50/80 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                      <div className="space-y-3 flex-1 max-w-3xl">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-slate-900 text-sm">{ticket.reference}</span>
+                          <span className="px-2 py-0.5 rounded text-xs font-mono bg-slate-100 text-slate-700">
+                            {ticket.typeCode}
+                          </span>
+                          {renderStatusBadge(ticket.status)}
+                        </div>
+
+                        <div>
+                          <h3 className="font-semibold text-slate-900 text-sm">{ticket.title}</h3>
+                          {ticket.description && (
+                            <p className="text-xs text-slate-600 mt-0.5">{ticket.description}</p>
+                          )}
+                        </div>
+
+                        {/* Motif de blocage si présent */}
+                        {ticket.status === "BLOCKED" && (
+                          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2.5">
+                            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <span className="font-bold">Développement en attente de précision : </span>
+                              <span>{ticket.blockerReason || "Le développeur a besoin d'éléments complémentaires pour poursuivre."}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Cartouche Développeur Dédié & Progression en temps réel */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          {/* 1. Développeur en charge */}
+                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-800 font-bold flex items-center justify-center text-xs shrink-0 border border-sky-200">
+                              {ticket.assignedDeveloper ? ticket.assignedDeveloper.name.split(" ").map((n) => n[0]).join("") : "?"}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Développeur Dédié</div>
+                              <div className="text-xs font-bold text-slate-900 truncate">
+                                {ticket.assignedDeveloper ? ticket.assignedDeveloper.name : "En cours d'affectation par Aliko"}
+                              </div>
+                              {ticket.assignedDeveloper && (
+                                <div className="text-[11px] text-slate-500 truncate">{ticket.assignedDeveloper.email}</div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 2. Progression en temps réel */}
+                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex flex-col justify-center">
+                            <div className="flex items-center justify-between text-[11px] mb-1">
+                              <span className="text-slate-500 font-medium">Progression</span>
+                              <span className="font-bold text-slate-900 font-mono">{getTicketProgress(ticket).label}</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden border border-slate-200">
+                              <div
+                                className={`h-full transition-all duration-500 ${getTicketProgress(ticket).barClass}`}
+                                style={{ width: `${getTicketProgress(ticket).pct}%` }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1">
+                              <span>Charge : {ticket.estimatedHours} h</span>
+                              <span>RAF : {ticket.remainingHours ?? ticket.estimatedHours} h</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Dernier échange si messages existants */}
+                        {ticket.messages && ticket.messages.length > 0 && (
+                          <div className="p-2.5 bg-purple-50/60 rounded-lg border border-purple-100 text-xs flex items-start gap-2">
+                            <MessageSquare className="w-3.5 h-3.5 text-purple-600 shrink-0 mt-0.5" />
+                            <div className="text-[11px] text-purple-900 leading-relaxed truncate">
+                              <span className="font-semibold">{ticket.messages[ticket.messages.length - 1].authorName} : </span>
+                              <span>{ticket.messages[ticket.messages.length - 1].message}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions Consultant */}
+                      <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
+                        <button
+                          onClick={() => setDiscussingTicket(ticket)}
+                          className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer ${
+                            ticket.status === "BLOCKED"
+                              ? "bg-rose-700 hover:bg-rose-800 text-white ring-2 ring-rose-400"
+                              : "bg-purple-700 hover:bg-purple-800 text-white"
+                          }`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>
+                            {ticket.status === "BLOCKED"
+                              ? "Répondre & Débloquer"
+                              : `Échanger avec ${ticket.assignedDeveloper ? ticket.assignedDeveloper.name.split(" ")[0] : "l'équipe"} (${ticket.messages?.length || 0})`}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -3010,6 +3293,70 @@ export default function TicketManagerPage() {
                   <strong className="text-slate-800">{supervisingTicket.clientCompany || "Safir Consulting"}</strong>
                 </div>
               </div>
+
+              {/* Fil d'Échange Développeur ↔ Consultant & Direction dans la Modale de Supervision */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Dialogue Technique : Développeur ↔ Consultante ({supervisingTicket.messages?.length || 0})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const t = supervisingTicket;
+                      setDiscussingTicket(t);
+                    }}
+                    className="px-2.5 py-1 text-[11px] bg-purple-100 text-purple-800 hover:bg-purple-200 rounded font-medium transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <span>Ouvrir le fil de discussion</span>
+                  </button>
+                </div>
+
+                {(!supervisingTicket.messages || supervisingTicket.messages.length === 0) ? (
+                  <p className="text-slate-500 text-xs italic">
+                    Aucun échange direct enregistré pour le moment entre le développeur et le consultant.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {supervisingTicket.messages.map((m) => (
+                      <div
+                        key={m.id}
+                        className={`p-2.5 rounded-lg border text-xs leading-relaxed ${
+                          m.authorRole === "DEVELOPER"
+                            ? "bg-sky-50/70 border-sky-200"
+                            : m.authorRole === "CONSULTANT"
+                            ? "bg-purple-50/70 border-purple-200"
+                            : "bg-amber-50/70 border-amber-200"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[11px] mb-1">
+                          <span className="font-semibold text-slate-900 flex items-center gap-1.5">
+                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
+                              m.authorRole === "DEVELOPER"
+                                ? "bg-sky-200 text-sky-900"
+                                : m.authorRole === "CONSULTANT"
+                                ? "bg-purple-200 text-purple-900"
+                                : "bg-amber-200 text-amber-900"
+                            }`}>
+                              {m.authorRole === "DEVELOPER" ? "Développeur" : m.authorRole === "CONSULTANT" ? "Consultante" : "Direction"}
+                            </span>
+                            <span>{m.authorName}</span>
+                          </span>
+                          <span className="text-slate-400 text-[10px]">{m.timestamp}</span>
+                        </div>
+                        <p className="text-slate-700">{m.message}</p>
+                        {m.isBlockerQuestion && (
+                          <div className="mt-1 text-[10px] font-semibold text-rose-700 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 text-rose-600" />
+                            <span>Précision bloquante demandée au consultant</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Pied de Modale : Arbitrages et Clôture Définitive par Aliko (HEAD) */}
@@ -3066,6 +3413,186 @@ export default function TicketManagerPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* MODALE 8 : DIALOGUE DIRECT DÉVELOPPEUR <-> CONSULTANT & DIRECTION */}
+      {/* ================================================================= */}
+      {discussingTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Entête */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-purple-950 via-slate-900 to-indigo-950 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 text-purple-300 rounded-xl border border-purple-400/20">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-purple-500/30 text-purple-200 border border-purple-400/30">
+                      {discussingTicket.reference}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-white/10 text-slate-300 font-mono">
+                      {discussingTicket.typeCode}
+                    </span>
+                    {renderStatusBadge(discussingTicket.status)}
+                  </div>
+                  <div className="text-[11px] font-semibold text-purple-300 uppercase tracking-wider mt-1">
+                    Fil d'Échange Tracé — Développeur ↔ Consultante ↔ Direction
+                  </div>
+                  <h3 className="font-bold text-sm sm:text-base text-white leading-tight">
+                    {discussingTicket.title}
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setDiscussingTicket(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Bandeau d'acteurs */}
+            <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 font-medium">Développeur :</span>
+                <span className="font-semibold text-slate-900">
+                  {discussingTicket.assignedDeveloper ? discussingTicket.assignedDeveloper.name : "Non affecté"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 font-medium">Consultante :</span>
+                <span className="font-semibold text-slate-900">{discussingTicket.applicantName || "Mélissa Diakité"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 font-medium">Progression :</span>
+                <span className="font-mono font-bold text-sky-800">{getTicketProgress(discussingTicket).label}</span>
+              </div>
+            </div>
+
+            {/* Corps Déroulant : Messages */}
+            <div className="p-5 overflow-y-auto space-y-3 flex-1 text-xs bg-slate-50/30 max-h-[50vh]">
+              {(!discussingTicket.messages || discussingTicket.messages.length === 0) ? (
+                <div className="p-8 text-center text-slate-400">
+                  <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p>Aucun message n'a encore été échangé sur ce ticket.</p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Le développeur ou le consultant peut poser une question ou partager des éléments ici.
+                  </p>
+                </div>
+              ) : (
+                discussingTicket.messages.map((m) => {
+                  const isCurrentAuthor = currentUser?.email.toLowerCase() === m.authorEmail.toLowerCase();
+                  return (
+                    <div
+                      key={m.id}
+                      className={`flex flex-col ${isCurrentAuthor ? "items-end" : "items-start"}`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-slate-500">
+                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
+                          m.authorRole === "DEVELOPER"
+                            ? "bg-sky-100 text-sky-800"
+                            : m.authorRole === "CONSULTANT"
+                            ? "bg-purple-100 text-purple-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {m.authorRole === "DEVELOPER" ? "Développeur" : m.authorRole === "CONSULTANT" ? "Consultante" : "Direction BU"}
+                        </span>
+                        <span className="font-medium text-slate-700">{m.authorName}</span>
+                        <span>•</span>
+                        <span>{m.timestamp}</span>
+                      </div>
+
+                      <div
+                        className={`p-3.5 rounded-2xl max-w-lg shadow-sm text-xs leading-relaxed ${
+                          isCurrentAuthor
+                            ? "bg-purple-700 text-white rounded-br-none"
+                            : m.authorRole === "DEVELOPER"
+                            ? "bg-white border border-sky-200 text-slate-800 rounded-bl-none"
+                            : "bg-white border border-purple-200 text-slate-800 rounded-bl-none"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{m.message}</p>
+                        {m.isBlockerQuestion && (
+                          <div className={`mt-2 pt-2 border-t text-[11px] font-semibold flex items-center gap-1.5 ${
+                            isCurrentAuthor ? "border-purple-600 text-amber-200" : "border-rose-100 text-rose-700"
+                          }`}>
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>Question bloquante signalée au consultant</span>
+                          </div>
+                        )}
+                        {m.isConsultantReply && (
+                          <div className={`mt-2 pt-2 border-t text-[11px] font-semibold flex items-center gap-1.5 ${
+                            isCurrentAuthor ? "border-purple-600 text-emerald-200" : "border-emerald-100 text-emerald-700"
+                          }`}>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Précision apportée par la consultante</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Formulaire de Réponse / Question */}
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-200 bg-white space-y-3">
+              {currentUser?.role === "DEVELOPER" && (
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-xs text-rose-700 cursor-pointer font-medium select-none">
+                    <input
+                      type="checkbox"
+                      checked={isQuestionBlocker}
+                      onChange={(e) => setIsQuestionBlocker(e.target.checked)}
+                      className="rounded text-rose-600 focus:ring-rose-500"
+                    />
+                    <span>🚨 Signaler ce besoin comme bloquant pour mon développement (alerter la consultante et Aliko)</span>
+                  </label>
+                </div>
+              )}
+
+              {currentUser?.role === "CONSULTANT" && (discussingTicket.status === "BLOCKED" || !!discussingTicket.blockerReason) && (
+                <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <label className="flex items-center gap-2 text-xs text-emerald-800 cursor-pointer font-medium select-none">
+                    <input
+                      type="checkbox"
+                      checked={unblockOnReply}
+                      onChange={(e) => setUnblockOnReply(e.target.checked)}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>✓ Mes précisions débloquent le problème : Débloquer automatiquement le ticket et relancer le développement</span>
+                  </label>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <textarea
+                  rows={2}
+                  required
+                  placeholder={
+                    currentUser?.role === "CONSULTANT"
+                      ? `Répondre à ${discussingTicket.assignedDeveloper ? discussingTicket.assignedDeveloper.name : "l'équipe"} avec vos précisions fonctionnelles...`
+                      : currentUser?.role === "DEVELOPER"
+                      ? `Poser une question fonctionnelle à ${discussingTicket.applicantName || "la consultante"}...`
+                      : "Saisir une directive ou arbitrage de Direction BU SME..."
+                  }
+                  value={ticketMessageText}
+                  onChange={(e) => setTicketMessageText(e.target.value)}
+                  className="w-full text-xs p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 resize-none"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 self-end shrink-0 cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">Envoyer</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

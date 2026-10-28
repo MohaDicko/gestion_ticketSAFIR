@@ -232,4 +232,41 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     // Vérifier l'affichage du statut Réglé & Clôturé dans le tableau
     await expect(page.locator("body")).toContainText("✓ Réglé & Clôturé");
   });
+
+  test("11. Espace Consultant : Visibilité sur le développeur assigné, progression en direct et fil de discussion direct Développeur <-> Consultant", async ({ page }) => {
+    await page.goto("/");
+
+    // 1. Connexion en tant que Mélissa Diakité (CONSULTANT)
+    const melissaBtn = page.getByRole("button", { name: /Mélissa Diakité/i }).first();
+    await expect(melissaBtn).toBeVisible();
+    await melissaBtn.click();
+
+    // 2. Vérifier la visibilité du développeur dédié et de la progression
+    await expect(page.locator("body")).toContainText("Développeur Dédié");
+    await expect(page.locator("body")).toContainText("Anoop Pandimukkula");
+    await expect(page.locator("body")).toContainText("anoop.pandimukkula@safirconsulting.net");
+    await expect(page.locator("body")).toContainText("Progression");
+
+    // 3. Vérifier la bannière d'alerte pour précision requise
+    await expect(page.locator("body")).toContainText("Précision Métier Attendue");
+
+    // 4. Ouvrir le dialogue avec le développeur sur le ticket bloqué
+    const exchangeBtn = page.getByRole("button", { name: /Répondre & Débloquer/i });
+    await expect(exchangeBtn).toBeVisible();
+    await exchangeBtn.click();
+
+    // 5. Vérifier la modale de fil d'échange tracé
+    await expect(page.getByText("Fil d'Échange Tracé — Développeur ↔ Consultante ↔ Direction")).toBeVisible();
+    await expect(page.locator("body")).toContainText("Bonjour Mélissa, l'anomalie de lettrage");
+
+    // 6. Rédiger la réponse apportant les précisions attendues
+    const textarea = page.locator("textarea");
+    await textarea.fill("Bonjour Anoop, voici l'échantillon des pièces comptables n° 4501 et 4502 pour tes tests.");
+
+    // 7. Envoyer la réponse
+    await page.getByRole("button", { name: /Envoyer/i }).click();
+
+    // 8. Vérifier la prise en compte et le déblocage du ticket
+    await expect(page.locator("body")).toContainText("Précision apportée par la consultante");
+  });
 });
