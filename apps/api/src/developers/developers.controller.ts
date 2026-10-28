@@ -10,6 +10,21 @@ export class DevelopersController {
     return this.developersService.findAll();
   }
 
+  @Post()
+  async createDeveloper(
+    @Body()
+    body: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      jobTitle: string;
+      weeklyCapacityHours?: number;
+      skills?: { skillId: string; level: number }[];
+    },
+  ) {
+    return this.developersService.createDeveloper(body);
+  }
+
   @Post(":id/skills")
   async updateSkill(
     @Param("id") developerId: string,

@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { Role, ProfileStatus } from "@prisma/client";
+import * as argon2 from "argon2";
 
 @Injectable()
 export class DevelopersService {
@@ -122,6 +124,90 @@ export class DevelopersService {
         validatedById: validatorId,
         validationSource: "Validation manuelle HEAD",
       },
+    });
+  }
+
+  async createDeveloper(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    jobTitle: string;
+    weeklyCapacityHours?: number;
+    skills?: { skillId: string; level: number }[];
+    actorId?: string;
+  }) {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: data.email.toLowerCase().trim() },
+    });
+    if (existing) {
+      throw new BadRequestException(`Un utilisateur avec l'adresse e-mail '${data.email}' existe déjà`);
+    }
+
+    const defaultPasswordHash = await argon2.hash("Safir2026!DevCapacity");
+    const weeklyHours = data.weeklyCapacityHours || 40;
+
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email.toLowerCase().trim(),
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          roles: [Role.DEVELOPER],
+          isActive: true,
+          passwordHash: defaultPasswordHash,
+          timezone: "Europe/Paris",
+        },
+      });
+
+      const profile = await tx.developerProfile.create({
+        data: {
+          userId: user.id,
+          jobTitle: data.jobTitle.trim(),
+          weeklyCapacityHours: weeklyHours,
+          weeklySchedule: { mon: 8, tue: 8, wed: 8, thu: 8, fri: 8, sat: 0, sun: 0 },
+          planningFactor: 1.0,
+          timezone: "Europe/Paris",
+          profileStatus: ProfileStatus.ACTIVE,
+        },
+      });
+
+      const assignedSkills: any[] = [];
+      if (data.skills && data.skills.length > 0) {
+        for (const sk of data.skills) {
+          const createdSkill = await tx.developerSkill.create({
+            data: {
+              developerId: profile.id,
+              skillId: sk.skillId,
+              proficiencyLevel: sk.level,
+              validatedAt: new Date(),
+              validatedById: data.actorId,
+              validationSource: "Validation initiale HEAD (Onboarding)",
+            },
+            include: { skill: true },
+          });
+          assignedSkills.push({
+            id: createdSkill.skillId,
+            name: createdSkill.skill.name,
+            category: createdSkill.skill.category,
+            level: createdSkill.proficiencyLevel,
+          });
+        }
+      }
+
+      return {
+        id: profile.id,
+        userId: user.id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        jobTitle: profile.jobTitle,
+        netWeeklyHours: weeklyHours,
+        reservedHours: 0,
+        freeHours: weeklyHours,
+        loadPercentage: 0,
+        skills: assignedSkills,
+        activeAssignmentsCount: 0,
+        hasUpcomingAbsence: false,
+      };
     });
   }
 }

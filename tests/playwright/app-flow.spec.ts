@@ -104,4 +104,29 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
     await page.getByRole("button", { name: /Annuler/i }).click();
     await expect(page.getByText("Nouveau Ticket de Développement SAP")).not.toBeVisible();
   });
+
+  test("7. Permet à Aliko (HEAD) d'ajouter un nouveau développeur à son équipe et rafraîchit l'effectif", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+
+    // Vérifier présence du bouton Ajouter un Développeur
+    const addDevBtn = page.getByRole("button", { name: /Ajouter un Développeur/i });
+    await expect(addDevBtn).toBeVisible();
+    await addDevBtn.click();
+
+    // Vérifier l'apparition de la modale
+    await expect(page.getByText("Intégrer un Développeur dans l'Équipe")).toBeVisible();
+
+    // Remplir les informations
+    await page.getByPlaceholder("ex : Amadou").fill("Amadou");
+    await page.getByPlaceholder("ex : Coulibaly").fill("Coulibaly");
+    await page.getByPlaceholder("amadou.coulibaly@safirconsulting.net").fill("amadou.coulibaly@safirconsulting.net");
+
+    // Valider l'ajout
+    await page.getByRole("button", { name: /Intégrer le Développeur/i }).click();
+
+    // Vérifier la présence du nouveau développeur dans la grille
+    await expect(page.locator("body")).toContainText("Amadou Coulibaly");
+    await expect(page.locator("body")).toContainText("amadou.coulibaly@safirconsulting.net");
+  });
 });

@@ -156,6 +156,14 @@ L'effectif de l'équipe de développement Safir Consulting est formalisé avec d
 ### 5.1. Consultants Fonctionnels Référents
 - **Mélissa Diakité** (`melissa.diakite@safirconsulting.net`) : Consultante Fonctionnelle SAP (Safir Consulting) — interlocutrice métier émettrice des besoins, interlocutrice pour les spécifications fonctionnelles et la recette applicative.
 
+### 5.2. Évolutivité de l'Équipe & Onboarding Dynamique par Aliko
+Pour accompagner l'agrandissement futur de la SME Business Unit, la plateforme permet à **Aliko Getheme (HEAD)** d'intégrer en temps réel de nouveaux développeurs dans son équipe :
+- Renseignement de l'identité (prénom, nom, e-mail d'entreprise).
+- Spécialité technique SAP (SAP B1 SDK, S/4HANA ABAP & CDS, Service Layer, Full-Stack Fiori).
+- Paramétrage de la capacité hebdomadaire contractuelle (ex: 40h/semaine).
+- Évaluation de la compétence clé d'entrée (Niveaux 1 à 5).
+Le profil est instantanément injecté dans le référentiel d'équipe, mis à jour dans le tableau de bord de capacité et éligible au moteur de scoring d'affectation.
+
 ---
 
 ## 6. MOTEUR DE CALCUL DE CAPACITÉ NETTE (SANS DOUBLE DÉCOMPTE)
@@ -281,6 +289,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 | **Livraison de Ticket pour Recette** | ✅ | ✅ | ❌ | ❌ |
 | **Suivi Transparent de ses Demandes Émises** | ✅ | ❌ | ✅ | ✅ |
 | **Formulaire de Soumission Directe de Nouveau Besoin** | ✅ | ❌ | ✅ | ✅ |
+| **Intégration d'un Nouveau Développeur (Onboarding Équipe)** | ✅ | ❌ | ❌ | ✅ |
 | **Validation Clôture Définitive (`CLOSED`)** | ✅ | ❌ | ❌ | ❌ |
 | **Pondération des Critères de Scoring & Règle Métier** | ✅ | ❌ | ❌ | ✅ |
 | **Journal d'Audit Immuable & Traçabilité** | ✅ | ❌ | ❌ | ✅ |
