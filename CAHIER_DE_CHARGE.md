@@ -243,9 +243,64 @@ Le ticket suit un cheminement maîtrisé garantissant la conformité contractuel
 
 ---
 
-## 9. ARCHITECTURE TECHNIQUE & HÉBERGEMENT SUR SERVEUR SAP
+## 9. ARCHITECTURE TECHNIQUE & LOGICIELLE DU SYSTÈME
 
-Pour répondre aux contraintes d'infrastructure de Safir Consulting, le système est conçu pour être hébergé sur les serveurs d'infrastructure **SAP Business One** ou **SAP S/4HANA** de l'entreprise :
+La plateforme est conçue selon une architecture monorepo moderne en couches étanches, combinant performance, sécurité d'entreprise et indépendance totale vis-à-vis des composants natifs SAP.
+
+### 9.1. Cartographie d'Architecture Globale & Flux de Données
+
+```mermaid
+graph TB
+    subgraph Clients["1. INTERFACES UTILISATEURS (Next.js 15 App Router)"]
+        A1["Portail Direction (Aliko - HEAD)"]
+        A2["Espace Développeur (Anoop, Moha, Hassane...)"]
+        A3["Espace Métier (Mélissa - CONSULTANT)"]
+        A4["Authentification Corporate & RBAC (Argon2id)"]
+    end
+
+    subgraph API["2. COUCHE SERVICES & API REST (NestJS / TypeScript)"]
+        B1["Contrôleur Auth & Session RBAC"]
+        B2["Moteur de Scoring d'Urgence (100 Pts)"]
+        B3["Calculateur de Capacité Nette & Charge"]
+        B4["Module Inbox Outlook M365 & Bouclier Anti-usurpation"]
+        B5["Moteur d'États Finis & Audit Trail Immuable"]
+        B6["Gestionnaire Multi-Développeurs par Lot SAP"]
+    end
+
+    subgraph Persistence["3. COUCHE PERSISTANCE & DONNÉES (PostgreSQL 16 / Prisma)"]
+        C1["Modèle Tickets & Lots Collaboratifs"]
+        C2["Modèle Développeurs & Matrice Compétences"]
+        C3["Modèle Absences & Calendrier Ouvré"]
+        C4["Modèle Profils Consultants & Logins"]
+        C5["Journal d'Audit Immuable (AuditLog)"]
+    end
+
+    subgraph External["4. ÉCOSYSTÈME EXTERNE & SAP"]
+        D1["Microsoft 365 / Azure Entra ID (Graph API)"]
+        D2["Serveur SAP B1 / S/4HANA (Service Layer / SQL / HANA)"]
+    end
+
+    Clients -->|"Requêtes HTTP/JSON Sécurisées (Ports 3000 -> 4000)"| API
+    API -->|"Requêtage Typé & Paramétré (Prisma ORM)"| Persistence
+    API -.->|"Synchronisation Ingestion E-mails"| D1
+    API -.->|"Intégration & Données Métier"| D2
+```
+
+### 9.2. Stack Technologique Complète
+
+| Couche | Technologie Retenue | Justification & Rôle Métier |
+|---|---|---|
+| **Frontend** | **Next.js 15 (React 19)** + Vanilla CSS & Tailwind | Rendu hybride ultra-rapide, ergonomie corporate, temps réel pour jauges et dashboards. |
+| **Backend API** | **NestJS 10 (Node.js LTS)** | Architecture modulaire d'entreprise, injection de dépendances, robustesse et typage fort. |
+| **ORM & Typage** | **Prisma ORM v5** | Schéma unifié, migrations automatiques, requêtes paramétrées avec immunité aux injections SQL. |
+| **Base de Données** | **PostgreSQL 16** (Supabase Cloud ou Local) | 22 tables relationnelles, intégrité référentielle, indexation avancée et conformité ACID. |
+| **Cryptographie** | **Argon2id** (`argon2`) | Algorithme standard OWASP pour le hachage des mots de passe de connexion. |
+| **Tests E2E & Unitaires** | **Playwright + Vitest** | 12 scénarios E2E navigateur Chromium + 36 tests métier automatisés. |
+| **Sécurité & Audit** | **OWASP ZAP** | 11 contrôles d'étanchéité, en-têtes de sécurité HSTS / CSP / anti-clickjacking. |
+
+### 9.3. Architecture d'Hébergement & Coexistence avec les Serveurs SAP
+
+Pour répondre aux contraintes d'infrastructure de Safir Consulting, le système est conçu pour être hébergé directement sur les serveurs d'infrastructure **SAP Business One** ou **SAP S/4HANA** de l'entreprise :
 
 ```
    ┌─────────────────────────────────────────────────────────────┐
@@ -271,11 +326,11 @@ Pour répondre aux contraintes d'infrastructure de Safir Consulting, le système
    └─────────────────────────────────────────────────────────────┘
 ```
 
-### Les 4 Garanties d'Étage Technique :
-1. **Étanchéité Logicielle** : Fonctionnement sous conteneurs légers Docker / Podman.
-2. **Indépendance des Données** : Base de données **PostgreSQL 16** dédiée (actuellement connectée sur Supabase en cloud, déployable localement sur le serveur SAP via `docker-compose.yml`).
-3. **Aucun Conflit de Ports** : Les ports de Ticket Manager (`3000` et `4000`) sont totalement disjoints des ports réservés SAP.
-4. **Fiabilité des Notifications (Outbox Pattern)** : Tout envoi d'e-mail est consigné en base avant expédition. En cas d'indisponibilité momentanée du réseau, le message n'est jamais perdu et part dès le rétablissement.
+### 9.4. Les 4 Garanties d'Étage Technique :
+1. **Étanchéité Logicielle** : Fonctionnement sous conteneurs légers Docker / Podman (`docker-compose.yml`) avec réseau pont privé.
+2. **Indépendance des Données** : Base de données **PostgreSQL 16** dédiée (actuellement connectée sur Supabase en cloud, déployable localement sur le serveur SAP via conteneur sans polluer l'instance HANA).
+3. **Aucun Conflit de Ports** : Les ports de Ticket Manager (`3000` et `4000`) sont totalement disjoints des ports réservés SAP (`30015`, `50000`, etc.).
+4. **Fiabilité des Notifications (Outbox Pattern)** : Tout envoi d'e-mail ou alerte est consigné en base avant expédition. En cas d'indisponibilité momentanée du réseau, le message n'est jamais perdu et part dès le rétablissement.
 
 ---
 
