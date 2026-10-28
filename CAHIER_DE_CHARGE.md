@@ -20,7 +20,7 @@
 - [2. Problématique & Objectifs Stratégiques](#2-problématique--objectifs-stratégiques)
 - [3. Typologie des Demandes & Spécificités SAP](#3-typologie-des-demandes--spécificités-sap)
 - [4. Module Messagerie & Flux E-mail Outlook Microsoft 365](#4-module-messagerie--flux-e-mail-outlook-microsoft-365)
-- [5. Référentiel Équipe des 8 Développeurs & Compétences](#5-référentiel-équipe-des-8-développeurs--compétences)
+- [5. Référentiel Équipe des 7 Développeurs & Compétences](#5-référentiel-équipe-des-7-développeurs--compétences)
 - [6. Moteur de Calcul de Capacité Nette (Sans Double Décompte)](#6-moteur-de-calcul-de-capacité-nette-sans-double-décompte)
 - [7. Moteur d'Aide à l'Affectation (Algorithme Décisionnel sur 100 Points)](#7-moteur-daide-à-laffectation-algorithme-décisionnel-sur-100-points)
 - [8. Cycle de Vie des Demandes & Machine à États Finis](#8-cycle-de-vie-des-demandes--machine-à-états-finis)
@@ -39,7 +39,7 @@ Au sein de **Safir Consulting**, la **SME Business Unit** assure la conception, 
   - Il reçoit les demandes des **consultants fonctionnels** et des **clients finaux**.
   - Il évalue la criticité, estime l'effort et décide de l'attribution de chaque demande.
   - Il garantit le respect des engagements de livraison contractuels auprès des clients.
-- **L'équipe de réalisation** est composée d'un effectif initial de **8 développeurs**, ayant chacun des niveaux d'expertise distincts (SDK SAP, Service Layer, ABAP, Fiori, interfaces Web, bases de données HANA/SQL).
+- **L'équipe de réalisation** est composée d'un effectif de **7 développeurs réels** (+ Direction et Consulting Fonctionnel, soit 9 collaborateurs au total), ayant chacun des niveaux d'expertise distincts (SDK SAP, Service Layer, ABAP, Fiori, interfaces Web, bases de données HANA/SQL).
 
 ```
    [Clients Externes & Consultants Safir]
@@ -51,7 +51,7 @@ Au sein de **Safir Consulting**, la **SME Business Unit** assure la conception, 
          └───────────┬─────────────┘
                      │ (Affectation optimisée & traçable)
                      ▼
-       [ Équipe des 8 Développeurs ]
+       [ Équipe des 7 Développeurs ]
   (SAP B1 · S/4HANA · API · Full-Stack)
 ```
 
@@ -61,12 +61,12 @@ Au sein de **Safir Consulting**, la **SME Business Unit** assure la conception, 
 
 ### 2.1. Les Défis Constatés
 1. **Dispersion des demandes** : Flux asynchrones d'e-mails dans la boîte personnelle d'Aliko sans visibilité partagée sur l'état d'avancement.
-2. **Risque de saturation des développeurs clés** : Tendance naturelle à sur-solliciter les profils seniors (Marc, Sarah) au détriment du reste de l'équipe.
+2. **Risque de saturation des développeurs clés** : Tendance naturelle à sur-solliciter les profils seniors (Anoop, Hassane) au détriment du reste de l'équipe.
 3. **Calcul de capacité approximatif** : Risque de double décompte entre congés, jours fériés et heures déjà réservées sur d'autres projets.
 4. **Perte de traçabilité des arbitrages** : Manque d'historique lorsqu'une demande urgente bouscule le planning prévu.
 
 ### 2.2. Objectifs Attendus de la Plateforme
-- **Visibilité en temps réel à 100%** sur la charge réelle et la capacité nette des 8 développeurs.
+- **Visibilité en temps réel à 100%** sur la charge réelle et la capacité nette des 7 développeurs.
 - **Zéro ressaisie** : Transformation directe d'un e-mail client en ticket d'intervention structuré.
 - **Aide à la décision objective** : Recommandation algorithmique du meilleur développeur disponible pour chaque demande, basée sur les compétences exigées et l'échéance.
 - **Garantie d'absence de conflit SAP** : Déploiement étanche pouvant cohabiter sans risque sur les serveurs d'infrastructure SAP de l'entreprise.
@@ -194,7 +194,7 @@ Un développeur est **strictement éliminé** de la recommandation si :
 | **Respect de l'Échéance** | **15 pts** | Capacité à finaliser l'effort estimé avant la date limite demandée par le client. |
 | **Continuité Client / Projet** | **10 pts** | +10 pts si le développeur a déjà livré avec succès sur ce même client ou projet (connaissance du code existant). |
 
-> **Liberté du Responsable (Override)** : Aliko conserve en permanence le pouvoir d'affecter un développeur différent du premier classé. Dans ce cas, la plateforme lui demande simplement un motif de dérogation (ex: *« Volonté de montée en compétences de Lucas »*), consigné dans le journal d'audit.
+> **Liberté du Responsable (Override)** : Aliko conserve en permanence le pouvoir d'affecter un développeur différent du premier classé. Dans ce cas, la plateforme lui demande simplement un motif de dérogation (ex: *« Volonté de montée en compétences d'un profil sur ce flux »*), consigné dans le journal d'audit.
 
 ---
 
@@ -318,6 +318,9 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 - ✅ **Contrôle d'Accès & Espaces Multi-Utilisateurs (RBAC)** : Cloisonnement strict entre Direction (Aliko), Développeurs (Anoop, Moha, Hassane - saisie RAF, Stop-the-line, livraison) et Consultante (Mélissa - suivi et soumission directe de besoins), avec sélecteur de session instantané.
 - ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas des variables d'environnement).
 - ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
+- ✅ **Banc de Tests Unitaires & Métier Vitest** : 26 tests automatisés validés à 100% (26 PASS / 0 FAIL en 927 ms) couvrant le scoring sur 100 points, le non-double décompte de capacité nette, la classification e-mails et la machine à états.
+- ✅ **Banc de Tests E2E Navigateur Playwright** : 6 scénarios complets sous Chromium (6 PASS / 0 FAIL en 30 s) validant le cloisonnement RBAC Direction / Développeur / Consultante, les filtres et les modales.
+- ✅ **Audit de Sécurité OWASP ZAP & Top 10** : 10 contrôles validés (étanchéité des grants RBAC, protection anti-usurpation Gmail, requêtage paramétré Prisma contre les injections SQL, en-têtes défensifs, script `run_owasp_zap_scan.ps1` et profil `zap-baseline.conf`).
 - ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 
 ### 11.2. Feuille de Route pour Mise en Production

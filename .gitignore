@@ -44,3 +44,8 @@ Thumbs.db
 
 # Docker volumes
 docker-data/
+
+# Tests & Coverage
+playwright-report/
+test-results/
+coverage/
