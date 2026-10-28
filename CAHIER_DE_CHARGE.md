@@ -304,6 +304,12 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 
 ### 10.2. Expérience et Cloisonnement par Profil
 
+0. **Portail d'Authentification Sécurisé par Défaut (`/`)** :
+   - **Arrivée par défaut** : Tout utilisateur non connecté arrive impérativement sur la page d'authentification d'entreprise corporate Safir Consulting.
+   - **Identifiants & Sécurité** : Saisie du login (adresse e-mail professionnelle) et du mot de passe initial chiffré via Argon2id, ou sélection rapide 1-clic pour les scénarios de démonstration.
+   - **Routage Automatique vers le Portail Dédié** : Dès validation, l'utilisateur est immédiatement orienté vers **son propre portail de travail** selon son profil RBAC (`HEAD` vers le Tableau de Bord Direction, `DEVELOPER` vers son Espace Développeur personnel, `CONSULTANT` vers son Espace Demandes Métier).
+   - **Déconnexion Directe** : Bouton de déconnexion explicite (`LogOut`) accessible en permanence dans l'en-tête pour clôturer la session et retourner à l'écran de connexion.
+
 1. **Espace Direction (`HEAD` — Aliko Getheme)** :
    - Vision consolidée à 360° : boîte de réception Outlook M365 (e-mails entrants, analyse anti-spoofing, scoring d'urgence).
    - Suivi en temps réel de la capacité de l'équipe (heures disponibles vs heures RAF réelles, taux de saturation).
@@ -331,12 +337,12 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 - ✅ **Base de Données Supabase PostgreSQL 16** : 22 tables créées, schéma Prisma appliqué, relations et contraintes d'intégrité en place.
 - ✅ **Jeu de Données Initial (Seed)** : 7 développeurs réels Safir Consulting (Moha Dicko, Anoop Pandimukkula, Hassane Bocoum, Nevrit Ahua, Fatoumata Traore, Korotoumou Thiam, Jean-Philippe Ebrottié), consultante Mélissa Diakité, compétences SAP et tickets enregistrés.
 - ✅ **Backend API REST NestJS** : Opérationnel sur `http://localhost:4000/api/v1` avec contrôleurs de tickets, qualification d'expéditeurs (Consultant Safir, Contact Client, Externe, Alerte anti-usurpation Gmail) et moteur de scoring.
-- ✅ **Frontend Next.js 15 App Router** : Opérationnel sur `http://localhost:3000` avec interface entreprise authentique, sobre et ergonomique (Tableau de bord de synthèse, Grand tableau des tickets SAP, Fiches de capacité de l'équipe, Boîte de réception Outlook M365 connectée).
-- ✅ **Contrôle d'Accès & Espaces Multi-Utilisateurs (RBAC)** : Cloisonnement strict entre Direction (Aliko), Développeurs (Anoop, Moha, Hassane - saisie RAF, Stop-the-line, livraison) et Consultante (Mélissa - suivi et soumission directe de besoins), avec sélecteur de session instantané.
+- ✅ **Frontend Next.js 15 App Router** : Opérationnel sur `http://localhost:3000` avec interface entreprise authentique, sobre et ergonomique (Page de login d'accueil par défaut, Tableau de bord de synthèse, Grand tableau des tickets SAP, Fiches de capacité de l'équipe, Boîte de réception Outlook M365 connectée).
+- ✅ **Contrôle d'Accès & Espaces Multi-Utilisateurs (RBAC)** : Cloisonnement strict entre Direction (Aliko), Développeurs (Anoop, Moha, Hassane - saisie RAF, Stop-the-line, livraison) et Consultante (Mélissa - suivi et soumission directe de besoins), avec sélecteur de session instantané et déconnexion.
 - ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas des variables d'environnement).
 - ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
 - ✅ **Banc de Tests Unitaires & Métier Vitest** : 36 tests automatisés validés à 100% (36 PASS / 0 FAIL) couvrant le scoring sur 100 points, le calcul de capacité nette, la classification e-mails, la machine à états finis, le provisioning de consultants (login = email pro, hachage Argon2id) et l'onboarding dynamique de développeurs.
-- ✅ **Banc de Tests E2E Navigateur Playwright** : 8 scénarios complets sous Chromium (8 PASS / 0 FAIL) validant le cycle complet, le cloisonnement RBAC Direction / Développeur / Consultante, les filtres, l'ajout d'un développeur et la création de compte consultant.
+- ✅ **Banc de Tests E2E Navigateur Playwright** : 9 scénarios complets sous Chromium (9 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC Direction / Développeur / Consultante, les filtres, l'onboarding et la déconnexion.
 - ✅ **Audit de Sécurité OWASP ZAP & Top 10** : 11 contrôles validés à 100% (étanchéité des grants RBAC pour la création de comptes, absence de fuite de hachage de mot de passe, protection anti-usurpation Gmail, requêtage paramétré Prisma contre les injections SQL, en-têtes défensifs, script `run_owasp_zap_scan.ps1` et profil `zap-baseline.conf`).
 - ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 

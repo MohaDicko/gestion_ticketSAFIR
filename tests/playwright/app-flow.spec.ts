@@ -1,29 +1,52 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
-  test("1. Affiche l'entête corporative Safir Consulting & le rôle HEAD par défaut", async ({ page }) => {
+async function loginAsAliko(page: any) {
+  await page.goto("/");
+  const alikoBtn = page.getByRole("button", { name: /Aliko Getheme/i }).first();
+  if (await alikoBtn.isVisible({ timeout: 2500 }).catch(() => false)) {
+    await alikoBtn.click();
+    await expect(page.getByRole("button", { name: /Tableau de bord/i })).toBeVisible();
+  }
+}
+
+test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
+  test("1. Affiche par défaut la page de login Safir Consulting, s'authentifie et accède au portail Direction", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Ticket Manager/i);
 
-    // Vérifier l'entête Safir Consulting
-    const header = page.locator("header");
-    await expect(header).toContainText("Safir Consulting");
-    await expect(header).toContainText("Ticket Manager");
+    // Vérifier l'écran de Login initial par défaut
+    await expect(page.locator("body")).toContainText("Safir Consulting");
+    await expect(page.locator("body")).toContainText("Connexion à votre Espace");
+    await expect(page.locator("body")).toContainText("Adresse e-mail professionnelle (Login)");
+    await expect(page.getByRole("button", { name: /Se connecter à mon portail/i })).toBeVisible();
 
-    // Vérifier la session active par défaut (Aliko Getheme - HEAD)
-    await expect(page.locator("body")).toContainText("Aliko Getheme");
-    await expect(page.locator("body")).toContainText("HEAD");
+    // Connexion en tant qu'Aliko Getheme (Direction)
+    const alikoBtn = page.getByRole("button", { name: /Aliko Getheme/i }).first();
+    await expect(alikoBtn).toBeVisible();
+    await alikoBtn.click();
+
+    // Vérifier l'arrivée dans le portail Direction (HEAD)
+    const header = page.locator("header");
+    await expect(header).toContainText("Aliko Getheme");
+    await expect(header).toContainText("HEAD");
+    await expect(page.getByRole("button", { name: /Tableau de bord/i })).toBeVisible();
+    await expect(page.locator("body")).toContainText("Capacité disponible");
   });
 
   test("2. Permet la navigation entre les onglets Direction (Dashboard, Tickets, Équipe, Outlook)", async ({ page }) => {
-    await page.goto("/");
+    await loginAsAliko(page);
 
     // 1. Clic sur Tous les Tickets SAP
     await page.getByRole("button", { name: /Tous les Tickets SAP/i }).click();
     await expect(page.getByPlaceholder(/Rechercher par référence, titre/i)).toBeVisible();
 
     // 2. Clic sur Équipe & Capacité
-    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+    const teamBtn = page.getByRole("button", { name: /Équipe & Capacité/i });
+    await teamBtn.click();
+    await expect(page.getByText("Ressources & Gouvernance BU SME")).toBeVisible().catch(async () => {
+      await teamBtn.click();
+      await expect(page.getByText("Ressources & Gouvernance BU SME")).toBeVisible();
+    });
     await expect(page.locator("body")).toContainText("Anoop Pandimukkula");
     await expect(page.locator("body")).toContainText("Hassane Bocoum");
     await expect(page.locator("body")).toContainText("Moha Dicko");
@@ -37,47 +60,45 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
     await expect(page.locator("body")).toContainText("Capacité disponible");
   });
 
-  test("3. Bascule de rôle RBAC vers DEVELOPER (Anoop Pandimukkula) & Espace Développeur Dédié", async ({ page }) => {
+  test("3. Connexion au portail Développeur (Anoop Pandimukkula) & Espace Développeur Dédié", async ({ page }) => {
     await page.goto("/");
 
-    // Ouvrir le menu utilisateur
-    await page.locator("header button:has-text('Aliko Getheme')").click();
+    // Connexion directe en tant qu'Anoop Pandimukkula (DEVELOPER)
+    const anoopBtn = page.getByRole("button", { name: /Anoop Pandimukkula/i }).first();
+    await expect(anoopBtn).toBeVisible();
+    await anoopBtn.click();
 
-    // Choisir Anoop Pandimukkula (DEVELOPER)
-    await page.getByRole("button", { name: /Anoop Pandimukkula/i }).click();
-
-    // Vérifier que la session a bien basculé
+    // Vérifier que l'utilisateur est bien dans son portail développeur dédié
     await expect(page.locator("body")).toContainText("Anoop Pandimukkula");
     await expect(page.locator("header")).toContainText("DEVELOPER");
+    await expect(page.locator("body")).toContainText("Espace Développeur — Anoop Pandimukkula");
 
-    // Vérifier que les onglets confidentiels Direction (Outlook) sont masqués
+    // Vérifier que les onglets confidentiels Direction (Outlook, Gouvernance globale) sont masqués
     await expect(page.getByRole("button", { name: /Boîte Outlook M365/i })).not.toBeVisible();
 
-    // Vérifier l'accès à l'Espace Développeur
+    // Vérifier l'onglet personnel Développeur
     await expect(page.getByRole("button", { name: /Mon Espace Développeur/i })).toBeVisible();
-    await expect(page.locator("body")).toContainText("Espace Développeur — Anoop Pandimukkula");
   });
 
-  test("4. Bascule de rôle RBAC vers CONSULTANT (Mélissa Diakité) & Espace Demandes", async ({ page }) => {
+  test("4. Connexion au portail Consultante (Mélissa Diakité) & Espace Demandes", async ({ page }) => {
     await page.goto("/");
 
-    // Ouvrir le menu utilisateur
-    await page.locator("header button:has-text('Aliko Getheme')").click();
+    // Connexion directe en tant que Mélissa Diakité (CONSULTANT)
+    const melissaBtn = page.getByRole("button", { name: /Mélissa Diakité/i }).first();
+    await expect(melissaBtn).toBeVisible();
+    await melissaBtn.click();
 
-    // Choisir Mélissa Diakité (CONSULTANT)
-    await page.getByRole("button", { name: /Mélissa Diakité/i }).click();
-
-    // Vérifier la session active
+    // Vérifier l'arrivée sur le portail Consultante dédié
     await expect(page.locator("body")).toContainText("Mélissa Diakité");
     await expect(page.locator("header")).toContainText("CONSULTANT");
+    await expect(page.locator("body")).toContainText("Espace Consulting SAP — Mélissa Diakité");
 
     // Vérifier l'onglet dédié Consultante
     await expect(page.getByRole("button", { name: /Mes Demandes Émises/i })).toBeVisible();
-    await expect(page.locator("body")).toContainText("Espace Consulting SAP — Mélissa Diakité");
   });
 
   test("5. Teste la recherche et le filtrage des tickets SAP", async ({ page }) => {
-    await page.goto("/");
+    await loginAsAliko(page);
     await page.getByRole("button", { name: /Tous les Tickets SAP/i }).click();
 
     const searchInput = page.getByPlaceholder(/Rechercher par référence, titre/i);
@@ -92,7 +113,7 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
   });
 
   test("6. Ouverture et affichage de la modale de création de ticket", async ({ page }) => {
-    await page.goto("/");
+    await loginAsAliko(page);
     await page.getByRole("button", { name: /Nouveau ticket/i }).click();
 
     // Vérifier l'apparition de la modale
@@ -106,7 +127,7 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
   });
 
   test("7. Permet à Aliko (HEAD) d'ajouter un nouveau développeur à son équipe et rafraîchit l'effectif", async ({ page }) => {
-    await page.goto("/");
+    await loginAsAliko(page);
     const teamBtn = page.getByRole("button", { name: /Équipe & Capacité/i });
     await expect(teamBtn).toBeVisible();
     await teamBtn.click();
@@ -137,7 +158,7 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
   });
 
   test("8. Permet à Aliko (HEAD) de créer un profil Consultant avec login et mot de passe", async ({ page }) => {
-    await page.goto("/");
+    await loginAsAliko(page);
     const teamBtn = page.getByRole("button", { name: /Équipe & Capacité/i });
     await expect(teamBtn).toBeVisible();
     await teamBtn.click();
@@ -169,5 +190,18 @@ test.describe("Tests E2E Interface & RBAC Ticket Manager (Playwright)", () => {
     // Vérifier l'affichage du consultant et de son login
     await expect(page.locator("body")).toContainText("Ibrahima Koné");
     await expect(page.locator("body")).toContainText("ibrahima.kone@safirconsulting.net");
+  });
+
+  test("9. Permet la déconnexion immédiate et le retour automatique sur la page de login", async ({ page }) => {
+    await loginAsAliko(page);
+
+    // Clic sur le bouton Déconnexion dans l'en-tête
+    const logoutBtn = page.getByRole("button", { name: /Déconnexion/i });
+    await expect(logoutBtn).toBeVisible();
+    await logoutBtn.click();
+
+    // Vérifier le retour immédiat à l'écran de Login
+    await expect(page.locator("body")).toContainText("Connexion à votre Espace");
+    await expect(page.getByRole("button", { name: /Se connecter à mon portail/i })).toBeVisible();
   });
 });
