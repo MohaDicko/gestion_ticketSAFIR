@@ -290,6 +290,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 | **Boîte de Réception Outlook M365 & Scoring d'Urgence** | ✅ | ❌ | ❌ | ✅ |
 | **Gouvernance Globale, Suivi Capacité & Alertes Surcharge** | ✅ | ❌ | ❌ | ✅ |
 | **Attribution des Tickets & Dérogations de Charge** | ✅ | ❌ | ❌ | ❌ |
+| **Affectation Multi-Développeurs par Brique SAP (Addon, HANA, API)** | ✅ | ❌ | ❌ | ❌ |
 | **Espace Développeur Personnalisé (Mes Tickets Dédiés)** | ✅ (Vue globale) | ✅ (Strictement les siens) | ❌ | ✅ |
 | **Saisie Reste à Faire (RAF en heures)** | ✅ | ✅ | ❌ | ❌ |
 | **Déclaration de Blocage d'Urgence (« Stop-the-line »)** | ✅ | ✅ | ❌ | ❌ |
