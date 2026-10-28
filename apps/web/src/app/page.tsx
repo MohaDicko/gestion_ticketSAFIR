@@ -103,6 +103,7 @@ interface Ticket {
   createdAt?: string;
   messages?: TicketMessage[];
   contributors?: TicketLotContributor[];
+  currency?: "XOF" | "EUR" | "USD";
 }
 
 interface InboxEmail {
@@ -323,7 +324,8 @@ const INITIAL_TICKETS: Ticket[] = [
     id: "tix-1",
     reference: "ADD-2026-0001",
     title: "Addon Validation Commandes Fournisseurs SAP B1",
-    description: "Implémentation d'un workflow de validation à double niveau pour les commandes d'achats excédant 10 000 €.",
+    description: "Implémentation d'un workflow de validation à double niveau pour les commandes d'achats excédant 10 000 000 FCFA (compatible multi-devises EUR / USD).",
+    currency: "XOF",
     status: "IN_PROGRESS",
     typeCode: "ADDON",
     priorityCode: "HIGH",
@@ -340,7 +342,7 @@ const INITIAL_TICKETS: Ticket[] = [
         authorName: "Mélissa Diakité",
         authorRole: "CONSULTANT",
         authorEmail: "melissa.diakite@safirconsulting.net",
-        message: "Spécification validée : le workflow d'approbation d'achats doit s'enclencher au-delà de 10 000 € HT sur la base de la devise société.",
+        message: "Spécification validée : le workflow d'approbation d'achats doit s'enclencher au-delà de 10 000 000 FCFA HT sur la base de la devise société (compatible multi-devises EUR / USD).",
         timestamp: "2026-10-25 à 14:30"
       },
       {
@@ -387,6 +389,7 @@ const INITIAL_TICKETS: Ticket[] = [
     priorityCode: "CRITICAL",
     estimatedHours: 32,
     remainingHours: 32,
+    currency: "XOF",
     clientCompany: "Omega Distribution",
     applicantName: "Christian Durand",
     applicantEmail: "c.durand@client-omega.com",
@@ -398,6 +401,7 @@ const INITIAL_TICKETS: Ticket[] = [
     reference: "REP-2026-0003",
     title: "Rapports d'inventaire valorisé en temps réel (SAP HANA)",
     description: "Création de vues de calcul optimisées sur HANA SQLScript pour le reporting de stock en clôture mensuelle.",
+    currency: "EUR",
     status: "RECEIVED",
     typeCode: "REPORT",
     priorityCode: "MEDIUM",
@@ -511,6 +515,8 @@ export default function TicketManagerPage() {
   const [newHours, setNewHours] = useState(16);
   const [newClient, setNewClient] = useState("");
   const [newApplicant, setNewApplicant] = useState("");
+  const [newCurrency, setNewCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
+  const [activeCurrency, setActiveCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
 
   const [assigningTicket, setAssigningTicket] = useState<Ticket | null>(null);
   const [selectedDevId, setSelectedDevId] = useState("");
@@ -923,6 +929,7 @@ export default function TicketManagerPage() {
       clientCompany: newClient || "Safir Consulting",
       applicantName: newApplicant || (currentUser ? currentUser.name : "Aliko Getheme"),
       applicantEmail: currentUser?.email || "aliko.getheme@safirconsulting.net",
+      currency: newCurrency || "XOF",
       assignedDeveloper: null,
       createdAt: new Date().toISOString().split("T")[0]
     };
@@ -1536,6 +1543,24 @@ export default function TicketManagerPage() {
                   <span>Nouveau ticket</span>
                 </button>
               )}
+
+              {/* SÉLECTEUR MULTI-DEVISES (AFRIQUE DE L'OUEST FCFA PAR DÉFAUT + EUR / USD) */}
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" title="Devise de valorisation (FCFA Afrique de l'Ouest / Multi-devises)">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Devise :</span>
+                <select
+                  value={activeCurrency}
+                  onChange={(e) => {
+                    const c = e.target.value as "XOF" | "EUR" | "USD";
+                    setActiveCurrency(c);
+                    showToast(c === "XOF" ? "Devise activée : FCFA (XOF — Afrique de l'Ouest)" : `Devise activée : ${c}`);
+                  }}
+                  className="bg-transparent font-semibold text-slate-800 text-xs cursor-pointer focus:outline-none"
+                >
+                  <option value="XOF">FCFA (XOF - Afrique de l'Ouest)</option>
+                  <option value="EUR">Euro (€ - International)</option>
+                  <option value="USD">Dollar ($ - International)</option>
+                </select>
+              </div>
 
               {/* SÉLECTEUR DE SESSION / PROFIL RBAC */}
               <div className="relative">
@@ -2925,14 +2950,28 @@ export default function TicketManagerPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client</label>
-                <input
-                  type="text"
-                  value={newClient}
-                  onChange={(e) => setNewClient(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client</label>
+                  <input
+                    type="text"
+                    value={newClient}
+                    onChange={(e) => setNewClient(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Devise du Contrat</label>
+                  <select
+                    value={newCurrency}
+                    onChange={(e) => setNewCurrency(e.target.value as "XOF" | "EUR" | "USD")}
+                    className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-medium"
+                  >
+                    <option value="XOF">FCFA (XOF)</option>
+                    <option value="EUR">Euro (€)</option>
+                    <option value="USD">Dollar ($)</option>
+                  </select>
+                </div>
               </div>
 
               <div>

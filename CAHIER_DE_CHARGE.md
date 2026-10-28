@@ -88,6 +88,24 @@ Les demandes traitées par la SME Business Unit sont catégorisées avec une num
 | **`SUP-`** | **Assistance & Support** | Accompagnement technique utilisateur, diagnostic d'incident | Optionnel |
 | **`ANA-`** | **Analyse & Étude** | Cadrage technique, faisabilité d'un addon ou audit d'architecture | Optionnel |
 
+### 3.1. Ancrage Régional Ouest-Africain & Gestion Multi-Devises (FCFA / XOF par Défaut)
+
+Établi au cœur de l'Afrique de l'Ouest (zone UEMOA / CEDEAO), **Safir Consulting** gère des projets de transformation numérique pour des entreprises locales, des institutions régionales et des filiales de groupes internationaux :
+
+1. **Devise de Référence Régionale (FCFA / XOF par défaut)** :
+   - Le **Franc CFA (FCFA / XOF)** constitue la devise d'affichage et de valorisation par défaut du système (taux d'effort, seuils d'approbation d'addons, budgets de développement).
+2. **Ouverture Multi-Devises Native (EUR, USD)** :
+   - La plateforme reste nativement ouverte aux devises internationales courantes :
+     - **Euro (`EUR` / `€`)** : Pour les donneurs d'ordre, partenaires et clients européens.
+     - **Dollar US (`USD` / `$`)** : Pour les contrats internationaux, bailleurs et multinationales.
+3. **Harmonisation avec les Référentiels SAP (SAP B1 & S/4HANA)** :
+   - Le système s'aligne sur la gestion multi-devises native de SAP :
+     - *Devise Locale / Société (Company Currency)* : FCFA.
+     - *Devise Système (System Currency)* : Reporting consolidé et valorisation de charge.
+     - *Devise Transaction / Partenaire (BP Currency)* : Devise contractuelle négociée avec le client.
+4. **Sélecteur Dynamique & Fiches Tickets** :
+   - Un sélecteur de devise interactif en en-tête permet à la direction d'adapter l'affichage, et chaque formulaire de ticket permet d'affecter la devise propre au contrat client.
+
 ---
 
 ## 4. MODULE MESSAGERIE & FLUX E-MAIL OUTLOOK MICROSOFT 365
