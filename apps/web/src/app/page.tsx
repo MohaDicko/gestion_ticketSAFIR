@@ -675,6 +675,7 @@ export default function TicketManagerPage() {
   const [activeCurrency, setActiveCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
 
   const [assigningTicket, setAssigningTicket] = useState<Ticket | null>(null);
+  const [assigningHours, setAssigningHours] = useState<number>(16);
   const [selectedDevId, setSelectedDevId] = useState("");
   // Affectation Multi-Développeurs par lot technique
   const [isMultiDevAssignment, setIsMultiDevAssignment] = useState(false);
@@ -737,6 +738,13 @@ export default function TicketManagerPage() {
       read: false
     };
     setNotifications((prev) => [item, ...prev]);
+  };
+
+  // Helper pour ouvrir la modale d'affectation avec la charge estimée pré-renseignée
+  const openAssignModal = (ticket: Ticket) => {
+    setAssigningTicket(ticket);
+    setAssigningHours(ticket.estimatedHours > 0 ? ticket.estimatedHours : 16);
+    setSelectedDevId(ticket.assignedDeveloper?.id || "");
   };
 
   // Chargement synchronisé API
@@ -1260,7 +1268,14 @@ export default function TicketManagerPage() {
   // Action HEAD / CONSULTANT : Créer un ticket (Flux 100% interne à l'application, Aliko point central)
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim()) {
+      showToast("Veuillez renseigner le titre de la demande");
+      return;
+    }
+    if (!newDesc.trim()) {
+      showToast("La description détaillée est obligatoire pour soumettre un ticket");
+      return;
+    }
 
     const refCode = `ADD-2026-${String(tickets.length + 1).padStart(4, "0")}`;
     const initialAttachment: TicketAttachment[] | undefined = newTicketAttachmentName.trim()
@@ -1278,18 +1293,22 @@ export default function TicketManagerPage() {
         ]
       : undefined;
 
+    // L'estimation de la charge est une prérogative exclusive d'Aliko (HEAD) ; pour les consultants, elle démarre à 0 (en attente d'estimation par Aliko)
+    const isHead = currentUser?.role === "HEAD";
+    const initialHours = isHead ? (Number(newHours) || 16) : 0;
+
     const newTicket: Ticket = {
       id: `tix-${Date.now()}`,
       reference: refCode,
-      title: newTitle,
-      description: newDesc,
+      title: newTitle.trim(),
+      description: newDesc.trim(),
       status: "RECEIVED",
       typeCode: newType,
       priorityCode: newPriority,
-      estimatedHours: Number(newHours) || 16,
-      remainingHours: Number(newHours) || 16,
-      clientCompany: newClient || "Safir Consulting",
-      applicantName: newApplicant || (currentUser ? currentUser.name : "Aliko Getheme"),
+      estimatedHours: initialHours,
+      remainingHours: initialHours,
+      clientCompany: newClient.trim() || "Safir Consulting",
+      applicantName: newApplicant.trim() || (currentUser ? currentUser.name : "Aliko Getheme"),
       applicantEmail: currentUser?.email || "aliko.getheme@safirconsulting.net",
       currency: newCurrency || "XOF",
       assignedDeveloper: null,
@@ -1309,7 +1328,7 @@ export default function TicketManagerPage() {
           senderKind: "CONSULTANT",
           isPersonalDomain: false,
           subject: newTitle,
-          bodyPreview: newDesc || "Nouvelle demande SAP soumise directement depuis l'Espace Consultant pour qualification et arbitrage par Aliko.",
+          bodyPreview: newDesc,
           receivedAt: "À l'instant",
           processingStatus: "QUALIFIED_IN_APP",
           ticket: { reference: refCode, title: newTitle }
@@ -1318,9 +1337,10 @@ export default function TicketManagerPage() {
       ]);
     }
 
+    const hoursLabel = isHead ? `${newTicket.estimatedHours}h` : "Charge à estimer par Aliko";
     pushInAppNotification({
       title: `📥 Nouveau besoin SAP enregistré (${refCode})`,
-      message: `${newTicket.applicantName} a soumis « ${newTitle} » (${newTicket.estimatedHours}h — ${newTicket.currency}) au Guichet Central d'Aliko.`,
+      message: `${newTicket.applicantName} a soumis « ${newTitle} » (${hoursLabel} — ${newTicket.currency}) au Guichet Central d'Aliko.`,
       category: "DEMAND",
       targetRoles: ["HEAD", "CONSULTANT"],
       ticketId: newTicket.id,
@@ -1332,7 +1352,11 @@ export default function TicketManagerPage() {
     setNewTitle("");
     setNewDesc("");
     setNewTicketAttachmentName("");
-    showToast("Nouveau ticket enregistré avec succès (centralisé chez Aliko)");
+    showToast(
+      isHead
+        ? "Nouveau ticket enregistré avec estimation validée par Aliko"
+        : "Demande transmise avec succès au Guichet Central d'Aliko pour estimation et qualification"
+    );
   };
 
   // Action HEAD : Intégrer un nouveau Développeur dans l'équipe
@@ -1468,7 +1492,7 @@ export default function TicketManagerPage() {
 
     const totalEstHours = isMultiDevAssignment && coDev
       ? Number(leadHours) + Number(coDevHours)
-      : assigningTicket.estimatedHours;
+      : (Number(assigningHours) || assigningTicket.estimatedHours || 16);
 
     const contributorsList: TicketLotContributor[] | undefined = isMultiDevAssignment && coDev
       ? [
@@ -1516,7 +1540,7 @@ export default function TicketManagerPage() {
     setDevelopers((prev) =>
       prev.map((d) => {
         if (d.id === dev.id) {
-          const addedHours = isMultiDevAssignment && coDev ? Number(leadHours) : assigningTicket.estimatedHours;
+          const addedHours = isMultiDevAssignment && coDev ? Number(leadHours) : totalEstHours;
           const newRes = d.reservedHours + addedHours;
           return {
             ...d,
@@ -2529,8 +2553,8 @@ export default function TicketManagerPage() {
                               />
                             </div>
                             <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1">
-                              <span>Charge : {ticket.estimatedHours} h</span>
-                              <span>RAF : {ticket.remainingHours ?? ticket.estimatedHours} h</span>
+                              <span>Charge : {ticket.estimatedHours > 0 ? `${ticket.estimatedHours} h` : "En attente d'estimation par Aliko"}</span>
+                              <span>RAF : {ticket.estimatedHours > 0 ? `${ticket.remainingHours ?? ticket.estimatedHours} h` : "—"}</span>
                             </div>
                           </div>
                         </div>
@@ -2729,14 +2753,14 @@ export default function TicketManagerPage() {
 
                               {!ticket.assignedDeveloper ? (
                                 <button
-                                  onClick={() => setAssigningTicket(ticket)}
+                                  onClick={() => openAssignModal(ticket)}
                                   className="text-xs text-sky-700 hover:text-sky-900 font-medium underline"
                                 >
                                   Affecter
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => setAssigningTicket(ticket)}
+                                  onClick={() => openAssignModal(ticket)}
                                   className="text-xs text-slate-500 hover:text-slate-800 font-medium underline"
                                 >
                                   Réaffecter
@@ -2914,7 +2938,7 @@ export default function TicketManagerPage() {
                           </button>
 
                           <button
-                            onClick={() => setAssigningTicket(ticket)}
+                            onClick={() => openAssignModal(ticket)}
                             className="px-2.5 py-1 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 rounded transition-colors"
                           >
                             {ticket.assignedDeveloper ? "Réaffecter" : "Affecter"}
@@ -3479,29 +3503,45 @@ export default function TicketManagerPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Estimation (heures)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="200"
-                    value={newHours}
-                    onChange={(e) => setNewHours(Number(e.target.value))}
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                  />
-                </div>
+              {/* Estimation de la charge : Définie exclusivement par Aliko (HEAD) */}
+              {currentUser?.role === "HEAD" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Estimation du temps de travail (heures) *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="200"
+                      required
+                      value={newHours}
+                      onChange={(e) => setNewHours(Number(e.target.value))}
+                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-mono"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Demandeur</label>
-                  <input
-                    type="text"
-                    value={newApplicant}
-                    onChange={(e) => setNewApplicant(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                  />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Demandeur</label>
+                    <input
+                      type="text"
+                      value={newApplicant}
+                      onChange={(e) => setNewApplicant(e.target.value)}
+                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-950">
+                    <Clock className="w-3.5 h-3.5 text-purple-700" />
+                    <span>Estimation de la charge réservée à Aliko Getheme (Direction BU SME)</span>
+                  </div>
+                  <p className="text-[11px] text-purple-900 leading-relaxed">
+                    En tant que consultante, vous renseignez la description détaillée et les pièces jointes du besoin SAP. L'estimation du temps de travail est fixée et validée par <strong>Aliko Getheme</strong> lors de la qualification.
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
@@ -3528,9 +3568,13 @@ export default function TicketManagerPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Description détaillée</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Description détaillée * <span className="text-rose-600 font-semibold">(Obligatoire)</span>
+                </label>
                 <textarea
                   rows={3}
+                  required
+                  placeholder="Décrivez précisément les exigences fonctionnelles, le flux SAP concerné et les critères d'acceptation..."
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
@@ -3606,12 +3650,34 @@ export default function TicketManagerPage() {
             </div>
 
             <form onSubmit={handleAssignSubmit} className="p-4 space-y-4">
-              <div>
-                <div className="text-xs text-slate-500 mb-1">Besoin :</div>
-                <div className="text-sm font-semibold text-slate-900">{assigningTicket.title}</div>
-                <div className="text-xs text-slate-600 mt-1">
-                  Charge estimée : <strong className="text-slate-800">{assigningTicket.estimatedHours} heures</strong>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+                <div>
+                  <div className="text-[11px] text-slate-500">Besoin / Titre :</div>
+                  <div className="text-sm font-semibold text-slate-900">{assigningTicket.title}</div>
+                  {assigningTicket.description && (
+                    <p className="text-xs text-slate-600 mt-1 line-clamp-2">{assigningTicket.description}</p>
+                  )}
                 </div>
+
+                {!isMultiDevAssignment && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Estimation du temps de travail par Aliko (heures) *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="200"
+                      required
+                      value={assigningHours}
+                      onChange={(e) => setAssigningHours(Number(e.target.value))}
+                      className="w-full text-xs px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-mono font-bold bg-white"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      Fixée et validée exclusivement par la Direction (Aliko Getheme).
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -4450,7 +4516,7 @@ export default function TicketManagerPage() {
                       onClick={() => {
                         const t = supervisingTicket;
                         setSupervisingTicket(null);
-                        setAssigningTicket(t);
+                        openAssignModal(t);
                       }}
                       className="px-3.5 py-1.5 text-xs text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-lg font-medium cursor-pointer"
                     >

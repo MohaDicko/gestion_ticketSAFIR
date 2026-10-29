@@ -367,6 +367,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 | **Livraison de Ticket pour Recette** | ✅ | ✅ | ❌ | ❌ |
 | **Suivi Transparent de ses Demandes Émises** | ✅ | ❌ | ✅ | ✅ |
 | **Formulaire de Soumission Directe de Nouveau Besoin** | ✅ | ❌ | ✅ | ✅ |
+| **Définition & Chiffrage de l'Estimation du Temps (Charge en Heures)** | ✅ (Prérogative exclusive) | ❌ | ❌ (Non habilité) | ❌ |
 | **Intégration d'un Nouveau Développeur (Onboarding Équipe)** | ✅ | ❌ | ❌ | ✅ |
 | **Création de Profils Consultants & Attribution des Logins** | ✅ | ❌ | ❌ | ✅ |
 | **Validation Clôture Définitive (`CLOSED`)** | ✅ | ❌ | ❌ | ❌ |
@@ -399,7 +400,9 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
    - **Jauge de progression en temps réel** : pourcentage d'avancement dynamique (`getTicketProgress`), barre visuelle animée et décompte Charge estimée vs Reste à Faire (RAF).
    - **Bannière d'alerte pour précision requise** : détection immédiate des tickets en pause nécessitant des éléments métier ou un jeu d'écritures.
    - **Dialogue direct Développeur ↔ Consultante** : fil de discussion contextuel horodaté permettant de répondre aux questions du développeur et de débloquer le ticket en un clic sans goulot d'étranglement.
-   - **Soumission directe** : formulaire dédié pour soumettre directement un nouveau ticket dans le système sans transiter par une chaîne de mails informelle.
+   - **Soumission directe de besoin SAP** : formulaire dédié pour soumettre directement un nouveau besoin dans le système :
+     - **Description détaillée obligatoire (`required`)** : garantit un niveau de détail fonctionnel complet dès la saisie (règles de gestion, flux SAP, critères d'acceptation).
+     - **Estimation réservée exclusivement à Aliko** : le consultant ne chiffre pas le temps de travail ; c'est Aliko Getheme (`HEAD`) qui évalue l'effort technique et fixe la charge estimée (en heures) lors de la qualification dans son Guichet Central ou lors de l'affectation.
 
 4. **Fil de Discussion Tracé & Collaboration Sans Goulot d'Étranglement** :
    - Le développeur peut poser une question au consultant et signaler le besoin comme bloquant (`status: BLOCKED`).

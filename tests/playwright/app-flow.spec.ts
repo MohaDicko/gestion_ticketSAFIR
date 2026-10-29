@@ -119,7 +119,8 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     // Vérifier l'apparition de la modale
     await expect(page.getByText("Nouveau Ticket de Développement SAP")).toBeVisible();
     await expect(page.getByText("Titre de la demande *")).toBeVisible();
-    await expect(page.getByText("Estimation (heures)")).toBeVisible();
+    await expect(page.getByText(/Estimation du temps de travail \(heures\)/i)).toBeVisible();
+    await expect(page.getByText(/Description détaillée \*/i)).toBeVisible();
 
     // Fermeture de la modale via Annuler
     await page.getByRole("button", { name: /Annuler/i }).click();
