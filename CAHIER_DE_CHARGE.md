@@ -457,21 +457,22 @@ Les développeurs étant rémunérés en fonction de leurs heures effectives de 
 5. **Envoi Officiel en Recette** :
    - Bouton d'action standardisé **« Envoyer en test chez le consultant »** qui stoppe tout chronomètre résiduel, passe le statut en `DELIVERED`, déclenche les alertes et ouvre la fenêtre de test chez la consultante.
 
-### 10.6. Impression des Rapports d'Activité et Feuilles de Temps Périodiques (Dev & Aliko)
-Pour répondre aux exigences de facturation et d'audit RH :
-1. **Édition Autonome pour le Développeur** :
-   - Bouton direct **« Imprimer mon rapport d'heures »** disponible à tout moment sur l'en-tête du portail développeur.
-2. **Édition Souveraine pour la Direction (Aliko)** :
-   - Bouton **« Rapport d'heures »** sur chaque fiche développeur et **« Rapport d'activité »** sur chaque fiche consultante dans l'onglet **Équipe & Capacité**.
-3. **6 Périodes d'Audit Prédéfinies** :
-   - **Journalier** (Jour courant)
-   - **Hebdomadaire** (Semaine en cours / 7 derniers jours)
-   - **Mensuel** (Mois civil)
-   - **Trimestriel** (Trimestre en cours — Q1, Q2, Q3, Q4)
-   - **Semestriel** (Semestre en cours — S1, S2)
-   - **Annuel** (Exercice fiscal complet)
-4. **Gabarit d'Impression Corporate Safir Consulting** :
-   - Document prêt pour impression (`window.print()` / PDF) avec en-tête officiel BU SME, données d'identification du collaborateur, 4 indicateurs consolidés (heures totales, nombre de sessions, tickets traités, clients servis), tableau détaillé ligne par ligne (date, ticket, client, descriptif des travaux, durée) et **double zone d'émargement légale** (Visa Collaborateur + Cachet / Approbation Direction Aliko Getheme).
+### 10.6. Supervision en Temps Réel de l'Activité Développeurs & Impression Directe des Rapports par Aliko
+Pour répondre à l'exigence de pilotage opérationnel en direct de la Business Unit SME :
+1. **Radar d'Activité en Temps Réel sur le Tableau de Bord d'Aliko (Live Tracker 360°)** :
+   - Aliko Getheme (`HEAD`) dispose sur son tableau de bord d'un **centre de supervision interactif en direct** affichant instantanément ce que chaque développeur produit à la seconde près :
+     - **🟢 En production active** : nom du développeur, projet en cours (`ADD-2026-0001`, `INT-2026-0002`...), entreprise cliente, descriptif précis de la tâche en cours d'exécution, et **chronomètre dynamique défilant en temps réel (`HH:MM:SS`)**.
+     - **🔴 Bloqué (Stop-the-line)** : développeurs arrêtés, ticket concerné, motif du blocage et durée du temps de blocage.
+     - **⚪ Disponible** : développeurs libres avec solde d'heures disponibles cette semaine, prêts pour une nouvelle affectation.
+   - **Filtres rapides et recherche plein texte** : filtrage instantané par statut (`Tous`, `🟢 En cours`, `🔴 Bloqués`, `⚪ Disponibles`) et recherche textuelle par nom de développeur, intitulé de projet ou tâche.
+2. **Impression Immédiate du Rapport de Travail par Développeur** :
+   - Directement depuis chaque ligne du moniteur temps réel, ainsi que sur les fiches de l'onglet **Équipe & Capacité**, Aliko dispose du bouton **« Imprimer son rapport »**.
+   - Clic immédiat ouvrant la modale officielle pré-remplie pour le développeur sélectionné avec :
+     - **6 Périodes d'audit sélectionnables** : *Journalier, Hebdomadaire, Mensuel, Trimestriel, Semestriel, Annuel*.
+     - **Sélecteur rapide de développeur intégré** : Aliko peut basculer d'un collaborateur à un autre directement dans la modale sans avoir à la fermer.
+     - **Gabarit d'émargement corporate Safir Consulting** : prêt à l'impression (`window.print()` / PDF) avec totaux d'heures réelles décomptées, détail des sessions de travail et double zone d'émargement légale (Visa Collaborateur + Approbation Direction Aliko Getheme).
+3. **Édition Autonome pour le Développeur** :
+   - Chaque développeur peut également imprimer son propre rapport détaillé depuis son portail dédié via le bouton « Imprimer mon rapport d'heures ».
 
 ### 10.7. Collaboration Multi-Développeurs par Brique Technique SAP (Lots Spécialisés)
 - **Répartition multi-niveaux par Aliko** : Capacité d'affecter plusieurs développeurs sur un même ticket complexe avec répartition par spécialité technique SAP :
@@ -514,7 +515,7 @@ Pour répondre aux exigences de facturation et d'audit RH :
 - ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas des variables d'environnement).
 - ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
 - ✅ **Banc de Tests Unitaires & Métier Vitest** : 36 tests automatisés validés à 100% (36 PASS / 0 FAIL) couvrant le scoring sur 100 points, le calcul de capacité nette, la classification e-mails, la machine à états finis, le provisioning de consultants (login = email pro, hachage Argon2id) et l'onboarding dynamique de développeurs.
-- ✅ **Banc de Tests E2E Navigateur Playwright** : 17 scénarios complets sous Chromium (17 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC strict sans vue croisée, les filtres et recherches rapides, l'onboarding, la supervision continue d'Aliko, la visibilité du développeur dédié et de la progression par la consultante, le dialogue direct avec déblocage automatique, l'affectation multi-développeurs par lot technique, le cycle de recette fonctionnelle consultante et clôture exclusive Aliko, ainsi que le portail développeur optimisé (chrono mono-tâche, pause sur blocage, envoi en test chez le consultant et impression de rapports périodiques).
+- ✅ **Banc de Tests E2E Navigateur Playwright** : 18 scénarios complets sous Chromium (18 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC strict sans vue croisée, les filtres et recherches rapides, l'onboarding, la supervision continue d'Aliko, la visibilité du développeur dédié et de la progression par la consultante, le dialogue direct avec déblocage automatique, l'affectation multi-développeurs par lot technique, le cycle de recette fonctionnelle consultante et clôture exclusive Aliko, le portail développeur optimisé (chrono mono-tâche, pause sur blocage, envoi en test chez le consultant), ainsi que la supervision en temps réel d'Aliko sur l'activité de chaque développeur avec impression directe des rapports.
 - ✅ **Audit de Sécurité OWASP ZAP & Top 10** : 11 contrôles validés à 100% (étanchéité des grants RBAC pour la création de comptes, absence de fuite de hachage de mot de passe, protection anti-usurpation Gmail, requêtage paramétré Prisma contre les injections SQL, en-têtes défensifs, script `run_owasp_zap_scan.ps1` et profil `zap-baseline.conf`).
 - ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 

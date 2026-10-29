@@ -602,8 +602,8 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     // Navigation vers Équipe & Capacité
     await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
 
-    // Clic sur 'Rapport d'heures' du premier développeur
-    const devCardReportBtn = page.getByRole("button", { name: /Rapport d'heures/i }).first();
+    // Clic sur 'Imprimer son rapport' du premier développeur
+    const devCardReportBtn = page.getByRole("button", { name: /Imprimer son rapport|Rapport d'heures/i }).first();
     await expect(devCardReportBtn).toBeVisible();
     await devCardReportBtn.click();
 
@@ -619,6 +619,53 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
 
     // Vérifier l'ouverture du rapport pour la consultante
     await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
+    await page.getByRole("button", { name: /Fermer le rapport/i }).click();
+  });
+
+  test("18. Supervision en Temps Réel d'Aliko : Vision 360° de l'activité de chaque développeur en direct (projets, tâches, chronos) et impression immédiate de ses rapports", async ({ page }) => {
+    // 1. Connexion en tant qu'Aliko (HEAD)
+    await loginAsAliko(page);
+
+    // 2. Vérifier la présence du module de Supervision Temps Réel sur le Tableau de bord
+    await expect(page.getByText(/Supervision de l'Activité des Développeurs en Direct/i)).toBeVisible();
+    await expect(page.getByText(/LIVE TEMPS RÉEL/i)).toBeVisible();
+
+    // Vérifier les compteurs de statut de l'équipe
+    await expect(page.getByText(/En production/i).first()).toBeVisible();
+    await expect(page.getByText(/Bloqué \(Stop-the-line\)/i).first()).toBeVisible();
+    await expect(page.getByText(/Disponible :/i).first()).toBeVisible();
+
+    // 3. Vérifier la visibilité de ce que les développeurs font en temps réel
+    await expect(page.getByText(/Anoop Pandimukkula/i).first()).toBeVisible();
+    await expect(page.getByText(/EN DIRECT :/i).first()).toBeVisible();
+    await expect(page.getByText(/ADD-2026-0001/i).first()).toBeVisible();
+    await expect(page.getByText(/Développement du formulaire UI API SAP B1/i).first()).toBeVisible();
+
+    // Vérifier le statut d'un dev bloqué
+    await expect(page.getByText(/Hassane Bocoum/i).first()).toBeVisible();
+    await expect(page.getByText(/BLOQUÉ/i).first()).toBeVisible();
+
+    // 4. Tester le filtrage rapide de la supervision en temps réel
+    await page.getByRole("button", { name: /🔴 Bloqués/i }).click();
+    await expect(page.getByText(/Hassane Bocoum/i).first()).toBeVisible();
+
+    await page.getByRole("button", { name: /^Tous \(/i }).click();
+
+    // 5. Impression 1-clic du rapport d'activité d'un développeur depuis la supervision temps réel
+    const printReportBtn = page.getByRole("button", { name: /Imprimer son rapport/i }).first();
+    await expect(printReportBtn).toBeVisible();
+    await printReportBtn.click();
+
+    // Vérifier que la modale de rapport s'ouvre avec le sélecteur corporate
+    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
+    await expect(page.getByText(/Total Heures Travaillées/i)).toBeVisible();
+    await expect(page.getByText(/Visa & Émargement du Collaborateur/i)).toBeVisible();
+    await expect(page.getByText(/Aliko Getheme — Directeur BU SME/i)).toBeVisible();
+
+    // Vérifier le sélecteur de changement de développeur pour Aliko
+    await expect(page.getByText(/Changer de développeur/i)).toBeVisible();
+
+    // Fermer le rapport
     await page.getByRole("button", { name: /Fermer le rapport/i }).click();
   });
 });

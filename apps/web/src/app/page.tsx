@@ -48,7 +48,8 @@ import {
   FlaskConical,
   Pause,
   Timer,
-  Square
+  Square,
+  Activity
 } from "lucide-react";
 
 const API_BASE = "/api/v1";
@@ -79,6 +80,18 @@ export interface TimeLog {
   durationHours: number;
   date: string; // Format YYYY-MM-DD
   note?: string;
+}
+
+export interface DeveloperLiveActivity {
+  developerId: string;
+  status: "WORKING" | "BLOCKED" | "AVAILABLE";
+  activeTicketId?: string;
+  activeTicketReference?: string;
+  activeTicketTitle?: string;
+  clientCompany?: string;
+  currentTaskDescription?: string;
+  startedAtTimestamp?: number;
+  elapsedSeconds: number;
 }
 
 export interface AppNotification {
@@ -601,8 +614,210 @@ const INITIAL_TIME_LOGS: TimeLog[] = [
     durationHours: 8.0,
     date: "2026-04-12",
     note: "Recette technique de migration et validation des types de données HANA."
+  },
+
+  // 6. Sessions Nevrit Ahua (Intégration API & Procédures SQLScript)
+  {
+    id: "log-12",
+    ticketId: "tix-3",
+    ticketReference: "MIG-2026-0003",
+    ticketTitle: "Migration Procédures Stock SQL vers HANA SQLScript",
+    clientCompany: "SGI Distribution",
+    developerId: "dev-nevrit",
+    developerName: "Nevrit Ahua",
+    developerEmail: "nevrit.ahua@safirconsulting.net",
+    startedAt: "2026-10-29 08:30",
+    endedAt: "2026-10-29 11:30",
+    durationMinutes: 180,
+    durationHours: 3.0,
+    date: "2026-10-29",
+    note: "Refactoring des curseurs T-SQL en syntaxe déclarative SQLScript HANA."
+  },
+  {
+    id: "log-13",
+    ticketId: "tix-3",
+    ticketReference: "MIG-2026-0003",
+    ticketTitle: "Migration Procédures Stock SQL vers HANA SQLScript",
+    clientCompany: "SGI Distribution",
+    developerId: "dev-nevrit",
+    developerName: "Nevrit Ahua",
+    developerEmail: "nevrit.ahua@safirconsulting.net",
+    startedAt: "2026-10-27 10:00",
+    endedAt: "2026-10-27 15:00",
+    durationMinutes: 300,
+    durationHours: 5.0,
+    date: "2026-10-27",
+    note: "Benchmark des temps d'exécution des procédures stockées sur HANA."
+  },
+
+  // 7. Sessions Fatoumata Traore (Développeuse SAP B1 & Service Layer)
+  {
+    id: "log-14",
+    ticketId: "tix-2",
+    ticketReference: "INT-2026-0002",
+    ticketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
+    clientCompany: "Omega Distribution",
+    developerId: "dev-fatoumata",
+    developerName: "Fatoumata Traore",
+    developerEmail: "fatoumata.traore@safirconsulting.net",
+    startedAt: "2026-10-29 09:00",
+    endedAt: "2026-10-29 12:00",
+    durationMinutes: 180,
+    durationHours: 3.0,
+    date: "2026-10-29",
+    note: "Validation des schémas JSON et gestion des retours d'erreurs HTTP."
+  },
+  {
+    id: "log-15",
+    ticketId: "tix-2",
+    ticketReference: "INT-2026-0002",
+    ticketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
+    clientCompany: "Omega Distribution",
+    developerId: "dev-fatoumata",
+    developerName: "Fatoumata Traore",
+    developerEmail: "fatoumata.traore@safirconsulting.net",
+    startedAt: "2026-10-26 13:30",
+    endedAt: "2026-10-26 17:30",
+    durationMinutes: 240,
+    durationHours: 4.0,
+    date: "2026-10-26",
+    note: "Tests d'intégration Service Layer avec le système de facturation client."
+  },
+
+  // 8. Sessions Korotoumou Thiam (Backend & Modélisation Base de Données)
+  {
+    id: "log-16",
+    ticketId: "tix-1",
+    ticketReference: "ADD-2026-0001",
+    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
+    clientCompany: "Safir Consulting (Consulting Interne)",
+    developerId: "dev-korotoumou",
+    developerName: "Korotoumou Thiam",
+    developerEmail: "korotoumou.thiam@safirconsulting.net",
+    startedAt: "2026-10-29 10:00",
+    endedAt: "2026-10-29 12:00",
+    durationMinutes: 120,
+    durationHours: 2.0,
+    date: "2026-10-29",
+    note: "Modélisation des tables d'historisation et indexation PostgreSQL."
+  },
+  {
+    id: "log-17",
+    ticketId: "tix-1",
+    ticketReference: "ADD-2026-0001",
+    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
+    clientCompany: "Safir Consulting (Consulting Interne)",
+    developerId: "dev-korotoumou",
+    developerName: "Korotoumou Thiam",
+    developerEmail: "korotoumou.thiam@safirconsulting.net",
+    startedAt: "2026-10-28 14:00",
+    endedAt: "2026-10-28 18:00",
+    durationMinutes: 240,
+    durationHours: 4.0,
+    date: "2026-10-28",
+    note: "Configuration des triggers d'audit et politiques de rétention."
+  },
+
+  // 9. Sessions Jean-Philippe Ebrottié (Architecte SAP & Revue Technique)
+  {
+    id: "log-18",
+    ticketId: "tix-1",
+    ticketReference: "ADD-2026-0001",
+    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
+    clientCompany: "Safir Consulting (Consulting Interne)",
+    developerId: "dev-jeanphilippe",
+    developerName: "Jean-Philippe Ebrottié",
+    developerEmail: "jeanphilippe.ebrottie@safirconsulting.net",
+    startedAt: "2026-10-29 08:00",
+    endedAt: "2026-10-29 11:30",
+    durationMinutes: 210,
+    durationHours: 3.5,
+    date: "2026-10-29",
+    note: "Revue d'architecture globale et validation de la conformité SDK SAP B1."
+  },
+  {
+    id: "log-19",
+    ticketId: "tix-1",
+    ticketReference: "ADD-2026-0001",
+    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
+    clientCompany: "Safir Consulting (Consulting Interne)",
+    developerId: "dev-jeanphilippe",
+    developerName: "Jean-Philippe Ebrottié",
+    developerEmail: "jeanphilippe.ebrottie@safirconsulting.net",
+    startedAt: "2026-10-27 09:00",
+    endedAt: "2026-10-27 14:00",
+    durationMinutes: 300,
+    durationHours: 5.0,
+    date: "2026-10-27",
+    note: "Audit de sécurité des connecteurs externes et des flux de données."
   }
 ];
+
+// État Temps Réel initial de l'activité de l'équipe des Développeurs (Supervision Direction Aliko)
+const INITIAL_DEV_LIVE_ACTIVITIES: Record<string, DeveloperLiveActivity> = {
+  "dev-anoop": {
+    developerId: "dev-anoop",
+    status: "WORKING",
+    activeTicketId: "tix-1",
+    activeTicketReference: "ADD-2026-0001",
+    activeTicketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
+    clientCompany: "Safir Consulting (Consulting Interne)",
+    currentTaskDescription: "Développement du formulaire UI API SAP B1 pour validation multi-devises",
+    startedAtTimestamp: Date.now() - (1 * 3600 + 42 * 60 + 15) * 1000,
+    elapsedSeconds: 1 * 3600 + 42 * 60 + 15
+  },
+  "dev-moha": {
+    developerId: "dev-moha",
+    status: "WORKING",
+    activeTicketId: "tix-2",
+    activeTicketReference: "INT-2026-0002",
+    activeTicketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
+    clientCompany: "Omega Distribution",
+    currentTaskDescription: "Configuration des endpoints REST Service Layer & tests de payload JSON",
+    startedAtTimestamp: Date.now() - (2 * 3600 + 15 * 60 + 30) * 1000,
+    elapsedSeconds: 2 * 3600 + 15 * 60 + 30
+  },
+  "dev-hassane": {
+    developerId: "dev-hassane",
+    status: "BLOCKED",
+    activeTicketId: "tix-1",
+    activeTicketReference: "ADD-2026-0001",
+    activeTicketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
+    clientCompany: "Safir Consulting (Consulting Interne)",
+    currentTaskDescription: "Schémas HANA tables UDF (en attente précision consultante)",
+    startedAtTimestamp: Date.now() - (35 * 60) * 1000,
+    elapsedSeconds: 35 * 60
+  },
+  "dev-nevrit": {
+    developerId: "dev-nevrit",
+    status: "WORKING",
+    activeTicketId: "tix-3",
+    activeTicketReference: "MIG-2026-0003",
+    activeTicketTitle: "Migration Procédures Stock SQL vers HANA SQLScript",
+    clientCompany: "SGI Distribution",
+    currentTaskDescription: "Refactoring des curseurs T-SQL en syntaxe déclarative SQLScript HANA",
+    startedAtTimestamp: Date.now() - (54 * 60 + 12) * 1000,
+    elapsedSeconds: 54 * 60 + 12
+  },
+  "dev-fatoumata": {
+    developerId: "dev-fatoumata",
+    status: "AVAILABLE",
+    currentTaskDescription: "Disponible pour affectation — Tests QA Service Layer validés avec succès",
+    elapsedSeconds: 0
+  },
+  "dev-korotoumou": {
+    developerId: "dev-korotoumou",
+    status: "AVAILABLE",
+    currentTaskDescription: "Disponible pour affectation — Capacité libre : 26.0 h",
+    elapsedSeconds: 0
+  },
+  "dev-jeanphilippe": {
+    developerId: "dev-jeanphilippe",
+    status: "AVAILABLE",
+    currentTaskDescription: "Disponible pour affectation — Capacité libre : 16.0 h (Architecte SAP)",
+    elapsedSeconds: 0
+  }
+};
 
 const INITIAL_TICKETS: Ticket[] = [
   {
@@ -1004,6 +1219,11 @@ export default function TicketManagerPage() {
     jobTitle?: string;
   } | null>(null);
   const [reportPeriod, setReportPeriod] = useState<"DAILY" | "WEEKLY" | "MONTHLY" | "QUARTERLY" | "SEMESTER" | "YEARLY">("WEEKLY");
+
+  // Supervision en Temps Réel de l'Activité des Développeurs (Live Activity Monitor pour Aliko)
+  const [devLiveActivities, setDevLiveActivities] = useState<Record<string, DeveloperLiveActivity>>(INITIAL_DEV_LIVE_ACTIVITIES);
+  const [liveSupervisionFilter, setLiveSupervisionFilter] = useState<"ALL" | "WORKING" | "BLOCKED" | "AVAILABLE">("ALL");
+  const [liveSupervisionSearch, setLiveSupervisionSearch] = useState("");
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -1414,15 +1634,29 @@ export default function TicketManagerPage() {
     setEditingRafTicket(null);
   };
 
-  // Timer en direct pour la session de travail active
+  // Timer en direct pour la session de travail active et la supervision temps réel de l'équipe
   useEffect(() => {
-    if (!activeTimerTicketId) {
-      setActiveTimerSeconds(0);
-      return;
-    }
-
     const interval = setInterval(() => {
-      setActiveTimerSeconds((prev) => prev + 1);
+      // 1. Incrément du compteur de la session individuelle si connecté en développeur
+      if (activeTimerTicketId) {
+        setActiveTimerSeconds((prev) => prev + 1);
+      }
+
+      // 2. Incrément temps réel pour tous les développeurs au statut WORKING dans la supervision d'Aliko
+      setDevLiveActivities((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const devId in next) {
+          if (next[devId]?.status === "WORKING") {
+            next[devId] = {
+              ...next[devId],
+              elapsedSeconds: (next[devId].elapsedSeconds || 0) + 1
+            };
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
@@ -1452,16 +1686,45 @@ export default function TicketManagerPage() {
     setActiveTimerTicketId(ticket.id);
     setTimerStartedAt(Date.now());
     setActiveTimerSeconds(0);
+
+    // Mettre à jour l'activité temps réel du développeur dans la supervision d'Aliko
+    const currentDevId = currentUser?.developerId || currentUser?.id || "dev-anoop";
+    setDevLiveActivities((prev) => ({
+      ...prev,
+      [currentDevId]: {
+        developerId: currentDevId,
+        status: "WORKING",
+        activeTicketId: ticket.id,
+        activeTicketReference: ticket.reference,
+        activeTicketTitle: ticket.title,
+        clientCompany: ticket.clientCompany || "Safir Consulting",
+        currentTaskDescription: `Développement en cours sur ${ticket.title}`,
+        startedAtTimestamp: Date.now(),
+        elapsedSeconds: 0
+      }
+    }));
+
     showToast(`⏱️ Compteur démarré sur ${ticket.reference} — Règle mono-tâche stricte activée.`);
   };
 
   // Arrêter ou mettre en pause le compteur de travail et enregistrer la feuille de temps
   const handleStopTimer = (ticketId: string, note?: string) => {
     const target = tickets.find((t) => t.id === ticketId);
+    const currentDevId = currentUser?.developerId || currentUser?.id || "dev-anoop";
+
     if (!target) {
       setActiveTimerTicketId(null);
       setTimerStartedAt(null);
       setActiveTimerSeconds(0);
+      setDevLiveActivities((prev) => ({
+        ...prev,
+        [currentDevId]: {
+          developerId: currentDevId,
+          status: "AVAILABLE",
+          currentTaskDescription: "Disponible pour affectation",
+          elapsedSeconds: 0
+        }
+      }));
       return;
     }
 
@@ -1478,7 +1741,7 @@ export default function TicketManagerPage() {
       ticketReference: target.reference,
       ticketTitle: target.title,
       clientCompany: target.clientCompany || "Safir Consulting",
-      developerId: currentUser?.developerId || currentUser?.id || "dev-anoop",
+      developerId: currentDevId,
       developerName: currentUser?.name || "Anoop Pandimukkula",
       developerEmail: currentUser?.email || "anoop.pandimukkula@safirconsulting.net",
       startedAt: `${todayStr} ${timeStr}`,
@@ -1510,6 +1773,17 @@ export default function TicketManagerPage() {
     setTimerStartedAt(null);
     setActiveTimerSeconds(0);
 
+    // Mettre à jour la supervision temps réel d'Aliko en statut disponible
+    setDevLiveActivities((prev) => ({
+      ...prev,
+      [currentDevId]: {
+        developerId: currentDevId,
+        status: "AVAILABLE",
+        currentTaskDescription: `Dernière tâche terminée : ${target.reference} (+${hours} h)`,
+        elapsedSeconds: 0
+      }
+    }));
+
     showToast(`⏱️ Session enregistrée sur ${target.reference} : +${hours} h (+${minutes} min) ajoutées à votre relevé d'heures.`);
   };
 
@@ -1518,11 +1792,26 @@ export default function TicketManagerPage() {
     e.preventDefault();
     if (!blockingTicket || !blockerReasonText.trim()) return;
 
+    const currentDevId = currentUser?.developerId || currentUser?.id || "dev-anoop";
+
     // Règle d'or : Mise en pause automatique immédiate du compteur de temps en cas de blocage
     if (activeTimerTicketId === blockingTicket.id) {
       handleStopTimer(blockingTicket.id, "Mise en pause automatique : Blocage technique signalé");
       showToast("⏱️ Compteur de temps mis en pause automatiquement : vous ne pouvez pas décompter du temps sur un ticket bloqué.");
     }
+
+    setDevLiveActivities((prev) => ({
+      ...prev,
+      [currentDevId]: {
+        ...(prev[currentDevId] || { developerId: currentDevId, elapsedSeconds: 0 }),
+        status: "BLOCKED",
+        activeTicketId: blockingTicket.id,
+        activeTicketReference: blockingTicket.reference,
+        activeTicketTitle: blockingTicket.title,
+        clientCompany: blockingTicket.clientCompany || "Safir Consulting",
+        currentTaskDescription: `Blocage signalé : ${blockerReasonText.trim()}`
+      }
+    }));
 
     setTickets((prev) =>
       prev.map((t) =>
@@ -2073,6 +2362,15 @@ export default function TicketManagerPage() {
 
     setDevelopers((prev) => [...prev, newDevObj]);
     setSystemUsers((prev) => [...prev, newAuthUser]);
+    setDevLiveActivities((prev) => ({
+      ...prev,
+      [newDevObj.id]: {
+        developerId: newDevObj.id,
+        status: "AVAILABLE",
+        currentTaskDescription: "Nouveau collaborateur intégré — Disponible pour affectation",
+        elapsedSeconds: 0
+      }
+    }));
     setShowAddDevModal(false);
     setNewDevFirstName("");
     setNewDevLastName("");
@@ -3590,6 +3888,281 @@ export default function TicketManagerPage() {
               </div>
             </div>
 
+            {/* ========================================================================= */}
+            {/* MODULE DIRECTION : SUPERVISION TEMPS RÉEL DE L'ÉQUIPE & ACTIONS RAPPORTS  */}
+            {/* ========================================================================= */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              {/* En-tête Live Monitor */}
+              <div className="p-4 sm:p-5 border-b border-slate-200 bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Activity className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        LIVE TEMPS RÉEL
+                      </span>
+                      <h2 className="text-base font-bold text-white">
+                        Supervision de l'Activité des Développeurs en Direct
+                      </h2>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Suivi instantané de ce que chaque développeur produit actuellement, chronos actifs en direct et impression de leurs rapports de travail.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Badges d'état de l'équipe */}
+                {(() => {
+                  const workingList = developers.filter((d) => devLiveActivities[d.id]?.status === "WORKING");
+                  const blockedList = developers.filter((d) => devLiveActivities[d.id]?.status === "BLOCKED");
+                  const availableList = developers.filter((d) => !devLiveActivities[d.id] || devLiveActivities[d.id]?.status === "AVAILABLE");
+
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <div className="px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 font-medium flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>En production : <strong className="font-bold text-white">{workingList.length}</strong></span>
+                      </div>
+                      <div className="px-3 py-1.5 rounded-xl bg-rose-950/80 border border-rose-500/30 text-rose-200 font-medium flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-rose-400" />
+                        <span>Bloqué (Stop-the-line) : <strong className="font-bold text-white">{blockedList.length}</strong></span>
+                      </div>
+                      <div className="px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 font-medium flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-slate-400" />
+                        <span>Disponible : <strong className="font-bold text-white">{availableList.length}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Filtres & Recherche de la supervision */}
+              <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 flex-1 max-w-md">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={liveSupervisionSearch}
+                      onChange={(e) => setLiveSupervisionSearch(e.target.value)}
+                      placeholder="Rechercher un développeur, un projet ou une tâche..."
+                      className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500 text-slate-800"
+                    />
+                  </div>
+                  {liveSupervisionSearch && (
+                    <button
+                      onClick={() => setLiveSupervisionSearch("")}
+                      className="text-slate-400 hover:text-slate-600 px-1 font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setLiveSupervisionFilter("ALL")}
+                    className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
+                      liveSupervisionFilter === "ALL" ? "bg-sky-100 text-sky-800 font-semibold" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    Tous ({developers.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLiveSupervisionFilter("WORKING")}
+                    className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
+                      liveSupervisionFilter === "WORKING" ? "bg-emerald-100 text-emerald-800 font-semibold" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    🟢 En cours ({developers.filter((d) => devLiveActivities[d.id]?.status === "WORKING").length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLiveSupervisionFilter("BLOCKED")}
+                    className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
+                      liveSupervisionFilter === "BLOCKED" ? "bg-rose-100 text-rose-800 font-semibold" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    🔴 Bloqués ({developers.filter((d) => devLiveActivities[d.id]?.status === "BLOCKED").length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLiveSupervisionFilter("AVAILABLE")}
+                    className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
+                      liveSupervisionFilter === "AVAILABLE" ? "bg-slate-200 text-slate-800 font-semibold" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    ⚪ Disponibles ({developers.filter((d) => !devLiveActivities[d.id] || devLiveActivities[d.id]?.status === "AVAILABLE").length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Liste Détaillée des Développeurs en Direct */}
+              <div className="divide-y divide-slate-100 max-h-[480px] overflow-y-auto">
+                {(() => {
+                  const filteredDevs = developers.filter((dev) => {
+                    const act = devLiveActivities[dev.id] || { status: "AVAILABLE" };
+                    if (liveSupervisionFilter !== "ALL" && act.status !== liveSupervisionFilter) {
+                      return false;
+                    }
+                    if (liveSupervisionSearch.trim()) {
+                      const q = liveSupervisionSearch.toLowerCase();
+                      const matchName = dev.name.toLowerCase().includes(q);
+                      const matchTitle = (dev.jobTitle || "").toLowerCase().includes(q);
+                      const matchTicket = (act.activeTicketReference || "").toLowerCase().includes(q) || (act.activeTicketTitle || "").toLowerCase().includes(q);
+                      const matchClient = (act.clientCompany || "").toLowerCase().includes(q);
+                      const matchTask = (act.currentTaskDescription || "").toLowerCase().includes(q);
+                      if (!matchName && !matchTitle && !matchTicket && !matchClient && !matchTask) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  });
+
+                  if (filteredDevs.length === 0) {
+                    return (
+                      <div className="p-8 text-center text-slate-400 text-xs italic">
+                        Aucun développeur ne correspond aux filtres de supervision sélectionnés.
+                      </div>
+                    );
+                  }
+
+                  return filteredDevs.map((dev) => {
+                    const activity = devLiveActivities[dev.id] || {
+                      developerId: dev.id,
+                      status: "AVAILABLE",
+                      currentTaskDescription: "Disponible pour affectation",
+                      elapsedSeconds: 0
+                    };
+
+                    return (
+                      <div
+                        key={dev.id}
+                        className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                      >
+                        {/* 1. Développeur & Spécialité */}
+                        <div className="flex items-center gap-3.5 min-w-[250px]">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border ${
+                              activity.status === "WORKING"
+                                ? "bg-emerald-100 text-emerald-800 border-emerald-300 ring-2 ring-emerald-400/40"
+                                : activity.status === "BLOCKED"
+                                ? "bg-rose-100 text-rose-800 border-rose-300 ring-2 ring-rose-400/40"
+                                : "bg-slate-100 text-slate-700 border-slate-200"
+                            }`}
+                          >
+                            {dev.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-bold text-slate-900 text-sm leading-tight">{dev.name}</h3>
+                              {activity.status === "WORKING" && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                                  <span>EN DIRECT : {formatTimer(activity.elapsedSeconds)}</span>
+                                </span>
+                              )}
+                              {activity.status === "BLOCKED" && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300">
+                                  <AlertTriangle className="w-3 h-3 text-rose-600" />
+                                  <span>BLOQUÉ ({formatTimer(activity.elapsedSeconds)})</span>
+                                </span>
+                              )}
+                              {activity.status === "AVAILABLE" && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                  <span>Disponible</span>
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-500 mt-0.5">{dev.jobTitle}</div>
+                          </div>
+                        </div>
+
+                        {/* 2. Ce qu'il fait en temps réel (Projet & Tâche active) */}
+                        <div className="flex-1 min-w-[280px]">
+                          {activity.status === "WORKING" || activity.status === "BLOCKED" ? (
+                            <div
+                              className={`p-2.5 rounded-xl border text-xs ${
+                                activity.status === "WORKING"
+                                  ? "bg-emerald-50/60 border-emerald-200"
+                                  : "bg-rose-50/60 border-rose-200"
+                              }`}
+                            >
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className="font-mono font-bold text-sky-900 bg-sky-100 px-1.5 py-0.5 rounded text-[11px]">
+                                  {activity.activeTicketReference || "TICKET"}
+                                </span>
+                                <span className="font-semibold text-slate-900 truncate">
+                                  {activity.activeTicketTitle || "Projet SAP"}
+                                </span>
+                                {activity.clientCompany && (
+                                  <span className="text-[10px] font-medium text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                    {activity.clientCompany}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-700 flex items-start gap-1.5">
+                                <span className="font-semibold text-slate-900 shrink-0">Tâche en cours :</span>
+                                <span className="italic">{activity.currentTaskDescription || "Développement actif"}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs text-slate-500 flex items-center justify-between">
+                              <span>{activity.currentTaskDescription || "Prêt pour affectation de ticket SAP"}</span>
+                              <span className="text-[11px] font-mono font-semibold text-emerald-700">{dev.freeHours} h libres cette semaine</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. Actions Aliko : Imprimer son rapport + Suivre le ticket */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPrintingReport({
+                                targetType: "DEVELOPER",
+                                targetId: dev.id,
+                                targetName: dev.name,
+                                targetEmail: dev.email,
+                                role: "DEVELOPER",
+                                jobTitle: dev.jobTitle
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-50 text-sky-900 hover:bg-sky-100 border border-sky-300 transition-colors shadow-2xs cursor-pointer"
+                            title={`Imprimer le rapport de travail détaillé de ${dev.name}`}
+                          >
+                            <Printer className="w-3.5 h-3.5 text-sky-700" />
+                            <span>Imprimer son rapport</span>
+                          </button>
+
+                          {activity.activeTicketId && (() => {
+                            const activeTicket = tickets.find((t) => t.id === activity.activeTicketId);
+                            if (!activeTicket) return null;
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => setSupervisingTicket(activeTicket)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
+                                title="Superviser la progression de ce ticket"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-slate-600" />
+                                <span>Voir projet</span>
+                              </button>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+
             {/* Deux colonnes : Tickets récents & Disponibilité équipe */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Colonne Gauche : Derniers tickets */}
@@ -3951,12 +4524,62 @@ export default function TicketManagerPage() {
                           <h3 className="font-semibold text-slate-900 text-sm leading-tight">{dev.name}</h3>
                           <p className="text-xs text-slate-500">{dev.email}</p>
                         </div>
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Actif
-                        </span>
+                        {(() => {
+                          const act = devLiveActivities[dev.id];
+                          if (act?.status === "WORKING") {
+                            return (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                                <span>{formatTimer(act.elapsedSeconds)}</span>
+                              </span>
+                            );
+                          }
+                          if (act?.status === "BLOCKED") {
+                            return (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                                <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
+                                <span>Bloqué</span>
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Actif
+                            </span>
+                          );
+                        })()}
                       </div>
 
-                      <p className="text-xs text-slate-600 font-medium mb-3">{dev.jobTitle}</p>
+                      <p className="text-xs text-slate-600 font-medium mb-2">{dev.jobTitle}</p>
+
+                      {/* Activité Temps Réel du Développeur */}
+                      {(() => {
+                        const act = devLiveActivities[dev.id];
+                        if (act?.status === "WORKING") {
+                          return (
+                            <div className="mb-3 p-2 bg-emerald-50 rounded-lg border border-emerald-200 text-xs">
+                              <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-900 mb-0.5">
+                                <span className="font-mono font-bold">{act.activeTicketReference}</span>
+                                <span className="font-mono text-[10px] text-emerald-700">{formatTimer(act.elapsedSeconds)}</span>
+                              </div>
+                              <p className="text-[11px] text-emerald-800 font-medium truncate">{act.activeTicketTitle}</p>
+                              <p className="text-[10px] text-emerald-600 italic truncate mt-0.5">{act.currentTaskDescription}</p>
+                            </div>
+                          );
+                        }
+                        if (act?.status === "BLOCKED") {
+                          return (
+                            <div className="mb-3 p-2 bg-rose-50 rounded-lg border border-rose-200 text-xs">
+                              <div className="flex items-center justify-between text-[11px] font-semibold text-rose-900 mb-0.5">
+                                <span className="font-mono font-bold">{act.activeTicketReference}</span>
+                                <span className="font-mono text-[10px] text-rose-700">Stop-the-line</span>
+                              </div>
+                              <p className="text-[10px] text-rose-700 italic truncate">{act.currentTaskDescription}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
 
                       <div className="space-y-1 mb-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                         <div className="flex items-center justify-between text-xs">
@@ -4013,11 +4636,11 @@ export default function TicketManagerPage() {
                             jobTitle: dev.jobTitle
                           })
                         }
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-sky-800 hover:text-sky-950 bg-sky-50 hover:bg-sky-100 border border-sky-300 px-2.5 py-1 rounded-lg transition-colors cursor-pointer shadow-2xs"
                         title="Imprimer le relevé d'heures de ce développeur"
                       >
-                        <Printer className="w-3 h-3 text-slate-600" />
-                        <span>Rapport d'heures</span>
+                        <Printer className="w-3.5 h-3.5 text-sky-700" />
+                        <span>Imprimer son rapport</span>
                       </button>
                     </div>
                   </div>
@@ -6285,7 +6908,36 @@ export default function TicketManagerPage() {
                 <Printer className="w-5 h-5 text-sky-400" />
                 <div>
                   <h3 className="font-bold text-sm">Rapport d'Activité & Feuilles de Temps — Safir Consulting</h3>
-                  <p className="text-[11px] text-slate-400">Collaborateur : {printingReport.targetName} ({printingReport.role})</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px]">
+                    <span className="text-slate-400">Collaborateur (Changer de développeur) :</span>
+                    {currentUser?.role === "HEAD" && printingReport.targetType === "DEVELOPER" ? (
+                      <select
+                        value={printingReport.targetId}
+                        onChange={(e) => {
+                          const chosenDev = developers.find((d) => d.id === e.target.value);
+                          if (chosenDev) {
+                            setPrintingReport({
+                              targetType: "DEVELOPER",
+                              targetId: chosenDev.id,
+                              targetName: chosenDev.name,
+                              targetEmail: chosenDev.email,
+                              role: "DEVELOPER",
+                              jobTitle: chosenDev.jobTitle
+                            });
+                          }
+                        }}
+                        className="bg-slate-800 text-sky-300 font-bold border border-slate-700 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                      >
+                        {developers.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name} ({d.jobTitle})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="font-semibold text-white">{printingReport.targetName} ({printingReport.role})</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
