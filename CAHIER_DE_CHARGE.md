@@ -421,6 +421,13 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
      - **Estimation de prix, temps et devise réservés exclusivement à Aliko** : le consultant ne définit ni le temps de travail, ni l'estimation financière du prix, ni la devise du contrat (champs retirés de son écran). C'est Aliko Getheme (`HEAD`) qui évalue l'effort technique, fixe la charge horaire, valide la valorisation financière et choisit la devise contractuelle lors de la qualification dans son Guichet Central ou lors de l'affectation.
 
 4. **Fil de Discussion Tracé & Collaboration Sans Goulot d'Étranglement** :
+
+### 10.3. Séparation Étanche des Portails (Zero Cross-Portal Visibility)
+Afin de préserver l'intégrité opérationnelle, la confidentialité des arbitrages et l'étanchéité des responsabilités au sein de Safir Consulting :
+- **Absence Totale de Vue Croisée** : **Aliko Getheme (`HEAD`) ne peut pas voir le portail d'un développeur ou d'une consultante**, et réciproquement.
+- **Suppression des Sélecteurs de Session en Cours d'Utilisation** : Aucun menu déroulant ni bouton d'usurpation (« Tester session ») n'est autorisé au sein d'une session authentifiée.
+- **Verrouillage des Onglets & Contrôleur d'Accès Réactif** : Si une tentative de navigation vers un onglet non autorisé intervient, le contrôleur RBAC bloque immédiatement l'accès, affiche un toast de refus et redirige vers l'espace autorisé.
+- **Déconnexion Obligatoire** : Pour basculer vers un autre rôle, chaque collaborateur doit obligatoirement **clôturer sa session (`Se déconnecter`)** et s'authentifier avec ses identifiants propres sur la page de connexion.
    - Le développeur peut poser une question au consultant et signaler le besoin comme bloquant (`status: BLOCKED`).
    - Le consultant est alerté sur son espace, apporte sa réponse et peut lever automatiquement le blocage (`status: IN_PROGRESS`).
    - Aliko (Direction BU SME) supervise l'intégralité du dialogue dans sa modale de supervision pour arbitrer si nécessaire tout en conservant l'historique complet.

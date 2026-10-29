@@ -394,4 +394,56 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     // Vérifier le badge 'Montée en compétences'
     await expect(page.locator("body")).toContainText("Montée en compétences");
   });
+
+  test("15. Séparation étanche des rôles (Zero Cross-Portal Visibility) : Aliko ne voit pas les portails dev/consultant, aucun switcher interne en session, déconnexion obligatoire", async ({ page }) => {
+    // 1. Connexion en tant qu'Aliko (HEAD)
+    await loginAsAliko(page);
+
+    // Vérifier qu'Aliko ne voit PAS les onglets Développeur ou Consultante
+    await expect(page.getByRole("button", { name: /Mon Espace Développeur/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /Mes Demandes Émises/i })).not.toBeVisible();
+
+    // Vérifier que le menu utilisateur ne propose plus aucun switcher de session vers d'autres rôles
+    await page.getByText(/Aliko Getheme/i).first().click();
+    const userMenu = page.locator(".absolute.right-0.mt-2.w-80");
+    await expect(userMenu.getByText(/Session Active Sécurisée/i)).toBeVisible();
+    await expect(userMenu.getByText(/Tester les niveaux d'accès/i)).not.toBeVisible();
+    await expect(userMenu.getByText(/Anoop Pandimukkula/i)).not.toBeVisible();
+    await expect(userMenu.getByText(/Mélissa Diakité/i)).not.toBeVisible();
+
+    // Fermer le menu
+    await page.getByText(/Aliko Getheme/i).first().click();
+
+    // Vérifier que la grille consultants ne contient plus de bouton 'Tester session'
+    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+    await page.getByRole("button", { name: /Consultants/i }).click();
+    await expect(page.getByText(/Tester session/i)).not.toBeVisible();
+    await expect(page.getByText(/Espace cloisonné/i).first()).toBeVisible();
+
+    // 2. Déconnexion obligatoire pour changer de rôle
+    await page.getByRole("button", { name: /Déconnexion/i }).click();
+    await expect(page.getByText(/Connexion à votre Espace/i)).toBeVisible();
+
+    // 3. Connexion en tant que Consultante (Mélissa Diakité)
+    const melissaBtn = page.getByRole("button", { name: /Mélissa Diakité/i }).first();
+    await melissaBtn.click();
+
+    // Vérifier que la consultante ne voit PAS les portails Direction ni Développeur
+    await expect(page.getByRole("button", { name: /Tableau de bord/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /Tous les Tickets SAP/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /Équipe & Capacité/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /Guichet Central Demandes/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /Mon Espace Développeur/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /Mes Demandes Émises/i })).toBeVisible();
+
+    // 4. Déconnexion et connexion Développeur (Anoop)
+    await page.getByRole("button", { name: /Déconnexion/i }).click();
+    const anoopBtn = page.getByRole("button", { name: /Anoop Pandimukkula/i }).first();
+    await anoopBtn.click();
+
+    // Vérifier que le développeur ne voit PAS les portails Direction ni Consultant
+    await expect(page.getByRole("button", { name: /Tableau de bord/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /Mes Demandes Émises/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /Mon Espace Développeur/i })).toBeVisible();
+  });
 });

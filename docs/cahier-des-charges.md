@@ -1056,6 +1056,7 @@ Design professionnel d'**application SaaS B2B** :
 - Authentification sécurisée
 - SSO d'entreprise si disponible
 - RBAC appliqué côté serveur
+- Séparation étanche des portails (Zero Cross-Portal Visibility) : Aliko (Direction) ne peut pas voir le portail d'un développeur ou consultant, et vice-versa. Aucun switcher en session ; déconnexion obligatoire pour changer de rôle.
 - Protection des sessions et des cookies
 - Validation et normalisation des entrées
 - Protection contre les injections et les accès non autorisés

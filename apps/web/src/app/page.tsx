@@ -900,17 +900,45 @@ export default function TicketManagerPage() {
     refreshData();
   }, []);
 
-  // Ajustement de l'onglet actif selon le rôle au changement d'utilisateur
+  // Cloisonnement strict RBAC : verrouillage automatique et étanche de l'espace selon le rôle connecté
   useEffect(() => {
     if (!currentUser) return;
     if (currentUser.role === "DEVELOPER") {
-      setActiveTab("my-tickets");
+      if (activeTab !== "my-tickets") {
+        setActiveTab("my-tickets");
+      }
     } else if (currentUser.role === "CONSULTANT") {
-      setActiveTab("my-demands");
-    } else {
-      setActiveTab("dashboard");
+      if (activeTab !== "my-demands") {
+        setActiveTab("my-demands");
+      }
+    } else if (currentUser.role === "HEAD") {
+      if (activeTab === "my-tickets" || activeTab === "my-demands") {
+        setActiveTab("dashboard");
+      }
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.role, activeTab]);
+
+  // Navigation avec contrôle d'accès strict (aucun rôle ne peut naviguer vers l'espace d'un autre)
+  const handleTabChange = (tab: "dashboard" | "tickets" | "developers" | "inbox" | "my-tickets" | "my-demands") => {
+    if (!currentUser) return;
+    if (currentUser.role === "HEAD") {
+      if (tab === "my-tickets" || tab === "my-demands") {
+        showToast("Accès refusé : Le portail Développeur et Consultant est strictement réservé à leurs titulaires (Cloisonnement RBAC).");
+        return;
+      }
+    } else if (currentUser.role === "DEVELOPER") {
+      if (tab !== "my-tickets") {
+        showToast("Accès refusé : Votre compte Développeur n'a pas accès au portail Direction ou Consultant.");
+        return;
+      }
+    } else if (currentUser.role === "CONSULTANT") {
+      if (tab !== "my-demands") {
+        showToast("Accès refusé : Votre compte Consultant n'a pas accès au portail Direction ou Développeur.");
+        return;
+      }
+    }
+    setActiveTab(tab);
+  };
 
   // Connexion manuelle
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -929,12 +957,6 @@ export default function TicketManagerPage() {
     setLoginEmail("");
     setLoginPassword("");
     showToast(`Connexion réussie — Bienvenue sur votre espace, ${found.name}`);
-  };
-
-  const switchUser = (user: AuthUser) => {
-    setCurrentUser(user);
-    setShowUserMenu(false);
-    showToast(`Session basculée sur : ${user.name} (${user.roleLabel})`);
   };
 
   // Statistiques calculées
@@ -2025,7 +2047,7 @@ export default function TicketManagerPage() {
                   {currentUser.role === "HEAD" && (
                     <>
                       <button
-                        onClick={() => setActiveTab("dashboard")}
+                        onClick={() => handleTabChange("dashboard")}
                         className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                           activeTab === "dashboard"
                             ? "bg-slate-100 text-sky-800 font-semibold"
@@ -2035,7 +2057,7 @@ export default function TicketManagerPage() {
                         Tableau de bord
                       </button>
                       <button
-                        onClick={() => setActiveTab("tickets")}
+                        onClick={() => handleTabChange("tickets")}
                         className={`px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                           activeTab === "tickets"
                             ? "bg-slate-100 text-sky-800 font-semibold"
@@ -2048,7 +2070,7 @@ export default function TicketManagerPage() {
                         </span>
                       </button>
                       <button
-                        onClick={() => setActiveTab("developers")}
+                        onClick={() => handleTabChange("developers")}
                         className={`px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                           activeTab === "developers"
                             ? "bg-slate-100 text-sky-800 font-semibold"
@@ -2058,7 +2080,7 @@ export default function TicketManagerPage() {
                         <span>Équipe & Capacité ({developers.length})</span>
                       </button>
                       <button
-                        onClick={() => setActiveTab("inbox")}
+                        onClick={() => handleTabChange("inbox")}
                         className={`px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                           activeTab === "inbox"
                             ? "bg-slate-100 text-sky-800 font-semibold"
@@ -2078,7 +2100,7 @@ export default function TicketManagerPage() {
                   {/* Vue Développeur (DEVELOPER) */}
                   {currentUser.role === "DEVELOPER" && (
                     <button
-                      onClick={() => setActiveTab("my-tickets")}
+                      onClick={() => handleTabChange("my-tickets")}
                       className={`px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                         activeTab === "my-tickets"
                           ? "bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200"
@@ -2093,7 +2115,7 @@ export default function TicketManagerPage() {
                   {/* Vue Consultante (CONSULTANT) */}
                   {currentUser.role === "CONSULTANT" && (
                     <button
-                      onClick={() => setActiveTab("my-demands")}
+                      onClick={() => handleTabChange("my-demands")}
                       className={`px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                         activeTab === "my-demands"
                           ? "bg-purple-50 text-purple-800 font-semibold border border-purple-200"
@@ -2130,23 +2152,25 @@ export default function TicketManagerPage() {
                 </>
               )}
 
-              {/* SÉLECTEUR MULTI-DEVISES (AFRIQUE DE L'OUEST FCFA PAR DÉFAUT + EUR / USD) */}
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" title="Devise de valorisation (FCFA Afrique de l'Ouest / Multi-devises)">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Devise :</span>
-                <select
-                  value={activeCurrency}
-                  onChange={(e) => {
-                    const c = e.target.value as "XOF" | "EUR" | "USD";
-                    setActiveCurrency(c);
-                    showToast(c === "XOF" ? "Devise activée : FCFA (XOF — Afrique de l'Ouest)" : `Devise activée : ${c}`);
-                  }}
-                  className="bg-transparent font-semibold text-slate-800 text-xs cursor-pointer focus:outline-none"
-                >
-                  <option value="XOF">FCFA (XOF - Afrique de l'Ouest)</option>
-                  <option value="EUR">Euro (€ - International)</option>
-                  <option value="USD">Dollar ($ - International)</option>
-                </select>
-              </div>
+              {/* SÉLECTEUR MULTI-DEVISES (AFRIQUE DE L'OUEST FCFA PAR DÉFAUT + EUR / USD) - RÉSERVÉ À ALIKO (HEAD) */}
+              {currentUser?.role === "HEAD" && (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" title="Devise contractuelle (Prérogative Aliko)">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Devise :</span>
+                  <select
+                    value={activeCurrency}
+                    onChange={(e) => {
+                      const c = e.target.value as "XOF" | "EUR" | "USD";
+                      setActiveCurrency(c);
+                      showToast(c === "XOF" ? "Devise activée : FCFA (XOF — Afrique de l'Ouest)" : `Devise activée : ${c}`);
+                    }}
+                    className="bg-transparent font-semibold text-slate-800 text-xs cursor-pointer focus:outline-none"
+                  >
+                    <option value="XOF">FCFA (XOF - Afrique de l'Ouest)</option>
+                    <option value="EUR">Euro (€ - International)</option>
+                    <option value="USD">Dollar ($ - International)</option>
+                  </select>
+                </div>
+              )}
 
               {/* CLOCHE DE NOTIFICATIONS TEMPS RÉEL IN-APP */}
               <div className="relative">
@@ -2275,52 +2299,56 @@ export default function TicketManagerPage() {
                   </button>
                 )}
 
-                {/* Dropdown de Changement Rapide d'Utilisateur / Rôle */}
+                {/* Fiche Profil & Session Sécurisée (Cloisonnement Strict RBAC - Aucun Switcher en Session) */}
                 {showUserMenu && currentUser && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in">
-                    <div className="px-3 py-2 border-b border-slate-100">
-                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                        Tester les niveaux d'accès (Grants)
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 py-3 z-50 animate-in fade-in">
+                    <div className="px-4 py-2 border-b border-slate-100 space-y-1">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Shield className="w-3 h-3 text-sky-600" />
+                        <span>Session Active Sécurisée</span>
                       </div>
+                      <div className="font-bold text-slate-900 text-sm leading-tight">
+                        {currentUser.name}
+                      </div>
+                      <div className="text-xs text-slate-500 font-mono">
+                        {currentUser.email}
+                      </div>
+                      <div className="pt-1.5 flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full border ${
+                          currentUser.role === "HEAD"
+                            ? "bg-sky-50 text-sky-800 border-sky-300"
+                            : currentUser.role === "DEVELOPER"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                            : "bg-purple-50 text-purple-800 border-purple-300"
+                        }`}>
+                          {currentUser.role === "HEAD" ? "🛡️ DIRECTION BU (HEAD)" : currentUser.role === "DEVELOPER" ? "💻 DÉVELOPPEUR SAP" : "📋 CONSULTANTE SAP"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 pt-1 leading-relaxed">
+                        {currentUser.role === "HEAD"
+                          ? "Accès exclusif : Tableau de bord, Capacité, Affectation souveraine & Arbitrage."
+                          : currentUser.role === "DEVELOPER"
+                          ? "Accès exclusif : Tickets affectés, Pilotage RAF & Stop-the-line."
+                          : "Accès exclusif : Demandes de développements SAP & Réponses fonctionnelles."}
+                      </p>
                     </div>
 
-                    <div className="py-1">
-                      {systemUsers.map((user) => (
-                        <button
-                          key={user.id}
-                          onClick={() => switchUser(user)}
-                          className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-slate-50 transition-colors ${
-                            currentUser.id === user.id ? "bg-sky-50 font-semibold" : ""
-                          }`}
-                        >
-                          <div>
-                            <div className="text-slate-900 font-medium">{user.name}</div>
-                            <div className="text-[11px] text-slate-500">{user.roleLabel}</div>
-                          </div>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                            user.role === "HEAD"
-                              ? "bg-sky-100 text-sky-800"
-                              : user.role === "DEVELOPER"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-purple-100 text-purple-800"
-                          }`}>
-                            {user.role}
-                          </span>
-                        </button>
-                      ))}
+                    <div className="p-3 bg-slate-50 mx-3 my-2 rounded-lg border border-slate-200 text-[11px] text-slate-600 flex items-start gap-2">
+                      <Lock className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                      <span><strong>Cloisonnement étanche :</strong> Pour changer de rôle, vous devez obligatoirement vous déconnecter et vous authentifier avec le compte correspondant.</span>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-100 px-3 py-1">
+                    <div className="pt-1 px-3">
                       <button
                         onClick={() => {
                           setCurrentUser(null);
                           setShowUserMenu(false);
-                          setShowLoginModal(true);
+                          showToast("Session clôturée avec succès");
                         }}
-                        className="w-full text-left text-xs text-rose-600 hover:text-rose-800 flex items-center gap-1.5 py-1 font-medium"
+                        className="w-full text-left text-xs text-rose-700 hover:text-rose-900 hover:bg-rose-50 p-2 rounded-lg flex items-center gap-2 font-semibold transition-colors cursor-pointer border border-rose-200"
                       >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>Se déconnecter (Écran de Login)</span>
+                        <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Se déconnecter (Retour au Login)</span>
                       </button>
                     </div>
                   </div>
@@ -3278,20 +3306,11 @@ export default function TicketManagerPage() {
                     </div>
 
                     <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-400">Rôle : CONSULTANT</span>
-                      <button
-                        onClick={() => {
-                          const targetUser = systemUsers.find((u) => u.email.toLowerCase() === c.email.toLowerCase());
-                          if (targetUser) {
-                            switchUser(targetUser);
-                          } else {
-                            showToast(`Utilisateur ${c.name} sélectionné`);
-                          }
-                        }}
-                        className="px-2.5 py-1 text-xs text-purple-700 hover:text-purple-900 hover:bg-purple-50 rounded font-semibold transition-colors border border-purple-200"
-                      >
-                        Tester session ➔
-                      </button>
+                      <span className="text-[10px] text-slate-400 font-mono">Profil : CONSULTANT</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>Espace cloisonné</span>
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -3468,9 +3487,9 @@ export default function TicketManagerPage() {
       )}
 
       {/* ================================================================= */}
-      {/* MODALE 1 : SAISIE DU RESTE À FAIRE (RAF DÉVELOPPEUR)              */}
+      {/* MODALE 1 : SAISIE DU RESTE À FAIRE (RÉSERVÉ DÉVELOPPEUR)           */}
       {/* ================================================================= */}
-      {editingRafTicket && (
+      {editingRafTicket && currentUser?.role === "DEVELOPER" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
@@ -3603,9 +3622,9 @@ export default function TicketManagerPage() {
       )}
 
       {/* ================================================================= */}
-      {/* MODALE 3 : CRÉATION DE TICKET SAP (HEAD / CONSULTANT)             */}
+      {/* MODALE 3 : CRÉATION DE TICKET SAP (RÉSERVÉE HEAD & CONSULTANT)   */}
       {/* ================================================================= */}
-      {showCreateModal && (
+      {showCreateModal && currentUser?.role !== "DEVELOPER" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
@@ -3923,9 +3942,9 @@ export default function TicketManagerPage() {
       )}
 
       {/* ================================================================= */}
-      {/* MODALE 4 : AFFECTATION DU TICKET PAR ALIKO (HEAD)                 */}
+      {/* MODALE 4 : AFFECTATION DU TICKET PAR ALIKO (HEAD EXCLUSIF)       */}
       {/* ================================================================= */}
-      {assigningTicket && (
+      {assigningTicket && currentUser?.role === "HEAD" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-md max-h-[92vh] flex flex-col overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50 shrink-0">
@@ -4209,9 +4228,9 @@ export default function TicketManagerPage() {
         </div>
       )}
       {/* ================================================================= */}
-      {/* MODALE 5 : INTÉGRATION D'UN NOUVEAU DÉVELOPPEUR PAR ALIKO (HEAD)   */}
+      {/* MODALE 5 : INTÉGRATION D'UN NOUVEAU DÉVELOPPEUR PAR ALIKO (HEAD EXCLUSIF) */}
       {/* ================================================================= */}
-      {showAddDevModal && (
+      {showAddDevModal && currentUser?.role === "HEAD" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
@@ -4355,9 +4374,9 @@ export default function TicketManagerPage() {
         </div>
       )}
       {/* ================================================================= */}
-      {/* MODALE 6 : CRÉATION D'UN PROFIL CONSULTANT PAR ALIKO (HEAD)        */}
+      {/* MODALE 6 : CRÉATION D'UN PROFIL CONSULTANT PAR ALIKO (HEAD EXCLUSIF) */}
       {/* ================================================================= */}
-      {showAddConsultantModal && (
+      {showAddConsultantModal && currentUser?.role === "HEAD" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-purple-50/50">
@@ -4484,9 +4503,9 @@ export default function TicketManagerPage() {
         </div>
       )}
       {/* ================================================================= */}
-      {/* MODALE 7 : SUPERVISION DU TICKET & OEIL DIRECTION D'ALIKO (HEAD)   */}
+      {/* MODALE 7 : SUPERVISION DU TICKET & OEIL DIRECTION D'ALIKO (HEAD EXCLUSIF) */}
       {/* ================================================================= */}
-      {supervisingTicket && (
+      {supervisingTicket && currentUser?.role === "HEAD" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
             {/* Entête de la Modale */}
