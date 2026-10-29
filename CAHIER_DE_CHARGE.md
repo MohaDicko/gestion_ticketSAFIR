@@ -434,43 +434,72 @@ Conformément aux exigences de gouvernance qualité :
 1. **Visibilité Intégrale de la Consultante jusqu'au Bout** :
    - La consultante suit en direct et en continu le statut, le ou les développeurs dédiés, la progression en % et le Reste à Faire (RAF) de chacun de ses tickets.
 2. **Phase de Test & Recette Réservée à la Consultante** :
-   - Dès qu'un développeur achève ses développements et clique sur *« Marquer comme Livré »* (`status: DELIVERED`), un espace de recette fonctionnelle s'active sur le portail de la consultante avec deux options souveraines :
+   - Dès qu'un développeur achève ses développements et clique sur le bouton officiel **« Envoyer en test chez le consultant »** (`status: DELIVERED`), un espace de recette fonctionnelle s'active sur le portail de la consultante avec deux options souveraines :
      - **Option A : Tester & Approuver la Recette (Solution Conforme)** : Valide la recette fonctionnelle (`consultantReviewStatus: APPROVED`), consigne l'approbation dans le fil d'échange officiel et habilite Aliko à clôturer le ticket.
      - **Option B : Renvoyer en Correction chez les Développeurs (Problème / Anomalie)** : Ouvre une modale de contestation avec **motif obligatoire de l'anomalie constatée**, réalloue une charge complémentaire de reprise au RAF, repasse le ticket en `IN_PROGRESS`, affiche l'alerte sur le tableau de bord du développeur et notifie l'équipe.
 3. **Clôture Souveraine Conditionnée d'Aliko (`HEAD`)** :
    - **Aliko est le seul habilité à prononcer la clôture définitive (`CLOSED`)**, mais **uniquement et strictement après que la consultante a testé et formellement approuvé la recette**.
    - Tant que la recette n'a pas été validée par la consultante, le bouton de clôture dans la modale de supervision d'Aliko est **verrouillé (`disabled`) avec cadenas et avertissement explicite**. Toute tentative de clôture anticipée est immédiatement rejetée par le système.
-   - Le développeur peut poser une question au consultant et signaler le besoin comme bloquant (`status: BLOCKED`).
-   - Le consultant est alerté sur son espace, apporte sa réponse et peut lever automatiquement le blocage (`status: IN_PROGRESS`).
-   - Aliko (Direction BU SME) supervise l'intégralité du dialogue dans sa modale de supervision pour arbitrer si nécessaire tout en conservant l'historique complet.
 
-5. **Affectation Multi-Développeurs par Brique Technique SAP (Lots Spécialisés)** :
-   - **Répartition multi-niveaux par Aliko** : Capacité d'affecter plusieurs développeurs sur un même ticket complexe avec répartition par spécialité technique SAP :
-     - *Addon SAP B1 (UI / DI API / C# .NET)*
-     - *Intégration HANA & Vues SQLScript*
-     - *API & Service Layer (Node.js / OData / REST)*
-     - *ABAP Core & Extensions Cloud*
-     - *Architecture Fullstack & Intégration Système*
-     - *Recette Technique & Assurance Qualité (QA)*
-   - **Pilotage Individualisé du Reste à Faire (RAF)** : Chaque développeur affecté à son lot visualise sa brique dédiée sur son espace, déclare son RAF spécifique, qui met à jour instantanément la charge consolidée du projet.
-   - **Supervision 360° par Aliko** : Affichage d'un tableau synthétique de l'équipe mobilisée, des heures allouées et du pourcentage d'avancement par brique technique.
-   - **Transparence Consultant** : La consultante (Mélissa) visualise l'ensemble des développeurs mobilisés et leurs domaines techniques respectifs.
+### 10.5. Portail Développeur Optimisé & Time Tracking Mono-Tâche Rigoureux
+Les développeurs étant rémunérés en fonction de leurs heures effectives de travail, le portail développeur intègre une suite d'outils de suivi précis et anti-fraude :
+1. **Filtrage Rapide par Projet et par Entreprise / Client** :
+   - Barre de recherche textuelle instantanée (référence ticket, intitulé projet).
+   - Menu déroulant de sélection immédiate par entreprise cliente (`devCompanyFilter`).
+2. **Chronomètre de Travail Mono-Tâche Strict (Anti-Cumul)** :
+   - Un développeur ne peut pas déclarer du temps sur plusieurs tickets en parallèle.
+   - Le démarrage du compteur sur un ticket B met automatiquement en pause et sauvegarde le temps presté sur le ticket A dans le registre des temps (`TimeLog`), tout en décrémentant le Reste à Faire (RAF).
+   - Bannière active clignotante avec chrono en direct (`HH:MM:SS`) et bouton d'arrêt immédiat.
+3. **Pause Automatique du Compteur lors d'un Blocage (« Stop-the-line »)** :
+   - Dès qu'un développeur déclare un problème ou un blocage technique/métier (`status: BLOCKED`), le chronomètre actif est immédiatement arrêté et sauvegardé. Aucun décompte d'heures rémunérées n'est permis sur un ticket en attente de résolution externe.
+4. **Communication Directe avec la Direction (Aliko) et la Consultante (Mélissa)** :
+   - Fil de discussion direct contextuel permettant d'alerter Aliko et la consultante, d'échanger les éléments techniques et de recevoir la réponse débloquante.
+5. **Envoi Officiel en Recette** :
+   - Bouton d'action standardisé **« Envoyer en test chez le consultant »** qui stoppe tout chronomètre résiduel, passe le statut en `DELIVERED`, déclenche les alertes et ouvre la fenêtre de test chez la consultante.
 
-6. **Rattachement de Pièces Jointes Sécurisées SAP (`.pdf`, `.xlsx`, `.sql`, `.png`)** :
-   - Possibilité de joindre des cahiers de spécifications fonctionnelles, des jeux d'écritures comptables Excel, des traces SQL HANA ou des captures d'écran lors de la soumission d'un besoin ou directement dans le fil d'échange.
-   - Chaque pièce jointe affiche un badge de contrôle de sécurité (`VERIFIED_CLEAN`) et est consultable par Aliko dans sa modale de supervision 360°.
+### 10.6. Impression des Rapports d'Activité et Feuilles de Temps Périodiques (Dev & Aliko)
+Pour répondre aux exigences de facturation et d'audit RH :
+1. **Édition Autonome pour le Développeur** :
+   - Bouton direct **« Imprimer mon rapport d'heures »** disponible à tout moment sur l'en-tête du portail développeur.
+2. **Édition Souveraine pour la Direction (Aliko)** :
+   - Bouton **« Rapport d'heures »** sur chaque fiche développeur et **« Rapport d'activité »** sur chaque fiche consultante dans l'onglet **Équipe & Capacité**.
+3. **6 Périodes d'Audit Prédéfinies** :
+   - **Journalier** (Jour courant)
+   - **Hebdomadaire** (Semaine en cours / 7 derniers jours)
+   - **Mensuel** (Mois civil)
+   - **Trimestriel** (Trimestre en cours — Q1, Q2, Q3, Q4)
+   - **Semestriel** (Semestre en cours — S1, S2)
+   - **Annuel** (Exercice fiscal complet)
+4. **Gabarit d'Impression Corporate Safir Consulting** :
+   - Document prêt pour impression (`window.print()` / PDF) avec en-tête officiel BU SME, données d'identification du collaborateur, 4 indicateurs consolidés (heures totales, nombre de sessions, tickets traités, clients servis), tableau détaillé ligne par ligne (date, ticket, client, descriptif des travaux, durée) et **double zone d'émargement légale** (Visa Collaborateur + Cachet / Approbation Direction Aliko Getheme).
 
-7. **Export de Reporting Direction en 1-Clic (Excel/CSV & Synthèse Comité de Direction)** :
-   - **Aliko (`HEAD`)** dispose d'un bouton d'export direct générant un fichier `.csv` (encodage UTF-8 BOM compatible Microsoft Excel) récapitulant tous les tickets, l'équipe mobilisée, les heures estimées vs réalisées vs RAF, et le budget valorisé dans la devise active (`FCFA / XOF`, `EUR`, `USD`).
-   - Une modale exécutive **« Synthèse Comité Direction »** consolide les KPI financiers et opérationnels de la SME Business Unit.
+### 10.7. Collaboration Multi-Développeurs par Brique Technique SAP (Lots Spécialisés)
+- **Répartition multi-niveaux par Aliko** : Capacité d'affecter plusieurs développeurs sur un même ticket complexe avec répartition par spécialité technique SAP :
+  - *Addon SAP B1 (UI / DI API / C# .NET)*
+  - *Intégration HANA & Vues SQLScript*
+  - *API & Service Layer (Node.js / OData / REST)*
+  - *ABAP Core & Extensions Cloud*
+  - *Architecture Fullstack & Intégration Système*
+  - *Recette Technique & Assurance Qualité (QA)*
+- **Pilotage Individualisé du Reste à Faire (RAF)** : Chaque développeur affecté à son lot visualise sa brique dédiée sur son espace, déclare son RAF spécifique, qui met à jour instantanément la charge consolidée du projet.
+- **Supervision 360° par Aliko** : Affichage d'un tableau synthétique de l'équipe mobilisée, des heures allouées et du pourcentage d'avancement par brique technique.
+- **Transparence Consultant** : La consultante (Mélissa) visualise l'ensemble des développeurs mobilisés et leurs domaines techniques respectifs.
 
-8. **Centre de Notifications Temps Réel In-App & Alertes « Stop-the-line »** :
-   - Cloche interactive dans l'en-tête avec compteur dynamique de notifications non lues filtrées selon le rôle connecté (`HEAD`, `DEVELOPER`, `CONSULTANT`).
-   - Notifications poussées automatiquement en temps réel lors d'une déclaration de blocage (« Stop-the-line »), d'une nouvelle demande soumise au Guichet Central d'Aliko, d'une affectation d'équipe, d'une réponse débloquante de la consultante, d'une livraison ou d'une clôture définitive.
-   - Navigation directe en 1-clic depuis la notification vers le ticket ou le fil de discussion concerné.
+### 10.8. Rattachement de Pièces Jointes Sécurisées SAP (`.pdf`, `.xlsx`, `.sql`, `.png`)
+- Possibilité de joindre des cahiers de spécifications fonctionnelles, des jeux d'écritures comptables Excel, des traces SQL HANA ou des captures d'écran lors de la soumission d'un besoin ou directement dans le fil d'échange.
+- Chaque pièce jointe affiche un badge de contrôle de sécurité (`VERIFIED_CLEAN`) et est consultable par Aliko dans sa modale de supervision 360°.
 
-9. **Sélecteur de Session Interactif (1-Clic)** :
-   - Sélecteur de profil corporate intégré dans l'en-tête permettant de basculer instantanément entre Aliko, Anoop, Moha et Mélissa pour les besoins de validation, tests et démonstrations.
+### 10.9. Export de Reporting Direction en 1-Clic (Excel/CSV & Synthèse Comité de Direction)
+- **Aliko (`HEAD`)** dispose d'un bouton d'export direct générant un fichier `.csv` (encodage UTF-8 BOM compatible Microsoft Excel) récapitulant tous les tickets, l'équipe mobilisée, les heures estimées vs réalisées vs RAF, et le budget valorisé dans la devise active (`FCFA / XOF`, `EUR`, `USD`).
+- Une modale exécutive **« Synthèse Comité Direction »** consolide les KPI financiers et opérationnels de la SME Business Unit.
+
+### 10.10. Centre de Notifications Temps Réel In-App & Alertes « Stop-the-line »
+- Cloche interactive dans l'en-tête avec compteur dynamique de notifications non lues filtrées selon le rôle connecté (`HEAD`, `DEVELOPER`, `CONSULTANT`).
+- Notifications poussées automatiquement en temps réel lors d'une déclaration de blocage (« Stop-the-line »), d'une nouvelle demande soumise au Guichet Central d'Aliko, d'une affectation d'équipe, d'une réponse débloquante de la consultante, d'une livraison ou d'une clôture définitive.
+- Navigation directe en 1-clic depuis la notification vers le ticket ou le fil de discussion concerné.
+
+### 10.11. Sélecteur de Profil Corporate Sécurisé (Sur Page de Connexion)
+- Sélecteur de profil corporate intégré sur l'écran d'accueil permettant de tester les différents accès dans le respect de l'isolation stricte des sessions.
 
 ---
 
@@ -485,7 +514,7 @@ Conformément aux exigences de gouvernance qualité :
 - ✅ **Préparation Déploiement Vercel** : Configuration monorepo complète (`vercel.json`, script `vercel-build`, proxy dynamique d'API et documentation pas-à-pas des variables d'environnement).
 - ✅ **Banc de Tests E2E Automatisé** : Script de qualification exécutable (`scratch/test_e2e_scenarios.ps1`) validé à 100% (9 PASS / 0 FAIL).
 - ✅ **Banc de Tests Unitaires & Métier Vitest** : 36 tests automatisés validés à 100% (36 PASS / 0 FAIL) couvrant le scoring sur 100 points, le calcul de capacité nette, la classification e-mails, la machine à états finis, le provisioning de consultants (login = email pro, hachage Argon2id) et l'onboarding dynamique de développeurs.
-- ✅ **Banc de Tests E2E Navigateur Playwright** : 12 scénarios complets sous Chromium (12 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC, les filtres, l'onboarding, la supervision continue d'Aliko, la visibilité du développeur dédié et de la progression par la consultante, le dialogue direct avec déblocage automatique, ainsi que l'affectation multi-développeurs par lot technique avec pilotage du reste à faire par brique.
+- ✅ **Banc de Tests E2E Navigateur Playwright** : 17 scénarios complets sous Chromium (17 PASS / 0 FAIL) validant l'arrivée sur la page de login par défaut, l'accès au portail dédié, le cycle complet, le cloisonnement RBAC strict sans vue croisée, les filtres et recherches rapides, l'onboarding, la supervision continue d'Aliko, la visibilité du développeur dédié et de la progression par la consultante, le dialogue direct avec déblocage automatique, l'affectation multi-développeurs par lot technique, le cycle de recette fonctionnelle consultante et clôture exclusive Aliko, ainsi que le portail développeur optimisé (chrono mono-tâche, pause sur blocage, envoi en test chez le consultant et impression de rapports périodiques).
 - ✅ **Audit de Sécurité OWASP ZAP & Top 10** : 11 contrôles validés à 100% (étanchéité des grants RBAC pour la création de comptes, absence de fuite de hachage de mot de passe, protection anti-usurpation Gmail, requêtage paramétré Prisma contre les injections SQL, en-têtes défensifs, script `run_owasp_zap_scan.ps1` et profil `zap-baseline.conf`).
 - ✅ **Dépôt Git & Versionnement** : Code source complet documenté et synchronisé sur [GitHub](https://github.com/MohaDicko/gestion_ticketSAFIR).
 

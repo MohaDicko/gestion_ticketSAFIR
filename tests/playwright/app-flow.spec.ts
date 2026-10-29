@@ -417,8 +417,13 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await page.getByText(/Aliko Getheme/i).first().click();
 
     // Vérifier que la grille consultants ne contient plus de bouton 'Tester session'
-    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
-    await page.getByRole("button", { name: /Consultants/i }).click();
+    const teamBtn = page.getByRole("button", { name: /Équipe & Capacité/i });
+    await teamBtn.click();
+    await expect(page.getByText("Ressources & Gouvernance BU SME")).toBeVisible().catch(async () => {
+      await teamBtn.click();
+      await expect(page.getByText("Ressources & Gouvernance BU SME")).toBeVisible();
+    });
+    await page.getByRole("button", { name: /Consultants Fonctionnels/i }).click();
     await expect(page.getByText(/Tester session/i)).not.toBeVisible();
     await expect(page.getByText(/Espace cloisonné/i).first()).toBeVisible();
 
@@ -456,8 +461,8 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await anoopBtn.click();
     await expect(page.getByText(/Mon Espace Développeur/i)).toBeVisible();
 
-    // Cliquer sur 'Marquer comme Livré' pour TCK-SAP-001
-    const deliverBtn = page.getByRole("button", { name: /Marquer comme Livré/i }).first();
+    // Cliquer sur 'Envoyer en test chez le consultant' pour TCK-SAP-001
+    const deliverBtn = page.getByRole("button", { name: /Envoyer en test chez le consultant|Marquer comme Livré/i }).first();
     await deliverBtn.click();
     await expect(page.getByText(/Livré \(À tester\)/i).first()).toBeVisible();
 
@@ -492,8 +497,8 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByText(/Reprise demandée suite à Recette Consultante/i)).toBeVisible();
     await expect(page.getByText(/Anomalie constatée : Le calcul de remise sur facture ne s'applique pas correctement sous SAP B1/i)).toBeVisible();
 
-    // Le développeur effectue la correction et relivre le ticket
-    const redeliverBtn = page.getByRole("button", { name: /Marquer comme Livré/i }).first();
+    // Le développeur effectue la correction et renvoie le ticket en test
+    const redeliverBtn = page.getByRole("button", { name: /Envoyer en test chez le consultant|Marquer comme Livré/i }).first();
     await redeliverBtn.click();
     await expect(page.getByText(/Livré \(À tester\)/i).first()).toBeVisible();
 
@@ -528,5 +533,92 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     // Aliko prononce la clôture définitive
     await closeBtn.click();
     await expect(page.getByText(/Réglé & Clôturé/i).first()).toBeVisible();
+  });
+
+  test("17. Portail Développeur Optimisé : Filtre projet/client, Chronomètre mono-tâche, Pause sur blocage & Impression de Rapports Périodiques (Dev & Aliko)", async ({ page }) => {
+    await page.goto("http://localhost:3000");
+
+    // 1. Connexion Développeur (Anoop)
+    const anoopBtn = page.getByRole("button", { name: /Anoop Pandimukkula/i }).first();
+    await anoopBtn.click();
+    await expect(page.getByText(/Mon Espace Développeur/i)).toBeVisible();
+
+    // 2. Test du filtrage rapide par nom de projet / référence
+    const searchInput = page.getByPlaceholder(/Filtrer par projet/i);
+    await searchInput.fill("ADD-2026-0001");
+    await expect(page.getByText(/Addon Validation Commandes Fournisseurs SAP B1/i)).toBeVisible();
+    await searchInput.fill("");
+
+    // Test du filtrage par Entreprise / Client
+    const companySelect = page.locator("select").filter({ hasText: /Toutes les entreprises/i });
+    if (await companySelect.isVisible()) {
+      await companySelect.selectOption({ index: 1 });
+      await expect(page.getByText(/Addon Validation Commandes Fournisseurs SAP B1/i)).toBeVisible();
+      await companySelect.selectOption({ value: "ALL" });
+    }
+
+    // 3. Test du Chronomètre / Compteur de temps en direct (Règle mono-tâche stricte)
+    const startTimerBtn = page.getByRole("button", { name: /Démarrer chrono/i }).first();
+    await startTimerBtn.click();
+
+    // Vérifier l'apparition du bandeau actif en temps réel
+    await expect(page.getByText(/Compteur d'heures actif \(Règle mono-tâche\)/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Arrêter & Enregistrer/i })).toBeVisible();
+
+    // Arrêter le chrono et vérifier l'enregistrement
+    await page.getByRole("button", { name: /Arrêter & Enregistrer/i }).click();
+    await expect(page.getByText(/Session enregistrée/i)).toBeVisible();
+
+    // 4. Test d'impression de son propre rapport par le Développeur
+    const devPrintBtn = page.getByRole("button", { name: /Imprimer mon rapport d'heures/i });
+    await expect(devPrintBtn).toBeVisible();
+    await devPrintBtn.click();
+
+    // Vérifier l'ouverture de la modale de rapport périodique
+    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
+    await expect(page.getByText(/Collaborateur SAP/i)).toBeVisible();
+
+    // Tester les bascules de granularité périodique
+    await page.getByRole("button", { name: /Journalier/i }).click();
+    await expect(page.getByText(/Rapport Périodique : Journalier/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /Hebdomadaire/i }).click();
+    await expect(page.getByText(/Rapport Périodique : Hebdomadaire/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /Mensuel/i }).click();
+    await expect(page.getByText(/Rapport Périodique : Mensuel/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /Annuel/i }).click();
+    await expect(page.getByText(/Rapport Périodique : Annuel/i)).toBeVisible();
+
+    // Fermer la modale
+    await page.getByRole("button", { name: /Fermer le rapport/i }).click();
+
+    // 5. Test d'accès Direction : Aliko imprime le rapport d'un développeur et d'un consultant
+    await page.getByRole("button", { name: /Déconnexion/i }).click();
+    await page.getByRole("button", { name: /Aliko Getheme/i }).first().click();
+    await expect(page.getByRole("button", { name: /Tableau de bord/i })).toBeVisible();
+
+    // Navigation vers Équipe & Capacité
+    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+
+    // Clic sur 'Rapport d'heures' du premier développeur
+    const devCardReportBtn = page.getByRole("button", { name: /Rapport d'heures/i }).first();
+    await expect(devCardReportBtn).toBeVisible();
+    await devCardReportBtn.click();
+
+    // Vérifier que la modale d'impression s'ouvre pour le développeur sélectionné
+    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
+    await page.getByRole("button", { name: /Fermer le rapport/i }).click();
+
+    // Basculer vers l'onglet Consultants
+    await page.getByRole("button", { name: /Consultants Fonctionnels/i }).click();
+    const consultantReportBtn = page.getByRole("button", { name: /Rapport d'activité/i }).first();
+    await expect(consultantReportBtn).toBeVisible();
+    await consultantReportBtn.click();
+
+    // Vérifier l'ouverture du rapport pour la consultante
+    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
+    await page.getByRole("button", { name: /Fermer le rapport/i }).click();
   });
 });
