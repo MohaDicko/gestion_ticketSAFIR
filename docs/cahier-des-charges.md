@@ -681,7 +681,9 @@ Le responsable peut ensuite :
 - revoir l'estimation ;
 - demander une qualification complémentaire.
 
-> Toute **dérogation** aux recommandations est possible pour les utilisateurs autorisés, mais **enregistrée dans l'historique avec un motif** lorsque nécessaire.
+> **Droit Souverain d'Aliko (Dérogation & Montée en Compétences)** :  
+> Le Responsable d'Équipe (Aliko Getheme) dispose du pouvoir managérial exclusif d'affecter un développeur sur un ticket **même si le développeur ne possède pas encore la compétence technique spécifique** (formation et montée en compétences encadrée).  
+> L'interface détecte automatiquement cette situation, affiche un bandeau managérial d'habilitation (*« 🎓 Dérogation & Montée en Compétences Accordée »*) avec validation en 1-clic, et appose le badge distinctif `🎓 Montée en compétences` sur le ticket.
 
 ### 9.4. Mise à jour de la capacité lors d'une affectation validée
 

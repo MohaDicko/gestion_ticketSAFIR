@@ -230,7 +230,12 @@ Un développeur est **strictement éliminé** de la recommandation si :
 | **Respect de l'Échéance** | **15 pts** | Capacité à finaliser l'effort estimé avant la date limite demandée par le client. |
 | **Continuité Client / Projet** | **10 pts** | +10 pts si le développeur a déjà livré avec succès sur ce même client ou projet (connaissance du code existant). |
 
-> **Liberté du Responsable (Override)** : Aliko conserve en permanence le pouvoir d'affecter un développeur différent du premier classé. Dans ce cas, la plateforme lui demande simplement un motif de dérogation (ex: *« Volonté de montée en compétences d'un profil sur ce flux »*), consigné dans le journal d'audit.
+> **Droit Souverain du Responsable (Sovereign Override & Montée en Compétences)** :  
+> Aliko Getheme conserve le plein pouvoir managérial d'affecter **n'importe quel développeur de l'équipe, même si celui-ci ne possède pas encore la compétence technique spécifique** requise par le besoin SAP (ex: affecter un développeur Web sur un lot S/4HANA ou Service Layer).  
+> - **Détection Automatique & Diagnostic In-App** : L'interface analyse instantanément le profil du développeur sélectionné par rapport au type de besoin SAP.  
+> - **Panneau d'Habilitation Managériale** : Si la compétence n'est pas encore couverte, un encart dédié apparaît : *« 🎓 Dérogation & Montée en Compétences Accordée »*.  
+> - **Validation Dérogatoire en 1-Clic** : Aliko confirme l'affectation dérogatoire pour encourager l'apprentissage et le perfectionnement encadré.  
+> - **Traçabilité & Badges Visuels** : Le ticket est enrichi des métadonnées `isSkillOverride: true` et du motif d'encadrement, et arbore le badge corporate `🎓 Montée en compétences` sur le Tableau de bord Direction, la vue d'équipe et la modale de supervision.
 
 ---
 

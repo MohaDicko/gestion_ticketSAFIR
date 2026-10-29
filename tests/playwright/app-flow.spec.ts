@@ -363,4 +363,35 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.locator("body")).toContainText("Validation_Architecture_Aliko.pdf");
     await expect(page.locator("body")).toContainText("VERIFIED");
   });
+
+  test("14. Droit souverain d'Aliko : affectation dérogatoire d'un développeur sans la compétence technique requise (montée en compétences encadrée)", async ({ page }) => {
+    await loginAsAliko(page);
+
+    // Ouvrir l'onglet Tous les Tickets SAP
+    await page.getByRole("button", { name: /Tous les Tickets SAP/i }).click();
+
+    // Trouver un bouton Affecter ou Réaffecter sur la première ligne
+    const assignBtn = page.getByRole("button", { name: /Affecter|Réaffecter/i }).first();
+    await assignBtn.click();
+
+    // Vérifier que la modale d'affectation est bien ouverte
+    await expect(page.getByText(/Affecter le ticket/i)).toBeVisible();
+
+    // Sélectionner un développeur qui n'a pas la compétence spécifique du ticket (ex: Moha Dicko)
+    const modal = page.locator(".fixed.inset-0.z-50");
+    const devSelect = modal.locator("select").nth(1); // Le select des devs dans la modale
+    await devSelect.selectOption("dev-moha");
+
+    // Vérifier l'apparition du panneau managérial d'autorisation et dérogation Aliko
+    await expect(page.getByText(/Dérogation & Montée en Compétences Accordée/i)).toBeVisible();
+    await expect(page.getByText(/Valider l'affectation dérogatoire en montée en compétences encadrée/i)).toBeVisible();
+
+    // Valider l'affectation
+    const submitBtn = modal.getByRole("button", { name: /Valider l'affectation/i });
+    await submitBtn.scrollIntoViewIfNeeded();
+    await submitBtn.click();
+
+    // Vérifier le badge 'Montée en compétences'
+    await expect(page.locator("body")).toContainText("Montée en compétences");
+  });
 });

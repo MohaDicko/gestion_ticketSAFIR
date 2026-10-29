@@ -42,7 +42,8 @@ import {
   FileSpreadsheet,
   Printer,
   ShieldCheck,
-  Trash2
+  Trash2,
+  GraduationCap
 } from "lucide-react";
 
 const API_BASE = "/api/v1";
@@ -138,6 +139,8 @@ interface Ticket {
   contributors?: TicketLotContributor[];
   currency?: "XOF" | "EUR" | "USD";
   attachments?: TicketAttachment[];
+  isSkillOverride?: boolean;
+  overrideReason?: string;
 }
 
 // Modèles de documents SAP prédéfinis pour l'attachement rapide sécurisé en 1-clic
@@ -715,6 +718,7 @@ export default function TicketManagerPage() {
   const [assigningHours, setAssigningHours] = useState<number>(16);
   const [assigningCurrency, setAssigningCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
   const [selectedDevId, setSelectedDevId] = useState("");
+  const [isSkillOverrideChecked, setIsSkillOverrideChecked] = useState(true);
   // Affectation Multi-Développeurs par lot technique
   const [isMultiDevAssignment, setIsMultiDevAssignment] = useState(false);
   const [leadLotRole, setLeadLotRole] = useState("ADDON_B1");
@@ -778,12 +782,31 @@ export default function TicketManagerPage() {
     setNotifications((prev) => [item, ...prev]);
   };
 
+  // Diagnostic d'adéquation technique des compétences d'un développeur avec le type de besoin SAP
+  const checkDeveloperSkillMatch = (dev: Developer, typeCode: string): boolean => {
+    if (!dev || !dev.skills) return true;
+    const code = (typeCode || "").toUpperCase();
+    return dev.skills.some((skill) => {
+      const sName = skill.name.toUpperCase();
+      const sCat = skill.category.toUpperCase();
+      if (code.includes("ADDON") && (sName.includes("ADDON") || sName.includes("DI API") || sName.includes("UI / DI") || sName.includes("B1"))) return true;
+      if (code.includes("GATEWAY") && (sName.includes("SERVICE LAYER") || sName.includes("GATEWAY"))) return true;
+      if (code.includes("S4HANA") && (sName.includes("ABAP") || sName.includes("CDS") || sName.includes("S/4HANA") || sName.includes("FIORI"))) return true;
+      if (code.includes("REPORT") && (sName.includes("HANA") || sName.includes("SQL") || sName.includes("REPORT"))) return true;
+      if (code.includes("INTEGRATION") && (sName.includes("API") || sName.includes("INTÉGRATION") || sName.includes("INTEGRATION") || sName.includes("GRAPH"))) return true;
+      if (code.includes("MAINTENANCE") && (sName.includes("SAP") || sName.includes("SERVICE LAYER") || sName.includes("API") || sName.includes("DOCKER"))) return true;
+      if (code.includes("SUPPORT") && (sName.includes("SAP") || sCat.includes("SAP"))) return true;
+      return sName.includes(code) || sCat.includes(code);
+    });
+  };
+
   // Helper pour ouvrir la modale d'affectation avec la charge estimée et devise pré-renseignées
   const openAssignModal = (ticket: Ticket) => {
     setAssigningTicket(ticket);
     setAssigningHours(ticket.estimatedHours > 0 ? ticket.estimatedHours : 16);
     setAssigningCurrency(ticket.currency || "XOF");
     setSelectedDevId(ticket.assignedDeveloper?.id || "");
+    setIsSkillOverrideChecked(true);
   };
 
   // Création dynamique d'un nouveau type de besoin SAP (Aliko HEAD)
@@ -1626,6 +1649,9 @@ export default function TicketManagerPage() {
         ]
       : undefined;
 
+    const leadSkillMatched = checkDeveloperSkillMatch(dev, assigningTicket.typeCode);
+    const isOverride = !leadSkillMatched;
+
     setTickets((prev) =>
       prev.map((t) =>
         t.id === assigningTicket.id
@@ -1636,7 +1662,11 @@ export default function TicketManagerPage() {
               remainingHours: totalEstHours,
               currency: assigningCurrency,
               assignedDeveloper: { id: dev.id, name: dev.name, email: dev.email },
-              contributors: contributorsList
+              contributors: contributorsList,
+              isSkillOverride: isOverride,
+              overrideReason: isOverride
+                ? "Montée en compétences encadrée validée par Aliko Getheme (Responsable BU)"
+                : undefined
             }
           : t
       )
@@ -1672,25 +1702,29 @@ export default function TicketManagerPage() {
     if (isMultiDevAssignment && coDev) {
       pushInAppNotification({
         title: `👥 Affectation Multi-Développeurs (${assigningTicket.reference})`,
-        message: `Aliko Getheme a affecté le projet à ${dev.name} (${leadHours}h) et ${coDev.name} (${coDevHours}h).`,
+        message: `Aliko Getheme a affecté le projet à ${dev.name} (${leadHours}h) et ${coDev.name} (${coDevHours}h)${isOverride ? " avec montée en compétences encadrée" : ""}.`,
         category: "ASSIGNMENT",
         targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
         ticketId: assigningTicket.id,
         ticketReference: assigningTicket.reference,
         actorName: "Aliko Getheme"
       });
-      showToast(`Projet ${assigningTicket.reference} affecté à l'équipe : ${dev.name} (${leadLotObj?.label.split(" ")[0]}) + ${coDev.name} (${coLotObj?.label.split(" ")[0]})`);
+      showToast(`Projet ${assigningTicket.reference} affecté à l'équipe : ${dev.name} + ${coDev.name}${isOverride ? " (Montée en compétences)" : ""}`);
     } else {
       pushInAppNotification({
-        title: `⚡ Nouvelle affectation sur ${assigningTicket.reference}`,
-        message: `Aliko Getheme a affecté le ticket « ${assigningTicket.title} » à ${dev.name}.`,
+        title: isOverride
+          ? `🎓 Affectation & Montée en compétences (${assigningTicket.reference})`
+          : `⚡ Nouvelle affectation sur ${assigningTicket.reference}`,
+        message: isOverride
+          ? `Aliko Getheme a affecté le ticket « ${assigningTicket.title} » à ${dev.name} en montée en compétences encadrée (validation dérogatoire accordée).`
+          : `Aliko Getheme a affecté le ticket « ${assigningTicket.title} » à ${dev.name}.`,
         category: "ASSIGNMENT",
         targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
         ticketId: assigningTicket.id,
         ticketReference: assigningTicket.reference,
         actorName: "Aliko Getheme"
       });
-      showToast(`Ticket ${assigningTicket.reference} affecté à ${dev.name}`);
+      showToast(`Ticket ${assigningTicket.reference} affecté à ${dev.name}${isOverride ? " (Montée en compétences validée par Aliko)" : ""}`);
     }
 
     setAssigningTicket(null);
@@ -2828,7 +2862,15 @@ export default function TicketManagerPage() {
                             <td className="py-3 px-4">{renderStatusBadge(ticket.status)}</td>
                             <td className="py-3 px-4 text-slate-600">
                               {ticket.assignedDeveloper ? (
-                                <span className="font-medium text-slate-900">{ticket.assignedDeveloper.name}</span>
+                                <div className="flex flex-col items-start gap-0.5">
+                                  <span className="font-medium text-slate-900">{ticket.assignedDeveloper.name}</span>
+                                  {ticket.isSkillOverride && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 font-medium" title={ticket.overrideReason || "Montée en compétences"}>
+                                      <GraduationCap className="w-3 h-3 text-amber-600" />
+                                      <span>Montée en compétences</span>
+                                    </span>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-slate-400 italic">Non affecté</span>
                               )}
@@ -3011,6 +3053,14 @@ export default function TicketManagerPage() {
                             <div>
                               <div className="font-medium text-slate-900">{ticket.assignedDeveloper.name}</div>
                               <div className="text-[11px] text-slate-500">{ticket.assignedDeveloper.email}</div>
+                              {ticket.isSkillOverride && (
+                                <div className="mt-1">
+                                  <span className="inline-flex items-center gap-1 text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 font-medium" title={ticket.overrideReason || "Montée en compétences"}>
+                                    <GraduationCap className="w-3 h-3 text-amber-600" />
+                                    <span>Montée en compétences</span>
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <span className="text-slate-400 italic">En attente</span>
@@ -3877,8 +3927,8 @@ export default function TicketManagerPage() {
       {/* ================================================================= */}
       {assigningTicket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-md max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50 shrink-0">
               <div>
                 <h3 className="font-semibold text-slate-900 text-sm">Affecter le ticket</h3>
                 <p className="text-xs text-slate-500 font-mono">{assigningTicket.reference}</p>
@@ -3888,7 +3938,7 @@ export default function TicketManagerPage() {
               </button>
             </div>
 
-            <form onSubmit={handleAssignSubmit} className="p-4 space-y-4">
+            <form onSubmit={handleAssignSubmit} className="p-4 space-y-4 overflow-y-auto">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
                 <div>
                   <div className="text-[11px] text-slate-500">Besoin / Titre :</div>
@@ -3953,16 +4003,66 @@ export default function TicketManagerPage() {
                   required
                   value={selectedDevId}
                   onChange={(e) => setSelectedDevId(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
                 >
                   <option value="">-- Choisir un développeur --</option>
-                  {developers.map((dev) => (
-                    <option key={dev.id} value={dev.id}>
-                      {dev.name} ({dev.freeHours} h libres cette semaine — {dev.jobTitle})
-                    </option>
-                  ))}
+                  {developers.map((dev) => {
+                    const match = checkDeveloperSkillMatch(dev, assigningTicket.typeCode);
+                    return (
+                      <option key={dev.id} value={dev.id}>
+                        {dev.name} ({dev.freeHours} h libres — {dev.jobTitle}) {!match ? "🎓 [Montée en compétences]" : "✓ [Compétence alignée]"}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
+
+              {/* Panneau de Validation Managériale : Aliko peut affecter un dev même s'il n'a pas cette compétence */}
+              {selectedDevId && (() => {
+                const dev = developers.find((d) => d.id === selectedDevId);
+                if (!dev) return null;
+                const isMatch = checkDeveloperSkillMatch(dev, assigningTicket.typeCode);
+
+                if (!isMatch) {
+                  return (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-xs animate-in fade-in">
+                      <div className="flex items-start gap-2.5">
+                        <div className="p-1.5 bg-amber-100 text-amber-800 rounded-lg shrink-0">
+                          <GraduationCap className="w-4 h-4" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="font-semibold text-amber-950 flex items-center gap-1.5">
+                            <span>🎓 Dérogation & Montée en Compétences Accordée</span>
+                            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-200 text-amber-900 font-bold">Autorisé</span>
+                          </div>
+                          <p className="text-[11px] text-amber-800 leading-relaxed">
+                            <strong>{dev.name}</strong> ne possède pas encore la compétence technique spécifique <strong>« {assigningTicket.typeCode} »</strong> dans sa fiche profil.
+                            En tant que Responsable d'Équipe (Aliko Getheme), vous avez le plein pouvoir managérial de lui confier ce projet pour lui permettre d'apprendre et de monter en compétences encadrée.
+                          </p>
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 text-[11px] font-medium text-amber-950 bg-amber-100/70 p-2 rounded-lg cursor-pointer select-none border border-amber-200">
+                        <input
+                          type="checkbox"
+                          checked={isSkillOverrideChecked}
+                          onChange={(e) => setIsSkillOverrideChecked(e.target.checked)}
+                          className="rounded text-amber-700 focus:ring-amber-600"
+                        />
+                        <span>Valider l'affectation dérogatoire en montée en compétences encadrée (Décision Aliko)</span>
+                      </label>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-center gap-2 animate-in fade-in">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span className="text-[11px]">
+                      <strong>Compétence alignée :</strong> {dev.name} possède une expertise confirmée correspondant au besoin <strong>{assigningTicket.typeCode}</strong>.
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Option Multi-Développeurs / Répartition par Lots */}
               <div className="pt-2 border-t border-slate-200">
@@ -4540,6 +4640,17 @@ export default function TicketManagerPage() {
                         <CheckCircle2 className="w-3 h-3" />
                         <span>En charge du développement</span>
                       </div>
+                      {supervisingTicket.isSkillOverride && (
+                        <div className="mt-2.5 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-1.5">
+                          <GraduationCap className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-semibold">Affectation en montée en compétences :</span>
+                            <p className="text-[11px] text-amber-800 mt-0.5">
+                              {supervisingTicket.overrideReason || "Montée en compétences encadrée validée par Aliko Getheme"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -4548,7 +4659,7 @@ export default function TicketManagerPage() {
                         onClick={() => {
                           const t = supervisingTicket;
                           setSupervisingTicket(null);
-                          setAssigningTicket(t);
+                          openAssignModal(t);
                         }}
                         className="px-3 py-1 text-xs bg-sky-700 hover:bg-sky-800 text-white rounded-lg font-medium cursor-pointer"
                       >
