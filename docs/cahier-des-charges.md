@@ -1291,18 +1291,18 @@ La solution doit rester **simple à exploiter, sécurisée, évolutive** et adap
 
 | # | Point | Hypothèse de travail par défaut |
 |---|---|---|
-| B1 | Fournisseur de messagerie | ✅ **Confirmé : Outlook / Microsoft 365** pour toute l'équipe. Adaptateur Microsoft Graph en V1, interface abstraite conservée |
-| B2 | SSO d'entreprise (Microsoft Entra ID) | Probable du fait de Microsoft 365 : **SSO Microsoft Entra ID** visé ; authentification locale sécurisée en repli/développement. Accès admin Entra ID à confirmer |
+| B1 | Flux de demandes & Notifications | ✅ **Confirmé (ADR-01)** : **Flux 100 % In-App centralisé autour d'Aliko Getheme (`HEAD`)**. Toutes les demandes (consultants internes et clients référencés) transitent par le **Guichet Central de Qualification In-App** d'Aliko et déclenchent des notifications temps réel dans le **Centre de Notifications In-App** (sans dépendance aux e-mails automatiques externes) |
+| B2 | Authentification d'entreprise & RBAC | ✅ **Confirmé** : Portail d'authentification sécurisé par défaut (`/`) avec identifiant e-mail professionnel, hachage **Argon2id**, et routage automatique vers l'espace dédié (`HEAD`, `DEVELOPER`, `CONSULTANT`) |
 | B3 | Horaires et jours de travail standards | Lundi–vendredi, 8 h/jour, 40 h/semaine, configurable par développeur |
-| B4 | Fuseau horaire de référence | Configurable par utilisateur ; défaut à confirmer par Safir Consulting |
-| B5 | Validation obligatoire avant clôture (`DELIVERED` → `CLOSED`) | Oui, par le HEAD |
-| B6 | Activation du rôle Consultant dès la V1 | Rôle présent mais formulaire désactivable via paramètre |
-| B7 | Stockage des pièces jointes (local, S3, Azure Blob) | Abstraction de stockage ; stockage local privé en développement |
-| B8 | Antivirus disponible (ex. ClamAV) | Champ `scanStatus` prévu ; scan branché si infrastructure disponible |
-| B9 | Politique de rétention des e-mails et données | À fournir par Safir Consulting ; paramètre de durée prévu |
+| B4 | Devise de référence et Multi-devises | ✅ **Confirmé** : **FCFA (`XOF`)** par défaut pour l'ancrage Afrique de l'Ouest (UEMOA/CEDEAO), avec bascule native vers **Euro (`EUR`)** et **Dollar US (`USD`)** alignée sur les référentiels SAP |
+| B5 | Validation obligatoire avant clôture (`DELIVERED` → `CLOSED`) | ✅ **Confirmé** : Validation finale exclusive par Aliko (`HEAD`) depuis la modale de Supervision 360° |
+| B6 | Portail Consultant & Dialogue Direct | ✅ **Confirmé** : Espace Consultant actif dès la V1 (soumission directe de besoins, visibilité développeur/lots dédiés, jauge de progression en direct et fil d'échange tracé `Développeur ↔ Consultante ↔ Direction` avec déblocage automatique) |
+| B7 | Rattachement de Pièces Jointes SAP | ✅ **Confirmé & Implémenté** : Rattachement de documents SAP (`.pdf`, `.xlsx`, `.sql`, `.png`) à la création d'un ticket et dans le fil de discussion, consultables dans la Supervision 360° d'Aliko |
+| B8 | Contrôle d'intégrité & Scan Antivirus | ✅ **Confirmé & Implémenté** : Badge de sécurité `scanStatus: "VERIFIED_CLEAN"` vérifié sur chaque pièce jointe |
+| B9 | Reporting Direction & Export Comité | ✅ **Confirmé & Implémenté** : Export 1-clic **CSV / Excel** (UTF-8 BOM) et modale **Synthèse Comité Direction** valorisés en `FCFA (XOF)`, `EUR` ou `USD` |
 | B10 | Suivi des réunions / activités hors tickets | Optionnel, via `Availability` de type « activité réservée » |
 | B11 | Format de référence des tickets par type (`ADD-`, `BUG-`…) | Préfixe configurable par type, séquence annuelle |
 | B12 | Hébergement cible (SAP B1 / S/4HANA, on-premise/VM) | ✅ **Confirmé** : Hébergement sur serveur d'infrastructure SAP B1 ou S/4HANA (Linux/Windows). Déploiement conteneurisé obligatoire (Docker/Compose ou Podman) avec base PostgreSQL 16 isolée et ports configurables pour éviter tout conflit avec les ports SAP. |
-| B13 | Expéditeur des e-mails d'affectation | ✅ **Confirmé** : boîte d'Aliko par défaut, paramétrable |
-| B14 | Détection des affectations faites directement depuis Outlook (Éléments envoyés) | ✅ **Confirmé** : prévue, avec confirmation obligatoire dans la plateforme |
-| B15 | Consultants internes et/ou expéditeurs externes | ✅ **Confirmé** : consultants internes `@safirconsulting.net` + clients externes, y compris avec adresses personnelles (cf. §5.6). Aliko est le point central |
+| B13 | Centre de Notifications Temps Réel In-App | ✅ **Confirmé & Implémenté** : Cloche interactive dans l'en-tête avec compteur de notifications non lues par rôle et alertes instantanées (« Stop-the-line », nouvelles demandes, affectations, réponses, livraisons et clôtures) |
+| B14 | Affectation Multi-Développeurs par Lot SAP | ✅ **Confirmé & Implémenté** : Répartition d'un ticket complexe entre plusieurs développeurs par brique technique (*Addon B1, Intégration HANA, Service Layer, ABAP Core, Fullstack, QA*) avec suivi individualisé du RAF |
+| B15 | Gouvernance Centrale Aliko | ✅ **Confirmé** : Aliko Getheme (`HEAD`) demeure le point focal obligatoire de qualification, d'arbitrage, d'affectation, de création de profils Développeurs/Consultants et de clôture définitive |
