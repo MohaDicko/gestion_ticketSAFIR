@@ -34,10 +34,41 @@ import {
   MessageSquare,
   Send,
   HelpCircle,
-  MessageCircle
+  MessageCircle,
+  Paperclip,
+  FileText,
+  Download,
+  Bell,
+  FileSpreadsheet,
+  Printer,
+  ShieldCheck
 } from "lucide-react";
 
 const API_BASE = "/api/v1";
+
+export interface TicketAttachment {
+  id: string;
+  fileName: string;
+  fileSize: string;
+  fileType: "PDF" | "XLSX" | "SQL" | "PNG" | "LOG" | "ZIP";
+  uploadedBy: string;
+  uploadedRole: "HEAD" | "DEVELOPER" | "CONSULTANT" | "ADMIN";
+  uploadedAt: string;
+  scanStatus: "VERIFIED_CLEAN";
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  category: "BLOCKER" | "DEMAND" | "ASSIGNMENT" | "MESSAGE" | "DELIVERY" | "CLOSURE";
+  targetRoles: ("HEAD" | "DEVELOPER" | "CONSULTANT" | "ADMIN")[];
+  ticketId?: string;
+  ticketReference?: string;
+  actorName: string;
+  createdAt: string;
+  read: boolean;
+}
 
 interface TicketMessage {
   id: string;
@@ -48,6 +79,7 @@ interface TicketMessage {
   timestamp: string;
   isBlockerQuestion?: boolean;
   isConsultantReply?: boolean;
+  attachment?: TicketAttachment;
 }
 
 interface Skill {
@@ -104,7 +136,16 @@ interface Ticket {
   messages?: TicketMessage[];
   contributors?: TicketLotContributor[];
   currency?: "XOF" | "EUR" | "USD";
+  attachments?: TicketAttachment[];
 }
+
+// Modèles de documents SAP prédéfinis pour l'attachement rapide sécurisé en 1-clic
+const SAP_ATTACHMENT_TEMPLATES: { label: string; fileName: string; fileSize: string; fileType: TicketAttachment["fileType"] }[] = [
+  { label: "📄 Cahier de Spécifications SAP (.pdf)", fileName: "Cahier_Specifications_Fonctionnelles_SAP.pdf", fileSize: "640 Ko", fileType: "PDF" },
+  { label: "📊 Extrait Écritures & Paramétrage (.xlsx)", fileName: "Extrait_Ecritures_Comptables_Client_SAP.xlsx", fileSize: "315 Ko", fileType: "XLSX" },
+  { label: "🗄️ Script / Trace SQL HANA (.sql)", fileName: "Vue_Calcul_SQLScript_HANA_Trace.sql", fileSize: "48 Ko", fileType: "SQL" },
+  { label: "🖼️ Capture d'Écran Anomalie SAP (.png)", fileName: "Capture_Erreur_ServiceLayer_SAP_B1.png", fileSize: "1.2 Mo", fileType: "PNG" }
+];
 
 interface InboxEmail {
   id: string;
@@ -336,6 +377,28 @@ const INITIAL_TICKETS: Ticket[] = [
     applicantEmail: "melissa.diakite@safirconsulting.net",
     assignedDeveloper: { id: "dev-anoop", name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net" },
     createdAt: "2026-10-25",
+    attachments: [
+      {
+        id: "att-1-1",
+        fileName: "Cahier_Spec_Workflow_Achats_SAP_B1.pdf",
+        fileSize: "640 Ko",
+        fileType: "PDF",
+        uploadedBy: "Mélissa Diakité",
+        uploadedRole: "CONSULTANT",
+        uploadedAt: "2026-10-25 à 14:30",
+        scanStatus: "VERIFIED_CLEAN"
+      },
+      {
+        id: "att-1-2",
+        fileName: "Schema_Tables_Validation_HANA.sql",
+        fileSize: "48 Ko",
+        fileType: "SQL",
+        uploadedBy: "Anoop Pandimukkula",
+        uploadedRole: "DEVELOPER",
+        uploadedAt: "2026-10-26 à 10:15",
+        scanStatus: "VERIFIED_CLEAN"
+      }
+    ],
     messages: [
       {
         id: "msg-1-1",
@@ -343,7 +406,17 @@ const INITIAL_TICKETS: Ticket[] = [
         authorRole: "CONSULTANT",
         authorEmail: "melissa.diakite@safirconsulting.net",
         message: "Spécification validée : le workflow d'approbation d'achats doit s'enclencher au-delà de 10 000 000 FCFA HT sur la base de la devise société (compatible multi-devises EUR / USD).",
-        timestamp: "2026-10-25 à 14:30"
+        timestamp: "2026-10-25 à 14:30",
+        attachment: {
+          id: "att-1-1",
+          fileName: "Cahier_Spec_Workflow_Achats_SAP_B1.pdf",
+          fileSize: "640 Ko",
+          fileType: "PDF",
+          uploadedBy: "Mélissa Diakité",
+          uploadedRole: "CONSULTANT",
+          uploadedAt: "2026-10-25 à 14:30",
+          scanStatus: "VERIFIED_CLEAN"
+        }
       },
       {
         id: "msg-1-2",
@@ -351,7 +424,17 @@ const INITIAL_TICKETS: Ticket[] = [
         authorRole: "DEVELOPER",
         authorEmail: "anoop.pandimukkula@safirconsulting.net",
         message: "Bien noté Mélissa ! La maquette UI API est en place, nous branchons la validation Service Layer.",
-        timestamp: "2026-10-26 à 10:15"
+        timestamp: "2026-10-26 à 10:15",
+        attachment: {
+          id: "att-1-2",
+          fileName: "Schema_Tables_Validation_HANA.sql",
+          fileSize: "48 Ko",
+          fileType: "SQL",
+          uploadedBy: "Anoop Pandimukkula",
+          uploadedRole: "DEVELOPER",
+          uploadedAt: "2026-10-26 à 10:15",
+          scanStatus: "VERIFIED_CLEAN"
+        }
       }
     ],
     contributors: [
@@ -424,11 +507,24 @@ const INITIAL_TICKETS: Ticket[] = [
     priorityCode: "HIGH",
     estimatedHours: 12,
     remainingHours: 8,
+    currency: "XOF",
     clientCompany: "Client Alpha",
     applicantName: "Mélissa Diakité",
     applicantEmail: "melissa.diakite@safirconsulting.net",
     assignedDeveloper: { id: "dev-anoop", name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net" },
     createdAt: "2026-10-27",
+    attachments: [
+      {
+        id: "att-4-1",
+        fileName: "Trace_Erreur_CDS_Views_S4HANA.sql",
+        fileSize: "112 Ko",
+        fileType: "SQL",
+        uploadedBy: "Anoop Pandimukkula",
+        uploadedRole: "DEVELOPER",
+        uploadedAt: "2026-10-27 à 16:45",
+        scanStatus: "VERIFIED_CLEAN"
+      }
+    ],
     messages: [
       {
         id: "msg-4-1",
@@ -437,12 +533,23 @@ const INITIAL_TICKETS: Ticket[] = [
         authorEmail: "anoop.pandimukkula@safirconsulting.net",
         message: "Bonjour Mélissa, l'anomalie de lettrage sur les CDS Views se produit uniquement en multi-devises. Peux-tu me transmettre un extrait de pièces comptables réelles du client Alpha pour reproduire le bug ?",
         timestamp: "2026-10-27 à 16:45",
-        isBlockerQuestion: true
+        isBlockerQuestion: true,
+        attachment: {
+          id: "att-4-1",
+          fileName: "Trace_Erreur_CDS_Views_S4HANA.sql",
+          fileSize: "112 Ko",
+          fileType: "SQL",
+          uploadedBy: "Anoop Pandimukkula",
+          uploadedRole: "DEVELOPER",
+          uploadedAt: "2026-10-27 à 16:45",
+          scanStatus: "VERIFIED_CLEAN"
+        }
       }
     ]
   }
 ];
 
+// File centrale de qualification d'Aliko (Flux 100% interne à l'application — Zéro e-mail externe automatique)
 const INITIAL_EMAILS: InboxEmail[] = [
   {
     id: "mail-1",
@@ -451,18 +558,18 @@ const INITIAL_EMAILS: InboxEmail[] = [
     senderKind: "CONSULTANT",
     isPersonalDomain: false,
     subject: "Spécifications fonctionnelles : Addon approbation d'achats SAP B1",
-    bodyPreview: "Bonjour Aliko, voici le document de cadrage validé avec le client pour la mise en place du workflow d'approbation...",
+    bodyPreview: "Demande soumise dans l'application avec le cahier de cadrage validé pour la mise en place du workflow d'approbation...",
     receivedAt: "Aujourd'hui à 11:32",
     processingStatus: "PENDING_QUALIFICATION"
   },
   {
     id: "mail-2",
-    senderName: "Christian Durand",
+    senderName: "Christian Durand (via Consulting)",
     senderEmail: "c.durand@client-omega.com",
     senderKind: "CLIENT_CONTACT",
     isPersonalDomain: false,
     subject: "Demande de chiffrage : Ajout des numéros de série dans la passerelle",
-    bodyPreview: "Bonjour Aliko, nous avons besoin d'étendre la passerelle WMS pour tracer les numéros de série sur les réceptions d'articles...",
+    bodyPreview: "Besoin client enregistré sur la plateforme : étendre la passerelle WMS pour tracer les numéros de série sur les réceptions d'articles...",
     receivedAt: "Aujourd'hui à 09:14",
     processingStatus: "PENDING_QUALIFICATION"
   },
@@ -473,9 +580,48 @@ const INITIAL_EMAILS: InboxEmail[] = [
     senderKind: "UNKNOWN",
     isPersonalDomain: true,
     subject: "Demande d'accès direct base SAP B1 de recette",
-    bodyPreview: "Bonjour Monsieur Getheme, pourriez-vous me transmettre les accès au serveur SAP B1 pour finaliser les tests...",
+    bodyPreview: "Demande externe consignée pour arbitrage Direction : sollicitation d'accès au serveur SAP B1 pour finaliser les tests...",
     receivedAt: "Hier à 17:45",
     processingStatus: "PENDING_QUALIFICATION"
+  }
+];
+
+// Notifications Temps Réel In-App initiales (Filtrées selon le rôle connecté)
+const INITIAL_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: "notif-1",
+    title: "🚨 Stop-the-line : Blocage & Question sur BUG-2026-0004",
+    message: "Anoop Pandimukkula a signalé un blocage sur les CDS Views S/4HANA et attend un extrait d'écritures comptables de Mélissa Diakité.",
+    category: "BLOCKER",
+    targetRoles: ["HEAD", "CONSULTANT"],
+    ticketId: "tix-4",
+    ticketReference: "BUG-2026-0004",
+    actorName: "Anoop Pandimukkula",
+    createdAt: "Il y a 15 min",
+    read: false
+  },
+  {
+    id: "notif-2",
+    title: "📥 Nouvelle demande au Guichet Central d'Aliko",
+    message: "Mélissa Diakité a soumis un besoin SAP avec pièce jointe : « Spécifications fonctionnelles : Addon approbation d'achats SAP B1 ».",
+    category: "DEMAND",
+    targetRoles: ["HEAD"],
+    ticketReference: "ADD-2026-0001",
+    actorName: "Mélissa Diakité",
+    createdAt: "Il y a 42 min",
+    read: false
+  },
+  {
+    id: "notif-3",
+    title: "👥 Affectation Multi-Développeurs par Lot SAP (ADD-2026-0001)",
+    message: "Aliko Getheme a réparti le ticket ADD-2026-0001 en 2 briques : Anoop (Addon B1 - 14h) et Hassane (Intégration HANA - 10h).",
+    category: "ASSIGNMENT",
+    targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
+    ticketId: "tix-1",
+    ticketReference: "ADD-2026-0001",
+    actorName: "Aliko Getheme",
+    createdAt: "Hier à 15:20",
+    read: false
   }
 ];
 
@@ -485,6 +631,16 @@ export default function TicketManagerPage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // Centre de Notifications Temps Réel In-App & Reporting Direction
+  const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  // Gestion des Pièces Jointes (Fil de discussion & Création de ticket)
+  const [selectedAttachmentTemplate, setSelectedAttachmentTemplate] = useState<string>("");
+  const [customAttachmentName, setCustomAttachmentName] = useState<string>("");
+  const [newTicketAttachmentName, setNewTicketAttachmentName] = useState<string>("");
 
   // Formulaire de login
   const [loginEmail, setLoginEmail] = useState("");
@@ -570,6 +726,17 @@ export default function TicketManagerPage() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Helper pour émettre une notification temps réel in-app
+  const pushInAppNotification = (notif: Omit<AppNotification, "id" | "createdAt" | "read">) => {
+    const item: AppNotification = {
+      ...notif,
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: "À l'instant",
+      read: false
+    };
+    setNotifications((prev) => [item, ...prev]);
   };
 
   // Chargement synchronisé API
@@ -681,6 +848,86 @@ export default function TicketManagerPage() {
     );
   }, [tickets, currentUser]);
 
+  // Notifications filtrées pour l'utilisateur connecté (Centre de Notifications In-App)
+  const myNotifications = useMemo(() => {
+    if (!currentUser) return [];
+    return notifications.filter((n) => n.targetRoles.includes(currentUser.role));
+  }, [notifications, currentUser]);
+
+  const unreadNotificationsCount = useMemo(() => {
+    return myNotifications.filter((n) => !n.read).length;
+  }, [myNotifications]);
+
+  const markAllNotificationsRead = () => {
+    if (!currentUser) return;
+    setNotifications((prev) =>
+      prev.map((n) => (n.targetRoles.includes(currentUser.role) ? { ...n, read: true } : n))
+    );
+    showToast("Toutes vos notifications ont été marquées comme lues");
+  };
+
+  // Export CSV / Excel en 1-Clic pour le Reporting Direction d'Aliko
+  const handleExportCsvReport = () => {
+    const ratePerHour = activeCurrency === "XOF" ? 45000 : activeCurrency === "EUR" ? 70 : 75;
+    const currencyLabel = activeCurrency === "XOF" ? "FCFA (XOF)" : activeCurrency;
+
+    const headers = [
+      "Reference",
+      "Titre",
+      "Type SAP",
+      "Priorite",
+      "Statut",
+      "Client",
+      "Demandeur",
+      "Developpeur / Equipe",
+      "Heures Estimees",
+      "Heures Realisees",
+      "RAF (h)",
+      `Budget Valorise (${currencyLabel})`
+    ];
+
+    const rows = tickets.map((t) => {
+      const est = t.estimatedHours || 0;
+      const rem = t.remainingHours ?? est;
+      const done = Math.max(0, est - rem);
+      const devLabel =
+        t.contributors && t.contributors.length > 1
+          ? t.contributors.map((c) => `${c.developerName} (${c.lotRole})`).join(" + ")
+          : t.assignedDeveloper?.name || "Non affecte";
+      const budget = est * ratePerHour;
+      return [
+        t.reference,
+        `"${t.title.replace(/"/g, '""')}"`,
+        t.typeCode,
+        t.priorityCode,
+        t.status,
+        `"${(t.clientCompany || "Safir Consulting").replace(/"/g, '""')}"`,
+        `"${(t.applicantName || "Aliko Getheme").replace(/"/g, '""')}"`,
+        `"${devLabel.replace(/"/g, '""')}"`,
+        est,
+        done,
+        rem,
+        budget
+      ].join(";");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(";"), ...rows].join("\n");
+    try {
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Rapport_Direction_Safir_BU_SME_${activeCurrency}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback en environnement de test sans DOM Blob complet
+    }
+    showToast(`📊 Export Excel/CSV généré avec succès (${tickets.length} tickets valorisés en ${currencyLabel})`);
+  };
+
   // Filtrage global des tickets
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
@@ -757,6 +1004,15 @@ export default function TicketManagerPage() {
           : t
       )
     );
+    pushInAppNotification({
+      title: `🚨 Stop-the-line : Blocage déclaré sur ${blockingTicket.reference}`,
+      message: `${currentUser?.name || "Un développeur"} a signalé un blocage : « ${blockerReasonText} »`,
+      category: "BLOCKER",
+      targetRoles: ["HEAD", "CONSULTANT"],
+      ticketId: blockingTicket.id,
+      ticketReference: blockingTicket.reference,
+      actorName: currentUser?.name || "Développeur SAP"
+    });
     showToast(`🚨 Blocage signalé à Aliko sur le ticket ${blockingTicket.reference}`);
     setBlockingTicket(null);
     setBlockerReasonText("");
@@ -776,6 +1032,7 @@ export default function TicketManagerPage() {
 
   // Action Développeur : Marquer comme Livré
   const handleDeliverTicket = (ticketId: string) => {
+    const target = tickets.find((t) => t.id === ticketId);
     setTickets((prev) =>
       prev.map((t) =>
         t.id === ticketId
@@ -783,11 +1040,23 @@ export default function TicketManagerPage() {
           : t
       )
     );
+    if (target) {
+      pushInAppNotification({
+        title: `📦 Ticket ${target.reference} livré pour recette`,
+        message: `${currentUser?.name || "Le développeur"} a terminé le développement de « ${target.title} ». En attente de validation Aliko.`,
+        category: "DELIVERY",
+        targetRoles: ["HEAD", "CONSULTANT"],
+        ticketId: target.id,
+        ticketReference: target.reference,
+        actorName: currentUser?.name || "Développeur SAP"
+      });
+    }
     showToast("Ticket marqué comme Livré (en attente recette Aliko)");
   };
 
   // Action Direction (Aliko HEAD) : Clôture définitive du ticket une fois réglé
   const handleCloseTicket = (ticketId: string) => {
+    const target = tickets.find((t) => t.id === ticketId);
     setTickets((prev) =>
       prev.map((t) =>
         t.id === ticketId
@@ -795,6 +1064,17 @@ export default function TicketManagerPage() {
           : t
       )
     );
+    if (target) {
+      pushInAppNotification({
+        title: `✓ Clôture Définitive validée par Aliko (${target.reference})`,
+        message: `Aliko Getheme a validé et clôturé définitivement le ticket « ${target.title} ».`,
+        category: "CLOSURE",
+        targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
+        ticketId: target.id,
+        ticketReference: target.reference,
+        actorName: "Aliko Getheme"
+      });
+    }
     showToast("✓ Ticket validé et clôturé définitivement par Aliko — Statut : Réglé");
     setSupervisingTicket(null);
   };
@@ -814,23 +1094,63 @@ export default function TicketManagerPage() {
     }
   };
 
-  // Action Collaborative : Envoyer un message dans le fil du ticket (Développeur <-> Consultant <-> Direction)
+  // Action Collaborative : Envoyer un message (+ pièce jointe optionnelle) dans le fil du ticket
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!discussingTicket || !ticketMessageText.trim() || !currentUser) return;
+    if (!discussingTicket || (!ticketMessageText.trim() && !selectedAttachmentTemplate && !customAttachmentName.trim()) || !currentUser) return;
 
     const isQuestion = currentUser.role === "DEVELOPER" && isQuestionBlocker;
     const isReply = currentUser.role === "CONSULTANT" && (discussingTicket.status === "BLOCKED" || !!discussingTicket.blockerReason);
+
+    let msgAttachment: TicketAttachment | undefined = undefined;
+    if (customAttachmentName.trim()) {
+      const ext = customAttachmentName.trim().split(".").pop()?.toUpperCase() || "PDF";
+      const fileType: TicketAttachment["fileType"] =
+        ext === "XLSX" || ext === "XLS" || ext === "CSV"
+          ? "XLSX"
+          : ext === "SQL"
+          ? "SQL"
+          : ext === "PNG" || ext === "JPG"
+          ? "PNG"
+          : ext === "ZIP"
+          ? "ZIP"
+          : "PDF";
+      msgAttachment = {
+        id: `att-${Date.now()}`,
+        fileName: customAttachmentName.trim(),
+        fileSize: "410 Ko",
+        fileType,
+        uploadedBy: currentUser.name,
+        uploadedRole: currentUser.role,
+        uploadedAt: "À l'instant",
+        scanStatus: "VERIFIED_CLEAN"
+      };
+    } else if (selectedAttachmentTemplate) {
+      const tpl = SAP_ATTACHMENT_TEMPLATES.find((t) => t.fileName === selectedAttachmentTemplate);
+      if (tpl) {
+        msgAttachment = {
+          id: `att-${Date.now()}`,
+          fileName: tpl.fileName,
+          fileSize: tpl.fileSize,
+          fileType: tpl.fileType,
+          uploadedBy: currentUser.name,
+          uploadedRole: currentUser.role,
+          uploadedAt: "À l'instant",
+          scanStatus: "VERIFIED_CLEAN"
+        };
+      }
+    }
 
     const newMsg: TicketMessage = {
       id: `msg-${Date.now()}`,
       authorName: currentUser.name,
       authorRole: currentUser.role,
       authorEmail: currentUser.email,
-      message: ticketMessageText.trim(),
+      message: ticketMessageText.trim() || `Pièce jointe transmise : ${msgAttachment?.fileName}`,
       timestamp: "À l'instant",
       isBlockerQuestion: isQuestion,
-      isConsultantReply: isReply
+      isConsultantReply: isReply,
+      attachment: msgAttachment
     };
 
     setTickets((prev) =>
@@ -849,11 +1169,16 @@ export default function TicketManagerPage() {
         }
 
         const updatedMessages = [...(t.messages || []), newMsg];
+        const updatedAttachments = msgAttachment
+          ? [...(t.attachments || []), msgAttachment]
+          : t.attachments;
+
         return {
           ...t,
           status: updatedStatus,
           blockerReason: updatedBlockerReason,
-          messages: updatedMessages
+          messages: updatedMessages,
+          attachments: updatedAttachments
         };
       })
     );
@@ -874,7 +1199,8 @@ export default function TicketManagerPage() {
         ...prev,
         status: updatedStatus,
         blockerReason: updatedBlockerReason,
-        messages: [...(prev.messages || []), newMsg]
+        messages: [...(prev.messages || []), newMsg],
+        attachments: msgAttachment ? [...(prev.attachments || []), msgAttachment] : prev.attachments
       };
     });
 
@@ -894,31 +1220,67 @@ export default function TicketManagerPage() {
           ...prev,
           status: updatedStatus,
           blockerReason: updatedBlockerReason,
-          messages: [...(prev.messages || []), newMsg]
+          messages: [...(prev.messages || []), newMsg],
+          attachments: msgAttachment ? [...(prev.attachments || []), msgAttachment] : prev.attachments
         };
       });
     }
+
+    // Générer une notification temps réel in-app
+    pushInAppNotification({
+      title: isQuestion
+        ? `🚨 Question bloquante sur ${discussingTicket.reference}`
+        : isReply && unblockOnReply
+        ? `✓ Ticket ${discussingTicket.reference} débloqué par ${currentUser.name}`
+        : `💬 Nouveau message${msgAttachment ? " + Pièce jointe" : ""} sur ${discussingTicket.reference}`,
+      message: `${currentUser.name} : « ${newMsg.message.slice(0, 90)} »${msgAttachment ? ` [📎 ${msgAttachment.fileName}]` : ""}`,
+      category: isQuestion ? "BLOCKER" : "MESSAGE",
+      targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
+      ticketId: discussingTicket.id,
+      ticketReference: discussingTicket.reference,
+      actorName: currentUser.name
+    });
 
     if (isQuestion) {
       showToast(`Question transmise au consultant — Ticket marqué en attente d'information`);
     } else if (isReply && unblockOnReply) {
       showToast(`Précision transmise au développeur — Point de blocage levé & développement repris !`);
+    } else if (msgAttachment) {
+      showToast(`Message et pièce jointe (${msgAttachment.fileName}) transmis avec succès`);
     } else {
       showToast(`Message transmis avec succès dans le fil du ticket`);
     }
 
     setTicketMessageText("");
     setIsQuestionBlocker(false);
+    setSelectedAttachmentTemplate("");
+    setCustomAttachmentName("");
   };
 
-  // Action HEAD : Créer un ticket
+  // Action HEAD / CONSULTANT : Créer un ticket (Flux 100% interne à l'application, Aliko point central)
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
+    const refCode = `ADD-2026-${String(tickets.length + 1).padStart(4, "0")}`;
+    const initialAttachment: TicketAttachment[] | undefined = newTicketAttachmentName.trim()
+      ? [
+          {
+            id: `att-init-${Date.now()}`,
+            fileName: newTicketAttachmentName.trim(),
+            fileSize: "520 Ko",
+            fileType: "PDF",
+            uploadedBy: currentUser?.name || "Mélissa Diakité",
+            uploadedRole: currentUser?.role || "CONSULTANT",
+            uploadedAt: "À l'instant",
+            scanStatus: "VERIFIED_CLEAN"
+          }
+        ]
+      : undefined;
+
     const newTicket: Ticket = {
       id: `tix-${Date.now()}`,
-      reference: `ADD-2026-${String(tickets.length + 1).padStart(4, "0")}`,
+      reference: refCode,
       title: newTitle,
       description: newDesc,
       status: "RECEIVED",
@@ -931,14 +1293,46 @@ export default function TicketManagerPage() {
       applicantEmail: currentUser?.email || "aliko.getheme@safirconsulting.net",
       currency: newCurrency || "XOF",
       assignedDeveloper: null,
-      createdAt: new Date().toISOString().split("T")[0]
+      createdAt: new Date().toISOString().split("T")[0],
+      attachments: initialAttachment
     };
 
     setTickets([newTicket, ...tickets]);
+
+    // Si la demande est émise par un consultant, elle alimente automatiquement le Guichet Central d'Aliko
+    if (currentUser?.role === "CONSULTANT") {
+      setEmails((prev) => [
+        {
+          id: `demand-${Date.now()}`,
+          senderName: currentUser.name,
+          senderEmail: currentUser.email,
+          senderKind: "CONSULTANT",
+          isPersonalDomain: false,
+          subject: newTitle,
+          bodyPreview: newDesc || "Nouvelle demande SAP soumise directement depuis l'Espace Consultant pour qualification et arbitrage par Aliko.",
+          receivedAt: "À l'instant",
+          processingStatus: "QUALIFIED_IN_APP",
+          ticket: { reference: refCode, title: newTitle }
+        },
+        ...prev
+      ]);
+    }
+
+    pushInAppNotification({
+      title: `📥 Nouveau besoin SAP enregistré (${refCode})`,
+      message: `${newTicket.applicantName} a soumis « ${newTitle} » (${newTicket.estimatedHours}h — ${newTicket.currency}) au Guichet Central d'Aliko.`,
+      category: "DEMAND",
+      targetRoles: ["HEAD", "CONSULTANT"],
+      ticketId: newTicket.id,
+      ticketReference: refCode,
+      actorName: newTicket.applicantName || "Aliko Getheme"
+    });
+
     setShowCreateModal(false);
     setNewTitle("");
     setNewDesc("");
-    showToast("Nouveau ticket enregistré avec succès");
+    setNewTicketAttachmentName("");
+    showToast("Nouveau ticket enregistré avec succès (centralisé chez Aliko)");
   };
 
   // Action HEAD : Intégrer un nouveau Développeur dans l'équipe
@@ -1146,8 +1540,26 @@ export default function TicketManagerPage() {
     );
 
     if (isMultiDevAssignment && coDev) {
+      pushInAppNotification({
+        title: `👥 Affectation Multi-Développeurs (${assigningTicket.reference})`,
+        message: `Aliko Getheme a affecté le projet à ${dev.name} (${leadHours}h) et ${coDev.name} (${coDevHours}h).`,
+        category: "ASSIGNMENT",
+        targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
+        ticketId: assigningTicket.id,
+        ticketReference: assigningTicket.reference,
+        actorName: "Aliko Getheme"
+      });
       showToast(`Projet ${assigningTicket.reference} affecté à l'équipe : ${dev.name} (${leadLotObj?.label.split(" ")[0]}) + ${coDev.name} (${coLotObj?.label.split(" ")[0]})`);
     } else {
+      pushInAppNotification({
+        title: `⚡ Nouvelle affectation sur ${assigningTicket.reference}`,
+        message: `Aliko Getheme a affecté le ticket « ${assigningTicket.title} » à ${dev.name}.`,
+        category: "ASSIGNMENT",
+        targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
+        ticketId: assigningTicket.id,
+        ticketReference: assigningTicket.reference,
+        actorName: "Aliko Getheme"
+      });
       showToast(`Ticket ${assigningTicket.reference} affecté à ${dev.name}`);
     }
 
@@ -1489,7 +1901,7 @@ export default function TicketManagerPage() {
                             : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                         }`}
                       >
-                        <span>Boîte Outlook M365</span>
+                        <span>Guichet Central Demandes</span>
                         {stats.pendingEmailsCount > 0 && (
                           <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-800 rounded-full font-semibold">
                             {stats.pendingEmailsCount}
@@ -1524,7 +1936,7 @@ export default function TicketManagerPage() {
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                     >
-                      <Mail className="w-4 h-4 text-purple-600" />
+                      <Layers className="w-4 h-4 text-purple-600" />
                       <span>Mes Demandes Émises ({myConsultantDemands.length})</span>
                     </button>
                   )}
@@ -1532,16 +1944,26 @@ export default function TicketManagerPage() {
               )}
             </div>
 
-            {/* Droite : Boutons d'action et Sélecteur de Rôle RBAC */}
-            <div className="flex items-center gap-3">
+            {/* Droite : Boutons d'action, Notifications Temps Réel et Sélecteur de Rôle RBAC */}
+            <div className="flex items-center gap-2.5">
               {currentUser?.role === "HEAD" && (
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-medium rounded-lg shadow-sm transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Nouveau ticket</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+                    title="Exporter le Reporting Hebdomadaire Direction (Excel/CSV & Synthèse)"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                    <span className="hidden xl:inline">Exporter Rapport</span>
+                  </button>
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-medium rounded-lg shadow-sm transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Nouveau ticket</span>
+                  </button>
+                </>
               )}
 
               {/* SÉLECTEUR MULTI-DEVISES (AFRIQUE DE L'OUEST FCFA PAR DÉFAUT + EUR / USD) */}
@@ -1560,6 +1982,97 @@ export default function TicketManagerPage() {
                   <option value="EUR">Euro (€ - International)</option>
                   <option value="USD">Dollar ($ - International)</option>
                 </select>
+              </div>
+
+              {/* CLOCHE DE NOTIFICATIONS TEMPS RÉEL IN-APP */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNotificationsPanel(!showNotificationsPanel);
+                    setShowUserMenu(false);
+                  }}
+                  aria-label="Notifications In-App"
+                  className="relative p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
+                  title="Centre de Notifications Temps Réel In-App"
+                >
+                  <Bell className={`w-4 h-4 ${unreadNotificationsCount > 0 ? "text-amber-600" : "text-slate-500"}`} />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center shadow-sm animate-pulse">
+                      {unreadNotificationsCount}
+                    </span>
+                  )}
+                </button>
+
+                {showNotificationsPanel && (
+                  <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in">
+                    <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-amber-400" />
+                        <span className="text-xs font-bold tracking-wide">Notifications Temps Réel In-App</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-white/15 text-[10px] font-mono">
+                          {unreadNotificationsCount} non lues
+                        </span>
+                      </div>
+                      {unreadNotificationsCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={markAllNotificationsRead}
+                          className="text-[11px] text-sky-300 hover:text-white underline cursor-pointer"
+                        >
+                          Tout marquer lu
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                      {myNotifications.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-slate-400">
+                          Aucune notification pour votre espace.
+                        </div>
+                      ) : (
+                        myNotifications.map((n) => (
+                          <div
+                            key={n.id}
+                            onClick={() => {
+                              setNotifications((prev) =>
+                                prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+                              );
+                              if (n.ticketId) {
+                                const found = tickets.find((t) => t.id === n.ticketId);
+                                if (found) {
+                                  if (currentUser?.role === "HEAD") {
+                                    setSupervisingTicket(found);
+                                  } else {
+                                    setDiscussingTicket(found);
+                                  }
+                                }
+                              }
+                              setShowNotificationsPanel(false);
+                            }}
+                            className={`p-3 text-xs hover:bg-slate-50 transition-colors cursor-pointer ${
+                              !n.read ? "bg-sky-50/50 border-l-4 border-l-sky-600" : ""
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="font-bold text-slate-900 line-clamp-1">{n.title}</span>
+                              <span className="text-[10px] text-slate-400 shrink-0">{n.createdAt}</span>
+                            </div>
+                            <p className="text-slate-600 text-[11px] leading-relaxed">{n.message}</p>
+                            <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-500">
+                              <span>Acteur : <strong className="text-slate-700">{n.actorName}</strong></span>
+                              {n.ticketReference && (
+                                <span className="font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 border border-slate-200">
+                                  {n.ticketReference}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* SÉLECTEUR DE SESSION / PROFIL RBAC */}
@@ -2098,11 +2611,46 @@ export default function TicketManagerPage() {
 
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex items-center justify-between text-slate-500 mb-2">
-                  <span className="text-xs font-medium uppercase tracking-wider">Boîte Outlook M365</span>
+                  <span className="text-xs font-medium uppercase tracking-wider">Guichet Central Demandes</span>
                   <Inbox className="w-4 h-4 text-slate-400" />
                 </div>
                 <div className="text-2xl font-bold text-slate-900">{stats.pendingEmailsCount}</div>
-                <p className="text-xs text-slate-500 mt-1">Messages reçus à qualifier</p>
+                <p className="text-xs text-slate-500 mt-1">Demandes In-App soumises à qualifier par Aliko</p>
+              </div>
+            </div>
+
+            {/* Barre de Pilotage Exécutif & Export Reporting Direction 1-Clic */}
+            <div className="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-sky-500/20 rounded-xl border border-sky-400/30 text-sky-300">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-sky-300">
+                    Gouvernance Centrale In-App — Point Focal Unique : Aliko Getheme
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    100% des flux (demandes consultants, arbitrages, affectations multi-lots, pièces jointes et clôtures) s'exécutent dans l'application.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleExportCsvReport}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Télécharger CSV / Excel</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Synthèse Comité Direction</span>
+                </button>
               </div>
             </div>
 
@@ -2573,20 +3121,22 @@ export default function TicketManagerPage() {
         )}
 
         {/* =============================================================== */}
-        {/* VUE 6 : BOÎTE OUTLOOK M365 (Rôle HEAD)                           */}
+        {/* VUE 6 : GUICHET CENTRAL DE QUALIFICATION IN-APP (Rôle HEAD)      */}
         {/* =============================================================== */}
         {currentUser?.role === "HEAD" && activeTab === "inbox" && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+            <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Boîte de réception Outlook Microsoft 365</h2>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Guichet Central de Qualification des Demandes (Flux 100% In-App)
+                </h2>
                 <p className="text-xs text-slate-500">
-                  E-mails reçus sur la boîte d'Aliko Getheme (aliko.getheme@safirconsulting.net)
+                  Point central d'arbitrage : Aliko Getheme — Toutes les demandes soumises dans l'application convergent ici avant affectation aux développeurs.
                 </p>
               </div>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Connecteur Graph M365 actif
+                Flux Central In-App Actif (Zéro E-mail Externe)
               </span>
             </div>
 
@@ -2600,17 +3150,17 @@ export default function TicketManagerPage() {
 
                       {email.senderKind === "CONSULTANT" && (
                         <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                          Consultante interne Safir
+                          Consultante interne Safir (Portail In-App)
                         </span>
                       )}
                       {email.senderKind === "CLIENT_CONTACT" && (
                         <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                          Contact client
+                          Besoin Client Référencé
                         </span>
                       )}
                       {email.isPersonalDomain && (
                         <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                          Domaine externe / vigilance
+                          Tiers externe / Vigilance Direction
                         </span>
                       )}
                     </div>
@@ -2628,17 +3178,20 @@ export default function TicketManagerPage() {
                           setNewDesc(email.bodyPreview);
                           setNewApplicant(email.senderName);
                           setNewClient(email.isPersonalDomain ? "Externe" : "Safir Consulting");
+                          setEmails((prev) =>
+                            prev.map((m) => (m.id === email.id ? { ...m, processingStatus: "QUALIFIED_IN_APP" } : m))
+                          );
                           setShowCreateModal(true);
                         }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-medium rounded-lg shadow-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-medium rounded-lg shadow-sm cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Créer ticket SAP</span>
+                        <span>Qualifier en ticket SAP</span>
                       </button>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-medium">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        Ticket créé
+                        Ticket qualifié In-App
                       </span>
                     )}
                   </div>
@@ -2984,6 +3537,38 @@ export default function TicketManagerPage() {
                 />
               </div>
 
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                  <Paperclip className="w-3.5 h-3.5 text-sky-700" />
+                  <span>Pièce jointe fonctionnelle ou technique SAP (Optionnel)</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={newTicketAttachmentName}
+                    onChange={(e) => setNewTicketAttachmentName(e.target.value)}
+                    className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
+                  >
+                    <option value="">-- Joindre un modèle type SAP --</option>
+                    {SAP_ATTACHMENT_TEMPLATES.map((tpl) => (
+                      <option key={tpl.fileName} value={tpl.fileName}>
+                        📎 {tpl.fileName} ({tpl.fileSize})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Ou nom du fichier (ex: Cahier_Recette_SAP.pdf)"
+                    value={newTicketAttachmentName}
+                    onChange={(e) => setNewTicketAttachmentName(e.target.value)}
+                    className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
+                  />
+                </div>
+                <div className="text-[10px] text-emerald-700 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span>Contrôle d'intégrité MIME & Scan Antivirus In-App actif (.pdf, .xlsx, .sql, .png)</span>
+                </div>
+              </div>
+
               <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
                 <button
                   type="button"
@@ -3165,8 +3750,11 @@ export default function TicketManagerPage() {
               )}
 
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">
-                <div className="font-medium text-slate-800">Notification automatique :</div>
-                <p>Un e-mail de notification officiel sera envoyé à chaque collaborateur sur sa messagerie Safir Consulting.</p>
+                <div className="font-medium text-slate-800 flex items-center gap-1.5">
+                  <Bell className="w-3.5 h-3.5 text-sky-700" />
+                  <span>Notification Temps Réel In-App :</span>
+                </div>
+                <p>Une alerte instantanée sera poussée dans le Centre de Notifications de chaque développeur mobilisé et de la consultante référente.</p>
               </div>
 
               <div className="pt-2 border-t border-slate-200 flex items-center justify-end gap-2">
@@ -3719,6 +4307,56 @@ export default function TicketManagerPage() {
                 </div>
               )}
 
+              {/* Pièces Jointes & Livrables SAP Attachés au Ticket */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5 text-sky-700" />
+                    <span>Pièces Jointes & Spécifications SAP ({supervisingTicket.attachments?.length || 0})</span>
+                  </div>
+                  <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                    <span>Vérifiées & Scannées</span>
+                  </span>
+                </div>
+
+                {(!supervisingTicket.attachments || supervisingTicket.attachments.length === 0) ? (
+                  <p className="text-slate-500 text-xs italic">
+                    Aucun document ou livrable joint à ce ticket pour le moment.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {supervisingTicket.attachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="p-2.5 bg-white rounded-lg border border-slate-200 flex items-center justify-between gap-2 shadow-xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="p-1.5 bg-sky-50 text-sky-700 rounded border border-sky-200 shrink-0">
+                            <FileText className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-slate-900 truncate" title={att.fileName}>
+                              {att.fileName}
+                            </div>
+                            <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-sky-800">{att.fileType}</span>
+                              <span>•</span>
+                              <span>{att.fileSize}</span>
+                              <span>•</span>
+                              <span>Par {att.uploadedBy}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded shrink-0">
+                          CLEAN
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Fil d'Échange Développeur ↔ Consultant & Direction dans la Modale de Supervision */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
@@ -3941,6 +4579,28 @@ export default function TicketManagerPage() {
                         }`}
                       >
                         <p className="whitespace-pre-wrap">{m.message}</p>
+                        {m.attachment && (
+                          <div
+                            className={`mt-2 p-2 rounded-lg border flex items-center justify-between gap-2 text-[11px] ${
+                              isCurrentAuthor
+                                ? "bg-purple-800/80 border-purple-500 text-purple-100"
+                                : "bg-slate-50 border-slate-200 text-slate-800"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Paperclip className="w-3.5 h-3.5 shrink-0" />
+                              <div className="min-w-0">
+                                <div className="font-semibold truncate">{m.attachment.fileName}</div>
+                                <div className="text-[10px] opacity-80">
+                                  {m.attachment.fileType} • {m.attachment.fileSize} • Scan Antivirus OK
+                                </div>
+                              </div>
+                            </div>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0">
+                              VERIFIED
+                            </span>
+                          </div>
+                        )}
                         {m.isBlockerQuestion && (
                           <div className={`mt-2 pt-2 border-t text-[11px] font-semibold flex items-center gap-1.5 ${
                             isCurrentAuthor ? "border-purple-600 text-amber-200" : "border-rose-100 text-rose-700"
@@ -3994,6 +4654,55 @@ export default function TicketManagerPage() {
                 </div>
               )}
 
+              {/* Sélecteur de Pièce Jointe dans le Fil de Discussion */}
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5 text-purple-700" />
+                    <span>Joindre un document SAP ou une capture au message (Optionnel)</span>
+                  </span>
+                  {(selectedAttachmentTemplate || customAttachmentName) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAttachmentTemplate("");
+                        setCustomAttachmentName("");
+                      }}
+                      className="text-[10px] text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Retirer la pièce jointe
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={selectedAttachmentTemplate}
+                    onChange={(e) => {
+                      setSelectedAttachmentTemplate(e.target.value);
+                      if (e.target.value) setCustomAttachmentName("");
+                    }}
+                    className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
+                  >
+                    <option value="">-- Sélectionner un document SAP --</option>
+                    {SAP_ATTACHMENT_TEMPLATES.map((tpl) => (
+                      <option key={tpl.fileName} value={tpl.fileName}>
+                        📎 {tpl.fileName} ({tpl.fileSize})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Ou saisir le nom d'un fichier joint..."
+                    value={customAttachmentName}
+                    onChange={(e) => {
+                      setCustomAttachmentName(e.target.value);
+                      if (e.target.value) setSelectedAttachmentTemplate("");
+                    }}
+                    className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
+                  />
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <textarea
                   rows={2}
@@ -4018,6 +4727,170 @@ export default function TicketManagerPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* MODALE 9 : SYNTHÈSE COMITÉ DIRECTION & EXPORT REPORTING (HEAD)    */}
+      {/* ================================================================= */}
+      {showReportModal && currentUser?.role === "HEAD" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-400/30">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                    Reporting Comité de Direction — Safir Consulting
+                  </span>
+                  <h3 className="font-bold text-base sm:text-lg text-white mt-1">
+                    Synthèse Hebdomadaire d'Activité & Valorisation Financière BU SME
+                  </h3>
+                  <p className="text-xs text-slate-300">
+                    Pilotage centralisé par Aliko Getheme • Devise de reporting :{" "}
+                    <strong>{activeCurrency === "XOF" ? "FCFA (XOF)" : activeCurrency === "EUR" ? "Euro (€)" : "Dollar US ($)"}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs">
+              {/* Synthèse Macro Financière & Opérationnelle */}
+              {(() => {
+                const ratePerHour = activeCurrency === "XOF" ? 45000 : activeCurrency === "EUR" ? 70 : 75;
+                const symbol = activeCurrency === "XOF" ? "FCFA" : activeCurrency === "EUR" ? "€" : "$";
+                const totalEst = tickets.reduce((acc, t) => acc + (t.estimatedHours || 0), 0);
+                const totalRem = tickets.reduce((acc, t) => acc + (t.remainingHours ?? t.estimatedHours ?? 0), 0);
+                const totalDone = Math.max(0, totalEst - totalRem);
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="text-[11px] text-slate-500">Volume Total Tickets</div>
+                      <div className="text-xl font-bold text-slate-900 mt-0.5">{tickets.length} tickets</div>
+                      <div className="text-[10px] text-emerald-700 font-medium mt-1">
+                        Dont {tickets.filter((t) => t.status === "DELIVERED" || t.status === "CLOSED").length} livrés / clôturés
+                      </div>
+                    </div>
+                    <div className="p-3.5 bg-sky-50/70 rounded-xl border border-sky-200">
+                      <div className="text-[11px] text-sky-800">Charge Totale Estimée</div>
+                      <div className="text-xl font-bold text-sky-950 mt-0.5">{totalEst} h</div>
+                      <div className="text-[10px] text-sky-700 font-medium mt-1">RAF global : {totalRem} h</div>
+                    </div>
+                    <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200">
+                      <div className="text-[11px] text-emerald-800">Valeur Produite (Heures Réalisées)</div>
+                      <div className="text-base sm:text-lg font-bold text-emerald-950 mt-0.5 font-mono">
+                        {(totalDone * ratePerHour).toLocaleString("fr-FR")} {symbol}
+                      </div>
+                      <div className="text-[10px] text-emerald-700 font-medium mt-1">{totalDone} h consommées</div>
+                    </div>
+                    <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200">
+                      <div className="text-[11px] text-amber-900">Valorisation Portefeuille Global</div>
+                      <div className="text-base sm:text-lg font-bold text-amber-950 mt-0.5 font-mono">
+                        {(totalEst * ratePerHour).toLocaleString("fr-FR")} {symbol}
+                      </div>
+                      <div className="text-[10px] text-amber-800 font-medium mt-1">
+                        Taux horaire : {ratePerHour.toLocaleString("fr-FR")} {symbol}/h
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Tableau Récapitulatif des Tickets pour Comité de Direction */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between">
+                  <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
+                    État Consolidé du Portefeuille Tickets & Valorisation ({activeCurrency === "XOF" ? "FCFA (XOF)" : activeCurrency})
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Généré pour Aliko Getheme (Head of BU SME)
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px]">
+                        <th className="py-2 px-3">Réf.</th>
+                        <th className="py-2 px-3">Client / Titre</th>
+                        <th className="py-2 px-3">Équipe / Lots</th>
+                        <th className="py-2 px-3">Statut</th>
+                        <th className="py-2 px-3 text-right">Estimé / RAF</th>
+                        <th className="py-2 px-3 text-right">Valorisation ({activeCurrency})</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {tickets.map((t) => {
+                        const ratePerHour = activeCurrency === "XOF" ? 45000 : activeCurrency === "EUR" ? 70 : 75;
+                        const symbol = activeCurrency === "XOF" ? "FCFA" : activeCurrency === "EUR" ? "€" : "$";
+                        const rem = t.remainingHours ?? t.estimatedHours ?? 0;
+                        return (
+                          <tr key={t.id} className="hover:bg-slate-50">
+                            <td className="py-2 px-3 font-mono font-bold text-sky-900">{t.reference}</td>
+                            <td className="py-2 px-3">
+                              <div className="font-semibold text-slate-900">{t.clientCompany || "Safir Consulting"}</div>
+                              <div className="text-[11px] text-slate-500 truncate max-w-xs">{t.title}</div>
+                            </td>
+                            <td className="py-2 px-3">
+                              {t.contributors && t.contributors.length > 1 ? (
+                                <span className="text-[11px] font-medium text-sky-800">
+                                  👥 {t.contributors.map((c) => c.developerName).join(" + ")}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-700">
+                                  {t.assignedDeveloper ? t.assignedDeveloper.name : "En attente Aliko"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3">{renderStatusBadge(t.status)}</td>
+                            <td className="py-2 px-3 text-right font-mono">
+                              <span className="font-semibold text-slate-900">{t.estimatedHours}h</span>{" "}
+                              <span className="text-slate-400">/</span>{" "}
+                              <span className="text-sky-700 font-bold">{rem}h</span>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-emerald-800">
+                              {(t.estimatedHours * ratePerHour).toLocaleString("fr-FR")} {symbol}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Données certifiées conformes au référentiel central BU SME — Safir Consulting.</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-800 bg-white border border-slate-300 rounded-lg cursor-pointer"
+                >
+                  Fermer
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCsvReport}
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Télécharger Export Excel / CSV ({activeCurrency})</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

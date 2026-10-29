@@ -19,7 +19,7 @@
 - [1. Contexte Métier & Rôle Central du Responsable](#1-contexte-métier--rôle-central-du-responsable)
 - [2. Problématique & Objectifs Stratégiques](#2-problématique--objectifs-stratégiques)
 - [3. Typologie des Demandes & Spécificités SAP](#3-typologie-des-demandes--spécificités-sap)
-- [4. Module Messagerie & Flux E-mail Outlook Microsoft 365](#4-module-messagerie--flux-e-mail-outlook-microsoft-365)
+- [4. Guichet Central de Qualification & Flux 100% In-App Orchestré par Aliko](#4-guichet-central-de-qualification--flux-100-in-app-orchestré-par-aliko)
 - [5. Référentiel Équipe des 7 Développeurs & Compétences](#5-référentiel-équipe-des-7-développeurs--compétences)
 - [6. Moteur de Calcul de Capacité Nette (Sans Double Décompte)](#6-moteur-de-calcul-de-capacité-nette-sans-double-décompte)
 - [7. Moteur d'Aide à l'Affectation (Algorithme Décisionnel sur 100 Points)](#7-moteur-daide-à-laffectation-algorithme-décisionnel-sur-100-points)
@@ -42,14 +42,14 @@ Au sein de **Safir Consulting**, la **SME Business Unit** assure la conception, 
 - **L'équipe de réalisation** est composée d'un effectif de **7 développeurs réels** (+ Direction et Consulting Fonctionnel, soit 9 collaborateurs au total), ayant chacun des niveaux d'expertise distincts (SDK SAP, Service Layer, ABAP, Fiori, interfaces Web, bases de données HANA/SQL).
 
 ```
-   [Clients Externes & Consultants Safir]
+   [Consultants Fonctionnels Safir & Clients Référencés]
                      │
-                     ▼ (Demandes entrantes par E-mail)
+                     ▼ (Soumission Directe 100% In-App + Pièces Jointes SAP)
          ┌─────────────────────────┐
-         │      Aliko Getheme      │ ◄── Point Central de Qualification
-         │ (Head of SME Bus. Unit) │     et d'Arbitrage des Priorités
+         │      Aliko Getheme      │ ◄── Guichet Central de Qualification,
+         │ (Head of SME Bus. Unit) │     d'Arbitrage & de Supervision 360°
          └───────────┬─────────────┘
-                     │ (Affectation optimisée & traçable)
+                     │ (Affectation mono ou multi-développeurs + Notifications In-App)
                      ▼
        [ Équipe des 7 Développeurs ]
   (SAP B1 · S/4HANA · API · Full-Stack)
@@ -108,52 +108,46 @@ Les demandes traitées par la SME Business Unit sont catégorisées avec une num
 
 ---
 
-## 4. MODULE MESSAGERIE & FLUX E-MAIL OUTLOOK MICROSOFT 365
+## 4. GUICHET CENTRAL DE QUALIFICATION & FLUX 100% IN-APP ORCHESTRÉ PAR ALIKO
 
-L'intégration e-mail est conçue pour respecter les habitudes de travail d'Aliko sans le contraindre à des tâches manuelles de copier-coller :
+Toute la logique opérationnelle se déroule **intégralement à l'intérieur de l'application (100% In-App)** sans dépendre de boîtes d'e-mails externes automatiques. **Aliko Getheme (`HEAD`)** demeure le **point central obligatoire** de réception, de qualification, d'arbitrage et d'affectation de toutes les demandes :
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Client / Consultant
-    participant M365 as Boîte Outlook Aliko
-    participant App as Ticket Manager
-    actor Aliko as Aliko Getheme (HEAD)
-    actor Dev as Développeur Affecté
+    actor Consultant as Consultante / Demandeur
+    participant App as Ticket Manager (Guichet Central In-App)
+    actor Aliko as Aliko Getheme (HEAD - Point Central)
+    actor Dev as Développeur(s) Affecté(s)
 
-    Client->>M365: Envoie sa demande par e-mail
-    M365->>App: Synchronisation Microsoft Graph (Inbox)
-    App->>App: Vérification expéditeur (Interne vs Client externe)
-    Aliko->>App: Ouvre l'écran Inbox & clique sur "Qualifier en Ticket"
-    App->>App: Génération de la référence unique (ex. ADD-2026-0003)
-    Aliko->>App: Valide l'affectation recommandée
-    App->>Dev: Envoi automatique de l'e-mail d'affectation avec détails
+    Consultant->>App: Soumet un besoin SAP dans l'application (+ Pièces jointes .pdf/.xlsx/.sql)
+    App->>Aliko: Notification Temps Réel In-App + Injection dans le Guichet Central
+    Aliko->>App: Qualifie la demande, vérifie les pièces jointes & arbitre la priorité
+    Aliko->>App: Affecte 1 ou plusieurs développeurs par brique SAP (Addon, HANA, API)
+    App->>Dev: Notification Temps Réel In-App dans l'Espace Développeur Dédié
+    Dev-->>Consultant: Échange direct tracé + pièces jointes dans le fil du ticket
+    Aliko->>App: Supervision 360°, Export Reporting Direction (CSV/Excel) & Clôture Définitive
 ```
 
-### 4.1. Règles de Rapprochement et Typologie des Expéditeurs
+### 4.1. Qualification Centralisée & Gouvernance des Émetteurs In-App
 
-La boîte de réception d'Aliko centralise des demandes issues d'acteurs aux statuts variés. Le système applique un aiguillage strict selon 4 catégories d'expéditeurs :
+Le **Guichet Central des Demandes** d'Aliko qualifie et catégorise chaque flux soumis dans la plateforme selon 4 niveaux de gouvernance :
 
 1. **Consultants & Collaborateurs Internes Safir** (`SenderKind.CONSULTANT` / `INTERNAL_TEAM`) :
-   - Reconnaissance automatique via le nom de domaine de messagerie d'entreprise `@safirconsulting.net`.
-   - Tout consultant interne (comme **Mélissa Diakité** ou d'autres consultants Safir) peut adresser des besoins, spécifications ou cahiers des charges directement à Aliko sans risque de blocage.
-   - L'e-mail est instantanément qualifié avec un niveau de confiance maximal (**Badge « 🏢 Consultante / Équipe Safir »**).
+   - Authentifiés directement sur leur portail dédié (`@safirconsulting.net`).
+   - Toute consultante interne (comme **Mélissa Diakité**) soumet ses cahiers des charges, extraits d'écritures SAP et besoins d'évolution directement dans l'application.
+   - La demande alimente immédiatement le Guichet Central d'Aliko avec le **Badge « 🏢 Consultante / Équipe Safir »** et déclenche une notification temps réel.
 
-2. **Contacts Clients Officiels Référencés** (`SenderKind.CLIENT_CONTACT`) :
-   - Rapprochement immédiat avec la fiche du compte client grâce au domaine d'entreprise enregistré (ex: `@client-omega.com` pour Omega Logistics).
-   - Le message est directement lié au compte client et à ses projets actifs (**Badge « 🤝 Contact Client Officiel »**).
+2. **Demandes Clients Officiels Référencés** (`SenderKind.CLIENT_CONTACT`) :
+   - Rapprochement immédiat avec la fiche du compte client enregistré (ex: *Omega Logistics*, *AgroTech Côte d'Ivoire*, *Sénégal Distribution*).
+   - La demande est directement rattachée au client et à sa devise contractuelle (**Badge « 🤝 Demande Client Référencé »**).
 
-3. **Personnes Extérieures à l'Entreprise / Nouveaux Contacts** (`SenderKind.UNKNOWN`) :
-   - Tout tiers externe à Safir Consulting n'appartenant pas à un domaine client connu (ex: nouveaux prospects, partenaires, sous-traitants, autres sociétés).
-   - L'e-mail est accueilli dans l'Inbox avec le statut d'attente (**Badge « 🌐 Personne Extérieure »**).
-   - Aliko dispose d'actions guidées en un clic :
-     - *Créer un nouveau compte Client & Contact* et qualifier le ticket.
-     - *Rattacher l'expéditeur à un Client existant* (nouveau collaborateur chez le client).
-     - *Classer sans suite / Archiver / Rejeter* (prospection commerciale non sollicitée ou SPAM).
+3. **Demandes Externes / Nouveaux Comptes à Référencer** (`SenderKind.UNKNOWN`) :
+   - Toute demande saisie pour un nouveau prospect ou partenaire non encore rattaché au référentiel client.
+   - Accueillie dans le Guichet Central d'Aliko (**Badge « 🌐 Externe / Nouveau Tiers »**) pour validation, création de fiche client ou classement sans suite.
 
-4. **Adresses Personnelles (Gmail, Yahoo, Hotmail, etc.) & Bouclier Anti-usurpation** :
-   - Couramment utilisées par certains consultants externes indépendants ou dirigeants de PME.
-   - **Contrôle de sécurité strict** : Si l'adresse personnelle a déjà été explicitement validée par Aliko dans la fiche du client, elle est acceptée en toute confiance. À défaut, le système affiche un **Badge d'alerte rouge « ⚠️ Vigilance : Domaine personnel non validé »** afin d'empêcher toute modification non autorisée ou ingénierie sociale.
+4. **Contrôle d'Identité & Bouclier Anti-Usurpation** :
+   - Vérification automatique de la légitimité du compte émetteur avant toute transformation en ticket actif (**Badge « ⚠️ Vigilance : Compte non rattaché »** si le domaine n'est pas certifié).
 
 ---
 
@@ -360,10 +354,13 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 
 | Fonctionnalité / Périmètre | `HEAD` (Aliko) | `DEVELOPER` (Équipe) | `CONSULTANT` (Mélissa) | `ADMIN` (IT) |
 |---|:---:|:---:|:---:|:---:|
-| **Boîte de Réception Outlook M365 & Scoring d'Urgence** | ✅ | ❌ | ❌ | ✅ |
+| **Guichet Central des Demandes In-App & Qualification** | ✅ | ❌ | ❌ | ✅ |
 | **Gouvernance Globale, Suivi Capacité & Alertes Surcharge** | ✅ | ❌ | ❌ | ✅ |
 | **Attribution des Tickets & Dérogations de Charge** | ✅ | ❌ | ❌ | ❌ |
 | **Affectation Multi-Développeurs par Brique SAP (Addon, HANA, API)** | ✅ | ❌ | ❌ | ❌ |
+| **Export Reporting Direction 1-Clic (CSV/Excel & Synthèse Comité)** | ✅ | ❌ | ❌ | ✅ |
+| **Centre de Notifications Temps Réel In-App (Cloche & Alertes)** | ✅ | ✅ | ✅ | ✅ |
+| **Rattachement & Consultation de Pièces Jointes SAP Sécurisées** | ✅ | ✅ | ✅ | ✅ |
 | **Espace Développeur Personnalisé (Mes Tickets Dédiés)** | ✅ (Vue globale) | ✅ (Strictement les siens) | ❌ | ✅ |
 | **Saisie Reste à Faire (RAF en heures)** | ✅ | ✅ | ❌ | ❌ |
 | **Déclaration de Blocage d'Urgence (« Stop-the-line »)** | ✅ | ✅ | ❌ | ❌ |
@@ -421,7 +418,20 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
    - **Supervision 360° par Aliko** : Affichage d'un tableau synthétique de l'équipe mobilisée, des heures allouées et du pourcentage d'avancement par brique technique.
    - **Transparence Consultant** : La consultante (Mélissa) visualise l'ensemble des développeurs mobilisés et leurs domaines techniques respectifs.
 
-6. **Sélecteur de Session Interactif (1-Clic)** :
+6. **Rattachement de Pièces Jointes Sécurisées SAP (`.pdf`, `.xlsx`, `.sql`, `.png`)** :
+   - Possibilité de joindre des cahiers de spécifications fonctionnelles, des jeux d'écritures comptables Excel, des traces SQL HANA ou des captures d'écran lors de la soumission d'un besoin ou directement dans le fil d'échange.
+   - Chaque pièce jointe affiche un badge de contrôle de sécurité (`VERIFIED_CLEAN`) et est consultable par Aliko dans sa modale de supervision 360°.
+
+7. **Export de Reporting Direction en 1-Clic (Excel/CSV & Synthèse Comité de Direction)** :
+   - **Aliko (`HEAD`)** dispose d'un bouton d'export direct générant un fichier `.csv` (encodage UTF-8 BOM compatible Microsoft Excel) récapitulant tous les tickets, l'équipe mobilisée, les heures estimées vs réalisées vs RAF, et le budget valorisé dans la devise active (`FCFA / XOF`, `EUR`, `USD`).
+   - Une modale exécutive **« Synthèse Comité Direction »** consolide les KPI financiers et opérationnels de la SME Business Unit.
+
+8. **Centre de Notifications Temps Réel In-App & Alertes « Stop-the-line »** :
+   - Cloche interactive dans l'en-tête avec compteur dynamique de notifications non lues filtrées selon le rôle connecté (`HEAD`, `DEVELOPER`, `CONSULTANT`).
+   - Notifications poussées automatiquement en temps réel lors d'une déclaration de blocage (« Stop-the-line »), d'une nouvelle demande soumise au Guichet Central d'Aliko, d'une affectation d'équipe, d'une réponse débloquante de la consultante, d'une livraison ou d'une clôture définitive.
+   - Navigation directe en 1-clic depuis la notification vers le ticket ou le fil de discussion concerné.
+
+9. **Sélecteur de Session Interactif (1-Clic)** :
    - Sélecteur de profil corporate intégré dans l'en-tête permettant de basculer instantanément entre Aliko, Anoop, Moha et Mélissa pour les besoins de validation, tests et démonstrations.
 
 ---

@@ -51,9 +51,9 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.locator("body")).toContainText("Hassane Bocoum");
     await expect(page.locator("body")).toContainText("Moha Dicko");
 
-    // 3. Clic sur Boîte Outlook M365
-    await page.getByRole("button", { name: /Boîte Outlook M365/i }).click();
-    await expect(page.locator("body")).toContainText("Outlook Microsoft 365");
+    // 3. Clic sur Guichet Central Demandes (100% In-App orchestré par Aliko)
+    await page.getByRole("button", { name: /Guichet Central Demandes/i }).click();
+    await expect(page.locator("body")).toContainText("Guichet Central de Qualification des Demandes");
 
     // 4. Retour sur Tableau de bord
     await page.getByRole("button", { name: /Tableau de bord/i }).click();
@@ -73,8 +73,8 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.locator("header")).toContainText("DEVELOPER");
     await expect(page.locator("body")).toContainText("Espace Développeur — Anoop Pandimukkula");
 
-    // Vérifier que les onglets confidentiels Direction (Outlook, Gouvernance globale) sont masqués
-    await expect(page.getByRole("button", { name: /Boîte Outlook M365/i })).not.toBeVisible();
+    // Vérifier que les onglets confidentiels Direction (Guichet Central, Gouvernance globale) sont masqués
+    await expect(page.getByRole("button", { name: /Guichet Central Demandes/i })).not.toBeVisible();
 
     // Vérifier l'onglet personnel Développeur
     await expect(page.getByRole("button", { name: /Mon Espace Développeur/i })).toBeVisible();
@@ -313,5 +313,49 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(modal.getByText("Hassane Bocoum").first()).toBeVisible();
     await expect(modal.getByText("Addon SAP B1 (UI/DI API)").first()).toBeVisible();
     await expect(modal.getByText("Intégration HANA & Vues SQLScript").first()).toBeVisible();
+  });
+
+  test("13. Les 3 Cerises sur le Gâteau : Pièces Jointes SAP sécurisées, Export Reporting Direction 1-Clic & Centre de Notifications Temps Réel In-App", async ({ page }) => {
+    await loginAsAliko(page);
+
+    // 1. Tester le Centre de Notifications Temps Réel In-App (Cloche dans l'en-tête)
+    const bellBtn = page.getByTitle("Centre de Notifications Temps Réel In-App");
+    await expect(bellBtn).toBeVisible();
+    await bellBtn.click();
+    await expect(page.getByText("Notifications Temps Réel In-App")).toBeVisible();
+    await expect(page.locator("body")).toContainText("Stop-the-line : Blocage & Question sur BUG-2026-0004");
+    await page.getByRole("button", { name: /Tout marquer lu/i }).click();
+    await expect(page.locator("body")).toContainText("Toutes vos notifications ont été marquées comme lues");
+    await bellBtn.click();
+
+    // 2. Tester l'Export Reporting Direction & la Synthèse Comité Direction (FCFA / XOF)
+    const reportModalBtn = page.getByRole("button", { name: /Synthèse Comité Direction/i });
+    await expect(reportModalBtn).toBeVisible();
+    await reportModalBtn.click();
+    await expect(page.getByText("Synthèse Hebdomadaire d'Activité & Valorisation Financière BU SME")).toBeVisible();
+    await expect(page.locator("body")).toContainText("Valeur Produite (Heures Réalisées)");
+
+    // Déclencher le téléchargement CSV/Excel depuis la modale
+    await page.getByRole("button", { name: /Télécharger Export Excel \/ CSV/i }).click();
+    await expect(page.locator("body")).toContainText("Export Excel/CSV généré avec succès");
+    await page.getByRole("button", { name: /Fermer/i }).first().click();
+
+    // 3. Tester les Pièces Jointes SAP sécurisées dans la Supervision 360° et le Fil d'Échange
+    const followBtn = page.getByRole("button", { name: /Suivre/i }).first();
+    await followBtn.click();
+    await expect(page.getByText(/Pièces Jointes & Spécifications SAP/i)).toBeVisible();
+    await expect(page.locator("body")).toContainText("Cahier_Spec_Workflow_Achats_SAP_B1.pdf");
+    await expect(page.locator("body")).toContainText("CLEAN");
+
+    // Ouvrir le fil de discussion et joindre un document SAP
+    await page.getByRole("button", { name: /Ouvrir le fil de discussion/i }).click();
+    await expect(page.getByText(/Joindre un document SAP ou une capture au message/i)).toBeVisible();
+    await page.getByPlaceholder(/Ou saisir le nom d'un fichier joint/i).fill("Validation_Architecture_Aliko.pdf");
+    await page.locator("textarea").fill("Validation de l'architecture par la Direction BU SME avec le document joint.");
+    await page.getByRole("button", { name: /Envoyer/i }).click();
+
+    // Vérifier l'affichage de la pièce jointe et du badge VERIFIED dans le fil
+    await expect(page.locator("body")).toContainText("Validation_Architecture_Aliko.pdf");
+    await expect(page.locator("body")).toContainText("VERIFIED");
   });
 });
