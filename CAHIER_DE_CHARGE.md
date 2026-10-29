@@ -428,6 +428,18 @@ Afin de préserver l'intégrité opérationnelle, la confidentialité des arbitr
 - **Suppression des Sélecteurs de Session en Cours d'Utilisation** : Aucun menu déroulant ni bouton d'usurpation (« Tester session ») n'est autorisé au sein d'une session authentifiée.
 - **Verrouillage des Onglets & Contrôleur d'Accès Réactif** : Si une tentative de navigation vers un onglet non autorisé intervient, le contrôleur RBAC bloque immédiatement l'accès, affiche un toast de refus et redirige vers l'espace autorisé.
 - **Déconnexion Obligatoire** : Pour basculer vers un autre rôle, chaque collaborateur doit obligatoirement **clôturer sa session (`Se déconnecter`)** et s'authentifier avec ses identifiants propres sur la page de connexion.
+
+### 10.4. Cycle de Recette Consultante & Prémisse Bloquante de Clôture Aliko
+Conformément aux exigences de gouvernance qualité :
+1. **Visibilité Intégrale de la Consultante jusqu'au Bout** :
+   - La consultante suit en direct et en continu le statut, le ou les développeurs dédiés, la progression en % et le Reste à Faire (RAF) de chacun de ses tickets.
+2. **Phase de Test & Recette Réservée à la Consultante** :
+   - Dès qu'un développeur achève ses développements et clique sur *« Marquer comme Livré »* (`status: DELIVERED`), un espace de recette fonctionnelle s'active sur le portail de la consultante avec deux options souveraines :
+     - **Option A : Tester & Approuver la Recette (Solution Conforme)** : Valide la recette fonctionnelle (`consultantReviewStatus: APPROVED`), consigne l'approbation dans le fil d'échange officiel et habilite Aliko à clôturer le ticket.
+     - **Option B : Renvoyer en Correction chez les Développeurs (Problème / Anomalie)** : Ouvre une modale de contestation avec **motif obligatoire de l'anomalie constatée**, réalloue une charge complémentaire de reprise au RAF, repasse le ticket en `IN_PROGRESS`, affiche l'alerte sur le tableau de bord du développeur et notifie l'équipe.
+3. **Clôture Souveraine Conditionnée d'Aliko (`HEAD`)** :
+   - **Aliko est le seul habilité à prononcer la clôture définitive (`CLOSED`)**, mais **uniquement et strictement après que la consultante a testé et formellement approuvé la recette**.
+   - Tant que la recette n'a pas été validée par la consultante, le bouton de clôture dans la modale de supervision d'Aliko est **verrouillé (`disabled`) avec cadenas et avertissement explicite**. Toute tentative de clôture anticipée est immédiatement rejetée par le système.
    - Le développeur peut poser une question au consultant et signaler le besoin comme bloquant (`status: BLOCKED`).
    - Le consultant est alerté sur son espace, apporte sa réponse et peut lever automatiquement le blocage (`status: IN_PROGRESS`).
    - Aliko (Direction BU SME) supervise l'intégralité du dialogue dans sa modale de supervision pour arbitrer si nécessaire tout en conservant l'historique complet.

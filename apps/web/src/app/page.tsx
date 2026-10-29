@@ -43,7 +43,9 @@ import {
   Printer,
   ShieldCheck,
   Trash2,
-  GraduationCap
+  GraduationCap,
+  RotateCcw,
+  FlaskConical
 } from "lucide-react";
 
 const API_BASE = "/api/v1";
@@ -141,6 +143,10 @@ interface Ticket {
   attachments?: TicketAttachment[];
   isSkillOverride?: boolean;
   overrideReason?: string;
+  consultantReviewStatus?: "PENDING" | "APPROVED" | "REJECTED";
+  consultantReviewDate?: string;
+  consultantReviewNote?: string;
+  rejectionReason?: string;
 }
 
 // Modèles de documents SAP prédéfinis pour l'attachement rapide sécurisé en 1-clic
@@ -738,6 +744,11 @@ export default function TicketManagerPage() {
   // Modale de Supervision / Oeil Direction d'Aliko sur la progression
   const [supervisingTicket, setSupervisingTicket] = useState<Ticket | null>(null);
 
+  // Modale Rejet de Recette & Renvoi en développement par la Consultante
+  const [rejectingTicket, setRejectingTicket] = useState<Ticket | null>(null);
+  const [rejectionReasonText, setRejectionReasonText] = useState("");
+  const [rejectionAdditionalHours, setRejectionAdditionalHours] = useState<number>(8);
+
   // Modale Fil de Discussion & Échange Direct Développeur <-> Consultant
   const [discussingTicket, setDiscussingTicket] = useState<Ticket | null>(null);
   const [ticketMessageText, setTicketMessageText] = useState("");
@@ -1188,20 +1199,25 @@ export default function TicketManagerPage() {
     showToast("Ticket débloqué, statut repassé en cours");
   };
 
-  // Action Développeur : Marquer comme Livré
+  // Action Développeur : Marquer comme Livré pour Recette Fonctionnelle
   const handleDeliverTicket = (ticketId: string) => {
     const target = tickets.find((t) => t.id === ticketId);
     setTickets((prev) =>
       prev.map((t) =>
         t.id === ticketId
-          ? { ...t, status: "DELIVERED", remainingHours: 0 }
+          ? {
+              ...t,
+              status: "DELIVERED",
+              remainingHours: 0,
+              consultantReviewStatus: "PENDING"
+            }
           : t
       )
     );
     if (target) {
       pushInAppNotification({
         title: `📦 Ticket ${target.reference} livré pour recette`,
-        message: `${currentUser?.name || "Le développeur"} a terminé le développement de « ${target.title} ». En attente de validation Aliko.`,
+        message: `${currentUser?.name || "Le développeur"} a terminé les développements de « ${target.title} ». La consultante (${target.applicantName || "Mélissa Diakité"}) doit désormais tester la solution et approuver la recette.`,
         category: "DELIVERY",
         targetRoles: ["HEAD", "CONSULTANT"],
         ticketId: target.id,
@@ -1209,12 +1225,137 @@ export default function TicketManagerPage() {
         actorName: currentUser?.name || "Développeur SAP"
       });
     }
-    showToast("Ticket marqué comme Livré (en attente recette Aliko)");
+    showToast("Ticket livré pour recette fonctionnelle par la consultante");
   };
 
-  // Action Direction (Aliko HEAD) : Clôture définitive du ticket une fois réglé
+  // Action Consultante : Tester & Approuver la recette (Solution conforme & validée)
+  const handleApproveTicketByConsultant = (ticketId: string) => {
+    const target = tickets.find((t) => t.id === ticketId);
+    if (!target) return;
+
+    const approvalDate = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+    const autoMessage: TicketMessage = {
+      id: `msg-${Date.now()}`,
+      authorName: currentUser?.name || "Mélissa Diakité",
+      authorRole: "CONSULTANT",
+      authorEmail: currentUser?.email || "melissa.diakite@safirconsulting.net",
+      message: `✅ Recette fonctionnelle SAP validée avec succès par ${currentUser?.name || "la consultante"}. La solution a été testée et certifiée conforme aux spécifications métier. Le ticket est désormais transmis à Aliko Getheme pour clôture définitive.`,
+      timestamp: `Aujourd'hui à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`,
+      isConsultantReply: true
+    };
+
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === ticketId
+          ? {
+              ...t,
+              consultantReviewStatus: "APPROVED",
+              consultantReviewDate: approvalDate,
+              messages: [...(t.messages || []), autoMessage]
+            }
+          : t
+      )
+    );
+
+    pushInAppNotification({
+      title: `✅ Recette Approuvée par la Consultante (${target.reference})`,
+      message: `${currentUser?.name || "Mélissa Diakité"} a testé et approuvé la conformité de « ${target.title} ». Aliko Getheme est désormais habilité à prononcer la clôture définitive.`,
+      category: "DELIVERY",
+      targetRoles: ["HEAD", "DEVELOPER"],
+      ticketId: target.id,
+      ticketReference: target.reference,
+      actorName: currentUser?.name || "Mélissa Diakité"
+    });
+
+    showToast("✅ Recette approuvée ! Ticket transmis à Aliko Getheme pour validation de clôture.");
+  };
+
+  // Action Consultante : Rejeter la recette & Renvoyer en développement avec motif d'anomalie
+  const handleRejectTicketByConsultant = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingTicket) return;
+
+    const reason = rejectionReasonText.trim();
+    if (!reason) {
+      showToast("Le motif de l'anomalie constatée lors du test est obligatoire.");
+      return;
+    }
+
+    const addHours = Number(rejectionAdditionalHours) || 8;
+    const targetId = rejectingTicket.id;
+    const targetRef = rejectingTicket.reference;
+    const targetTitle = rejectingTicket.title;
+
+    const autoMessage: TicketMessage = {
+      id: `msg-${Date.now()}`,
+      authorName: currentUser?.name || "Mélissa Diakité",
+      authorRole: "CONSULTANT",
+      authorEmail: currentUser?.email || "melissa.diakite@safirconsulting.net",
+      message: `❌ Recette non conforme — Renvoyé en développement par ${currentUser?.name || "la consultante"} :\n« ${reason} »\nCharge complémentaire estimée : ${addHours} h.`,
+      timestamp: `Aujourd'hui à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`,
+      isBlockerQuestion: true
+    };
+
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === targetId
+          ? {
+              ...t,
+              status: "IN_PROGRESS",
+              remainingHours: addHours,
+              consultantReviewStatus: "REJECTED",
+              rejectionReason: reason,
+              messages: [...(t.messages || []), autoMessage]
+            }
+          : t
+      )
+    );
+
+    // Mettre à jour la capacité du développeur assigné
+    if (rejectingTicket.assignedDeveloper?.id) {
+      setDevelopers((prev) =>
+        prev.map((d) => {
+          if (d.id === rejectingTicket.assignedDeveloper?.id) {
+            const newRes = d.reservedHours + addHours;
+            return {
+              ...d,
+              reservedHours: newRes,
+              freeHours: Math.max(0, d.freeHours - addHours),
+              loadPercentage: Math.min(100, Math.round((newRes / d.netWeeklyHours) * 100))
+            };
+          }
+          return d;
+        })
+      );
+    }
+
+    pushInAppNotification({
+      title: `🚨 Recette rejetée sur ${targetRef} — Renvoyé aux Développeurs`,
+      message: `${currentUser?.name || "Mélissa Diakité"} a rejeté la recette : « ${reason} ». Le ticket a été renvoyé en cours de développement avec ${addHours}h de reprise.`,
+      category: "DELIVERY",
+      targetRoles: ["HEAD", "DEVELOPER"],
+      ticketId: targetId,
+      ticketReference: targetRef,
+      actorName: currentUser?.name || "Mélissa Diakité"
+    });
+
+    showToast(`Ticket ${targetRef} renvoyé en développement avec vos observations de recette`);
+    setRejectingTicket(null);
+    setRejectionReasonText("");
+    setRejectionAdditionalHours(8);
+  };
+
+  // Action Direction (Aliko HEAD) : Clôture définitive du ticket — EXCLUSIVEMENT après approbation par la consultante
   const handleCloseTicket = (ticketId: string) => {
     const target = tickets.find((t) => t.id === ticketId);
+    if (!target) return;
+
+    if (target.consultantReviewStatus !== "APPROVED") {
+      showToast("Clôture impossible : La consultante doit d'abord tester et approuver la recette de la solution.");
+      return;
+    }
+
     setTickets((prev) =>
       prev.map((t) =>
         t.id === ticketId
@@ -1222,17 +1363,17 @@ export default function TicketManagerPage() {
           : t
       )
     );
-    if (target) {
-      pushInAppNotification({
-        title: `✓ Clôture Définitive validée par Aliko (${target.reference})`,
-        message: `Aliko Getheme a validé et clôturé définitivement le ticket « ${target.title} ».`,
-        category: "CLOSURE",
-        targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
-        ticketId: target.id,
-        ticketReference: target.reference,
-        actorName: "Aliko Getheme"
-      });
-    }
+
+    pushInAppNotification({
+      title: `✓ Clôture Définitive validée par Aliko (${target.reference})`,
+      message: `Aliko Getheme a validé et clôturé définitivement le ticket « ${target.title} » suite à l'approbation de la recette par la consultante.`,
+      category: "CLOSURE",
+      targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
+      ticketId: target.id,
+      ticketReference: target.reference,
+      actorName: "Aliko Getheme"
+    });
+
     showToast("✓ Ticket validé et clôturé définitivement par Aliko — Statut : Réglé");
     setSupervisingTicket(null);
   };
@@ -1758,10 +1899,13 @@ export default function TicketManagerPage() {
   // Calcul de la progression visuelle du ticket jusqu'à résolution complète
   const getTicketProgress = (ticket: Ticket) => {
     if (ticket.status === "CLOSED") {
-      return { pct: 100, label: "✓ Réglé & Clôturé", barClass: "bg-emerald-600", badgeClass: "text-emerald-700 bg-emerald-50 border-emerald-300" };
+      return { pct: 100, label: "✓ Réglé & Clôturé (Aliko)", barClass: "bg-emerald-600", badgeClass: "text-emerald-700 bg-emerald-50 border-emerald-300" };
     }
     if (ticket.status === "DELIVERED") {
-      return { pct: 100, label: "📦 Livré (À valider)", barClass: "bg-teal-500", badgeClass: "text-teal-700 bg-teal-50 border-teal-300" };
+      if (ticket.consultantReviewStatus === "APPROVED") {
+        return { pct: 95, label: "✅ Recette Validée (Attente Clôture Aliko)", barClass: "bg-emerald-500", badgeClass: "text-emerald-800 bg-emerald-50 border-emerald-300" };
+      }
+      return { pct: 90, label: "🧪 Recette & Test Consultant en cours", barClass: "bg-teal-500", badgeClass: "text-teal-800 bg-teal-50 border-teal-300 animate-pulse" };
     }
     if (ticket.status === "BLOCKED") {
       const est = ticket.estimatedHours || 1;
@@ -1771,6 +1915,9 @@ export default function TicketManagerPage() {
       return { pct, label: `🚨 Bloqué (${pct}%)`, barClass: "bg-rose-500", badgeClass: "text-rose-700 bg-rose-50 border-rose-300" };
     }
     if (ticket.status === "IN_PROGRESS") {
+      if (ticket.consultantReviewStatus === "REJECTED") {
+        return { pct: 60, label: "🔄 En correction (Anomalie Recette)", barClass: "bg-amber-500", badgeClass: "text-amber-800 bg-amber-50 border-amber-300" };
+      }
       const est = ticket.estimatedHours || 1;
       const rem = ticket.remainingHours !== undefined ? ticket.remainingHours : est;
       const done = Math.max(0, Math.min(est, est - rem));
@@ -1781,13 +1928,16 @@ export default function TicketManagerPage() {
       return { pct: 10, label: "Affecté (Démarrage)", barClass: "bg-blue-400", badgeClass: "text-blue-700 bg-blue-50 border-blue-200" };
     }
     if (ticket.status === "QUALIFIED") {
-      return { pct: 5, label: "Qualifié", barClass: "bg-slate-300", badgeClass: "text-slate-600 bg-slate-100 border-slate-200" };
+      return { pct: 5, label: "Qualifié par Aliko", barClass: "bg-slate-300", badgeClass: "text-slate-600 bg-slate-100 border-slate-200" };
     }
-    return { pct: 0, label: "Reçu", barClass: "bg-slate-200", badgeClass: "text-slate-500 bg-slate-50 border-slate-200" };
+    return { pct: 0, label: "Reçu au Guichet", barClass: "bg-slate-200", badgeClass: "text-slate-500 bg-slate-50 border-slate-200" };
   };
 
   // Helpers de rendu des statuts
-  const renderStatusBadge = (status: Ticket["status"]) => {
+  const renderStatusBadge = (ticketOrStatus: Ticket | Ticket["status"]) => {
+    const status = typeof ticketOrStatus === "string" ? ticketOrStatus : ticketOrStatus.status;
+    const reviewStatus = typeof ticketOrStatus === "object" ? ticketOrStatus.consultantReviewStatus : undefined;
+
     switch (status) {
       case "RECEIVED":
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 border border-slate-300">Reçu</span>;
@@ -1796,11 +1946,17 @@ export default function TicketManagerPage() {
       case "ASSIGNED":
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-800 border border-blue-300">Affecté</span>;
       case "IN_PROGRESS":
+        if (reviewStatus === "REJECTED") {
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">🔄 Reprise Dev (Rejet Recette)</span>;
+        }
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-300">En cours</span>;
       case "BLOCKED":
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-300 animate-pulse">🚨 Bloqué</span>;
       case "DELIVERED":
-        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-300">📦 Livré (Recette)</span>;
+        if (reviewStatus === "APPROVED") {
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">✅ Recette Validée</span>;
+        }
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-300 animate-pulse">📦 Livré (À tester)</span>;
       case "CLOSED":
         return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-400">✓ Réglé & Clôturé</span>;
       default:
@@ -2498,6 +2654,25 @@ export default function TicketManagerPage() {
                             </div>
                           )}
 
+                          {/* Alerte si le ticket a été renvoyé en développement suite à anomalie de recette */}
+                          {ticket.status === "IN_PROGRESS" && ticket.rejectionReason && (
+                            <div className="p-2.5 rounded bg-amber-50 border border-amber-300 text-xs text-amber-950 flex items-start gap-2 shadow-xs">
+                              <RotateCcw className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                              <div className="space-y-0.5">
+                                <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                                  <span>Reprise demandée suite à Recette Consultante</span>
+                                  <span className="px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 text-[10px] font-mono">
+                                    ANOMALIE SIGNALÉE
+                                  </span>
+                                </div>
+                                <div className="text-amber-800 leading-relaxed">
+                                  <strong>Observation {ticket.applicantName?.split(" ")[0] || "Consultant"} : </strong>
+                                  <span>{ticket.rejectionReason}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           <div className="text-xs text-slate-500 flex items-center gap-4 pt-1 flex-wrap">
                             <span>Demandeur : <strong className="text-slate-700">{ticket.applicantName}</strong></span>
                             <span>Client : <strong className="text-slate-700">{ticket.clientCompany}</strong></span>
@@ -2726,6 +2901,69 @@ export default function TicketManagerPage() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Étape Clé : Espace Recette & Test Utilisateur pour la Consultante */}
+                        {ticket.status === "DELIVERED" && ticket.consultantReviewStatus !== "APPROVED" && (
+                          <div className="p-3.5 bg-gradient-to-r from-amber-50 via-emerald-50 to-sky-50 rounded-xl border border-amber-300 space-y-2 shadow-xs">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                                <FlaskConical className="w-4 h-4 text-amber-700" />
+                                <span>Solution Livrée par l'Équipe Dév — Recette Fonctionnelle SAP Requise</span>
+                              </span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-200 text-amber-950 font-bold uppercase tracking-wider">
+                                Phase de Test
+                              </span>
+                            </div>
+                            <p className="text-xs text-amber-900 leading-relaxed">
+                              Le développement technique est terminé. Veuillez tester la solution selon vos spécifications métier. Vous seule pouvez valider la recette ou renvoyer le ticket aux développeurs avec vos remarques.
+                            </p>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              <button
+                                onClick={() => handleApproveTicketByConsultant(ticket.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Tester & Approuver la Recette (Solution Conforme)</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setRejectingTicket(ticket);
+                                  setRejectionReasonText("");
+                                  setRejectionAdditionalHours(4);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>Renvoyer en Correction chez les Dév (Problème / Anomalie)</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {ticket.status === "DELIVERED" && ticket.consultantReviewStatus === "APPROVED" && (
+                          <div className="p-3 bg-emerald-50/90 rounded-xl border border-emerald-300 text-xs text-emerald-950 flex items-center justify-between flex-wrap gap-2 shadow-xs">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <div>
+                                <span className="font-bold">Recette testée & validée avec succès par vos soins. </span>
+                                <span className="text-emerald-800">Le ticket est transmis à Aliko Getheme pour clôture définitive.</span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-200 text-emerald-950 shrink-0 uppercase">
+                              Attente Clôture Direction
+                            </span>
+                          </div>
+                        )}
+
+                        {ticket.status === "IN_PROGRESS" && ticket.consultantReviewStatus === "REJECTED" && (
+                          <div className="p-3 bg-amber-50 rounded-xl border border-amber-300 text-xs text-amber-950 flex items-start gap-2 shadow-xs">
+                            <RotateCcw className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-bold">Ticket renvoyé aux développeurs suite à votre test. </span>
+                              <span className="text-amber-800">Anomalie signalée : « {ticket.rejectionReason} ». Les développeurs sont notifiés.</span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Dernier échange si messages existants */}
                         {ticket.messages && ticket.messages.length > 0 && (
@@ -3614,6 +3852,90 @@ export default function TicketManagerPage() {
                   className="px-4 py-1.5 text-xs font-medium text-white bg-rose-700 hover:bg-rose-800 rounded-lg shadow-sm"
                 >
                   Déclarer le blocage
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* MODALE 2-BIS : REJET DE RECETTE PAR LA CONSULTANTE & RENVOI EN DÉV */}
+      {/* ================================================================= */}
+      {rejectingTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-xl border border-rose-200 shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="p-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50 to-amber-50">
+              <div className="flex items-center gap-2">
+                <RotateCcw className="w-5 h-5 text-rose-700" />
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Renvoyer en Correction chez les Développeurs</h3>
+                  <p className="text-[11px] text-rose-800">Recette non conforme — Notification immédiate de l'équipe</p>
+                </div>
+              </div>
+              <button onClick={() => setRejectingTicket(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRejectTicketByConsultant} className="p-5 space-y-4">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
+                <div>
+                  <span className="font-semibold text-slate-500">Ticket testé : </span>
+                  <span className="font-mono font-bold text-slate-900">{rejectingTicket.reference}</span> — {rejectingTicket.title}
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-500">Développeur dédié : </span>
+                  <strong className="text-slate-900">{rejectingTicket.assignedDeveloper?.name || "Équipe de développement"}</strong>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Motif du problème / Anomalie constatée lors de votre test *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Décrivez précisément l'erreur, le cas de test en échec ou le comportement inattendu (ex : Le calcul de TVA sur la facture d'acompte ne prend pas en compte le taux réduit à 5.5% sous SAP B1)..."
+                  value={rejectionReasonText}
+                  onChange={(e) => setRejectionReasonText(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Ce message sera consigné dans le fil d'échange officiel du ticket et transmis au développeur.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Charge complémentaire estimée pour la reprise (heures) :
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={40}
+                  value={rejectionAdditionalHours}
+                  onChange={(e) => setRejectionAdditionalHours(Number(e.target.value))}
+                  className="w-32 text-xs px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+                <span className="text-[11px] text-slate-500 ml-2">heures rajoutées au Reste À Faire (RAF) du développeur</span>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectingTicket(null)}
+                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-800 bg-slate-100 rounded-lg cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-rose-700 hover:bg-rose-800 rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Confirmer le Renvoi en Correction</span>
                 </button>
               </div>
             </form>
@@ -4883,6 +5205,41 @@ export default function TicketManagerPage() {
               </div>
             </div>
 
+            {/* Statut Recette & Condition de Clôture pour Aliko */}
+            {supervisingTicket.status === "DELIVERED" && (
+              <div className="px-5 py-3 border-t border-slate-200 bg-white">
+                {supervisingTicket.consultantReviewStatus === "APPROVED" ? (
+                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-300 text-xs text-emerald-950 flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <div>
+                        <span className="font-bold">Recette approuvée par la consultante ({supervisingTicket.applicantName || "Mélissa Diakité"}). </span>
+                        <span className="text-emerald-800">Toutes les conditions contractuelles sont remplies pour la clôture définitive.</span>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-emerald-200 text-emerald-950 font-bold font-mono text-[10px] uppercase shrink-0">
+                      Prêt pour Clôture
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-300 text-xs text-amber-950 flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-amber-700 shrink-0" />
+                      <div>
+                        <span className="font-bold">Clôture souveraine verrouillée : </span>
+                        <span className="text-amber-800">
+                          La consultante ({supervisingTicket.applicantName || "Mélissa Diakité"}) doit d'abord tester la solution livrée et certifier la conformité de la recette.
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-950 font-bold font-mono text-[10px] uppercase shrink-0">
+                      En Attente Test
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Pied de Modale : Arbitrages et Clôture Définitive par Aliko (HEAD) */}
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
               <div className="text-xs text-slate-500">
@@ -4918,21 +5275,34 @@ export default function TicketManagerPage() {
                       {supervisingTicket.assignedDeveloper ? "Réaffecter" : "Affecter"}
                     </button>
 
-                    <button
-                      onClick={() => handleCloseTicket(supervisingTicket.id)}
-                      className={`px-4 py-1.5 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 text-white transition-all cursor-pointer ${
-                        supervisingTicket.status === "DELIVERED"
-                          ? "bg-emerald-700 hover:bg-emerald-800 ring-2 ring-emerald-400"
-                          : "bg-slate-800 hover:bg-slate-900"
-                      }`}
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>
-                        {supervisingTicket.status === "DELIVERED"
-                          ? "Valider la Clôture Définitive (Ticket Réglé)"
-                          : "Clôturer le Ticket (Réglé)"}
-                      </span>
-                    </button>
+                    {supervisingTicket.status === "DELIVERED" ? (
+                      supervisingTicket.consultantReviewStatus === "APPROVED" ? (
+                        <button
+                          onClick={() => handleCloseTicket(supervisingTicket.id)}
+                          className="px-4 py-1.5 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 text-white bg-emerald-700 hover:bg-emerald-800 ring-2 ring-emerald-400 transition-all cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Valider la Clôture Définitive (Recette Approuvée)</span>
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="px-4 py-1.5 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 text-slate-400 bg-slate-200 border border-slate-300 cursor-not-allowed opacity-80"
+                          title="La consultante doit d'abord tester et approuver la recette de la solution livrée."
+                        >
+                          <Lock className="w-4 h-4 text-slate-400" />
+                          <span>Clôture en attente de Recette Consultante</span>
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        onClick={() => handleCloseTicket(supervisingTicket.id)}
+                        className="px-4 py-1.5 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 text-white bg-slate-800 hover:bg-slate-900 transition-all cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Clôturer le Ticket (Réglé)</span>
+                      </button>
+                    )}
                   </>
                 )}
               </div>

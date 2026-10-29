@@ -229,13 +229,15 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByText("Étape 6")).toBeVisible();
     await expect(page.getByText("Suivi de Charge & Reste à Faire (RAF)")).toBeVisible();
 
-    // Aliko clôture le ticket (statut réglé)
+    // Vérifier la tentative de clôture sans recette préalable : doit être strictement bloquée
     const closeBtn = page.getByRole("button", { name: /Clôturer le Ticket \(Réglé\)|Valider la Clôture Définitive/i });
     await expect(closeBtn).toBeVisible();
     await closeBtn.click();
+    await expect(page.getByText(/La consultante doit d'abord tester et approuver la recette/i)).toBeVisible();
 
-    // Vérifier l'affichage du statut Réglé & Clôturé dans le tableau
-    await expect(page.locator("body")).toContainText("✓ Réglé & Clôturé");
+    // Fermer la modale de supervision
+    await page.getByRole("button", { name: /Fermer/i }).first().click();
+    await expect(page.getByText("Supervision Métier")).not.toBeVisible();
   });
 
   test("11. Espace Consultant : Visibilité sur le développeur assigné, progression en direct et fil de discussion direct Développeur <-> Consultant", async ({ page }) => {
@@ -445,5 +447,86 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByRole("button", { name: /Tableau de bord/i })).not.toBeVisible();
     await expect(page.getByRole("button", { name: /Mes Demandes Émises/i })).not.toBeVisible();
     await expect(page.getByRole("button", { name: /Mon Espace Développeur/i })).toBeVisible();
+  });
+
+  test("16. Cycle de Recette & Clôture : Suivi consultante -> Test & Rejet dév (anomalie) -> Correction dev -> Test & Approbation consultante -> Clôture exclusive Aliko", async ({ page }) => {
+    // 1. Développeur livre un ticket (Anoop livre TCK-SAP-001)
+    await page.goto("http://localhost:3000");
+    const anoopBtn = page.getByRole("button", { name: /Anoop Pandimukkula/i }).first();
+    await anoopBtn.click();
+    await expect(page.getByText(/Mon Espace Développeur/i)).toBeVisible();
+
+    // Cliquer sur 'Marquer comme Livré' pour TCK-SAP-001
+    const deliverBtn = page.getByRole("button", { name: /Marquer comme Livré/i }).first();
+    await deliverBtn.click();
+    await expect(page.getByText(/Livré \(À tester\)/i).first()).toBeVisible();
+
+    // 2. Déconnexion et Connexion Consultante (Mélissa Diakité)
+    await page.getByRole("button", { name: /Déconnexion/i }).click();
+    const melissaBtn = page.getByRole("button", { name: /Mélissa Diakité/i }).first();
+    await melissaBtn.click();
+    await expect(page.getByText(/Espace Consulting SAP — Mélissa Diakité/i)).toBeVisible();
+
+    // Vérifier la présence de l'espace de recette sur le ticket livré
+    await expect(page.getByText(/Solution Livrée par l'Équipe Dév — Recette Fonctionnelle SAP Requise/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Tester & Approuver la Recette/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Renvoyer en Correction chez les Dév/i })).toBeVisible();
+
+    // 3. Option A : Rejet suite à anomalie constatée lors du test
+    await page.getByRole("button", { name: /Renvoyer en Correction chez les Dév/i }).click();
+    await expect(page.getByText(/Renvoyer en Correction chez les Développeurs/i)).toBeVisible();
+
+    // Remplir le motif d'anomalie
+    const reasonTextarea = page.getByPlaceholder(/Décrivez précisément l'erreur/i);
+    await reasonTextarea.fill("Anomalie constatée : Le calcul de remise sur facture ne s'applique pas correctement sous SAP B1.");
+    await page.getByRole("button", { name: /Confirmer le Renvoi en Correction/i }).click();
+
+    // Vérifier la confirmation et le bandeau de renvoi en développement
+    await expect(page.getByText(/Ticket renvoyé aux développeurs suite à votre test/i)).toBeVisible();
+
+    // 4. Déconnexion et vérification côté Développeur (Anoop)
+    await page.getByRole("button", { name: /Déconnexion/i }).click();
+    await page.getByRole("button", { name: /Anoop Pandimukkula/i }).first().click();
+
+    // Le développeur voit l'alerte d'anomalie de recette
+    await expect(page.getByText(/Reprise demandée suite à Recette Consultante/i)).toBeVisible();
+    await expect(page.getByText(/Anomalie constatée : Le calcul de remise sur facture ne s'applique pas correctement sous SAP B1/i)).toBeVisible();
+
+    // Le développeur effectue la correction et relivre le ticket
+    const redeliverBtn = page.getByRole("button", { name: /Marquer comme Livré/i }).first();
+    await redeliverBtn.click();
+    await expect(page.getByText(/Livré \(À tester\)/i).first()).toBeVisible();
+
+    // 5. Déconnexion et Reconnexion Consultante (Mélissa) pour Approbation
+    await page.getByRole("button", { name: /Déconnexion/i }).click();
+    await page.getByRole("button", { name: /Mélissa Diakité/i }).first().click();
+
+    // La consultante valide la recette avec succès
+    const approveBtn = page.getByRole("button", { name: /Tester & Approuver la Recette/i });
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+
+    // Vérifier que le statut passe à "Recette testée & validée avec succès"
+    await expect(page.getByText(/Recette testée & validée avec succès par vos soins/i)).toBeVisible();
+    await expect(page.getByText(/Attente Clôture Direction/i)).toBeVisible();
+
+    // 6. Déconnexion et Connexion Direction (Aliko) pour Clôture Définitive
+    await page.getByRole("button", { name: /Déconnexion/i }).click();
+    await page.getByRole("button", { name: /Aliko Getheme/i }).first().click();
+    await expect(page.getByRole("button", { name: /Tableau de bord/i })).toBeVisible();
+
+    // Aliko ouvre le ticket dans Tous les Tickets SAP
+    await page.getByRole("button", { name: /Tous les Tickets SAP/i }).click();
+    const superviseBtn = page.getByRole("button", { name: /Suivre/i }).first();
+    await superviseBtn.click();
+
+    // Vérifier que la modale indique que la recette est validée
+    await expect(page.getByText(/Recette approuvée par la consultante/i)).toBeVisible();
+    const closeBtn = page.getByRole("button", { name: /Valider la Clôture Définitive \(Recette Approuvée\)/i });
+    await expect(closeBtn).toBeEnabled();
+
+    // Aliko prononce la clôture définitive
+    await closeBtn.click();
+    await expect(page.getByText(/Réglé & Clôturé/i).first()).toBeVisible();
   });
 });

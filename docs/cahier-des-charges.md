@@ -510,9 +510,12 @@ stateDiagram-v2
 Règles :
 
 - Définir les **transitions autorisées**, les **conditions de passage** et les **rôles habilités**.
-- Un ticket **ne peut pas passer à `READY`** sans description suffisante et critères d'acceptation lorsque ceux-ci sont nécessaires.
-- Un ticket livré **peut nécessiter une validation** avant clôture.
-- Une **réouverture conserve l'historique** précédent.
+- Un ticket **ne peut pas passer à `READY`** sans description détaillée obligatoire et critères d'acceptation complets.
+- **Recette Fonctionnelle par la Consultante (`DELIVERED`)** : La consultante demanderesse suit l'avancement en temps réel (développeur dédié, %, RAF). Dès livraison (`DELIVERED`), elle effectue les tests de conformité :
+  - **Approbation de la recette** : `consultantReviewStatus: APPROVED` (certifie la solution conforme et transmet à Aliko).
+  - **Rejet de la recette** : renvoi en développement (`IN_PROGRESS`) avec **motif d'anomalie obligatoire** et heures complémentaires allouées au RAF du développeur.
+- **Clôture Souveraine Définitive par Aliko (`CLOSED`)** : Aliko Getheme (`HEAD`) est le seul habilité à prononcer la clôture définitive, **strictement et exclusivement conditionnée à l'approbation préalable de la recette par la consultante**.
+- Une **réouverture conserve l'historique** et les échanges précédents.
 
 > Le diagramme ci-dessus est une **proposition initiale** ; la matrice définitive des transitions et des rôles sera validée en phase 1.
 
