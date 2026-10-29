@@ -368,6 +368,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 | **Suivi Transparent de ses Demandes Émises** | ✅ | ❌ | ✅ | ✅ |
 | **Formulaire de Soumission Directe de Nouveau Besoin** | ✅ | ❌ | ✅ | ✅ |
 | **Définition & Chiffrage de l'Estimation du Temps (Charge en Heures)** | ✅ (Prérogative exclusive) | ❌ | ❌ (Non habilité) | ❌ |
+| **Estimation Financière (Prix) & Devise du Contrat (XOF, EUR, USD)** | ✅ (Décision exclusive Aliko) | ❌ | ❌ (Champs retirés) | ❌ |
 | **Intégration d'un Nouveau Développeur (Onboarding Équipe)** | ✅ | ❌ | ❌ | ✅ |
 | **Création de Profils Consultants & Attribution des Logins** | ✅ | ❌ | ❌ | ✅ |
 | **Validation Clôture Définitive (`CLOSED`)** | ✅ | ❌ | ❌ | ❌ |
@@ -402,7 +403,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
    - **Dialogue direct Développeur ↔ Consultante** : fil de discussion contextuel horodaté permettant de répondre aux questions du développeur et de débloquer le ticket en un clic sans goulot d'étranglement.
    - **Soumission directe de besoin SAP** : formulaire dédié pour soumettre directement un nouveau besoin dans le système :
      - **Description détaillée obligatoire (`required`)** : garantit un niveau de détail fonctionnel complet dès la saisie (règles de gestion, flux SAP, critères d'acceptation).
-     - **Estimation réservée exclusivement à Aliko** : le consultant ne chiffre pas le temps de travail ; c'est Aliko Getheme (`HEAD`) qui évalue l'effort technique et fixe la charge estimée (en heures) lors de la qualification dans son Guichet Central ou lors de l'affectation.
+     - **Estimation de prix, temps et devise réservés exclusivement à Aliko** : le consultant ne définit ni le temps de travail, ni l'estimation financière du prix, ni la devise du contrat (champs retirés de son écran). C'est Aliko Getheme (`HEAD`) qui évalue l'effort technique, fixe la charge horaire, valide la valorisation financière et choisit la devise contractuelle lors de la qualification dans son Guichet Central ou lors de l'affectation.
 
 4. **Fil de Discussion Tracé & Collaboration Sans Goulot d'Étranglement** :
    - Le développeur peut poser une question au consultant et signaler le besoin comme bloquant (`status: BLOCKED`).

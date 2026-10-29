@@ -676,6 +676,7 @@ export default function TicketManagerPage() {
 
   const [assigningTicket, setAssigningTicket] = useState<Ticket | null>(null);
   const [assigningHours, setAssigningHours] = useState<number>(16);
+  const [assigningCurrency, setAssigningCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
   const [selectedDevId, setSelectedDevId] = useState("");
   // Affectation Multi-Développeurs par lot technique
   const [isMultiDevAssignment, setIsMultiDevAssignment] = useState(false);
@@ -740,10 +741,11 @@ export default function TicketManagerPage() {
     setNotifications((prev) => [item, ...prev]);
   };
 
-  // Helper pour ouvrir la modale d'affectation avec la charge estimée pré-renseignée
+  // Helper pour ouvrir la modale d'affectation avec la charge estimée et devise pré-renseignées
   const openAssignModal = (ticket: Ticket) => {
     setAssigningTicket(ticket);
     setAssigningHours(ticket.estimatedHours > 0 ? ticket.estimatedHours : 16);
+    setAssigningCurrency(ticket.currency || "XOF");
     setSelectedDevId(ticket.assignedDeveloper?.id || "");
   };
 
@@ -1529,6 +1531,7 @@ export default function TicketManagerPage() {
               status: "ASSIGNED",
               estimatedHours: totalEstHours,
               remainingHours: totalEstHours,
+              currency: assigningCurrency,
               assignedDeveloper: { id: dev.id, name: dev.name, email: dev.email },
               contributors: contributorsList
             }
@@ -3503,69 +3506,84 @@ export default function TicketManagerPage() {
                 </div>
               </div>
 
-              {/* Estimation de la charge : Définie exclusivement par Aliko (HEAD) */}
+              {/* Estimation de la charge & Devise : Définies exclusivement par Aliko (HEAD) */}
               {currentUser?.role === "HEAD" ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Estimation du temps de travail (heures) *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="200"
-                      required
-                      value={newHours}
-                      onChange={(e) => setNewHours(Number(e.target.value))}
-                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-mono"
-                    />
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Estimation du temps de travail (heures) *
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="200"
+                        required
+                        value={newHours}
+                        onChange={(e) => setNewHours(Number(e.target.value))}
+                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Demandeur</label>
+                      <input
+                        type="text"
+                        value={newApplicant}
+                        onChange={(e) => setNewApplicant(e.target.value)}
+                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client</label>
+                      <input
+                        type="text"
+                        value={newClient}
+                        onChange={(e) => setNewClient(e.target.value)}
+                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Devise du Contrat</label>
+                      <select
+                        value={newCurrency}
+                        onChange={(e) => setNewCurrency(e.target.value as "XOF" | "EUR" | "USD")}
+                        className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-medium"
+                      >
+                        <option value="XOF">FCFA (XOF)</option>
+                        <option value="EUR">Euro (€)</option>
+                        <option value="USD">Dollar ($)</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-950">
+                      <Clock className="w-3.5 h-3.5 text-purple-700" />
+                      <span>Chiffrage, estimation de prix et devise réservés à la Direction (Aliko Getheme)</span>
+                    </div>
+                    <p className="text-[11px] text-purple-900 leading-relaxed">
+                      En tant que consultante, vous décrivez le besoin fonctionnel et transmettez les spécifications SAP. Le temps de travail, l'estimation financière du prix et la devise du contrat sont définis et validés exclusivement par <strong>Aliko Getheme</strong>.
+                    </p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Demandeur</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client</label>
                     <input
                       type="text"
-                      value={newApplicant}
-                      onChange={(e) => setNewApplicant(e.target.value)}
+                      placeholder="ex : Safir Consulting, AgroTech, Omega Logistics..."
+                      value={newClient}
+                      onChange={(e) => setNewClient(e.target.value)}
                       className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
                     />
                   </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-950">
-                    <Clock className="w-3.5 h-3.5 text-purple-700" />
-                    <span>Estimation de la charge réservée à Aliko Getheme (Direction BU SME)</span>
-                  </div>
-                  <p className="text-[11px] text-purple-900 leading-relaxed">
-                    En tant que consultante, vous renseignez la description détaillée et les pièces jointes du besoin SAP. L'estimation du temps de travail est fixée et validée par <strong>Aliko Getheme</strong> lors de la qualification.
-                  </p>
-                </div>
+                </>
               )}
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client</label>
-                  <input
-                    type="text"
-                    value={newClient}
-                    onChange={(e) => setNewClient(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Devise du Contrat</label>
-                  <select
-                    value={newCurrency}
-                    onChange={(e) => setNewCurrency(e.target.value as "XOF" | "EUR" | "USD")}
-                    className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-medium"
-                  >
-                    <option value="XOF">FCFA (XOF)</option>
-                    <option value="EUR">Euro (€)</option>
-                    <option value="USD">Dollar ($)</option>
-                  </select>
-                </div>
-              </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -3678,6 +3696,32 @@ export default function TicketManagerPage() {
                     </p>
                   </div>
                 )}
+
+                {/* Devise du contrat et Estimation de prix (Prérogative exclusive d'Aliko) */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Devise contractuelle (Décision Aliko)
+                    </label>
+                    <select
+                      value={assigningCurrency}
+                      onChange={(e) => setAssigningCurrency(e.target.value as "XOF" | "EUR" | "USD")}
+                      className="w-full text-xs p-1.5 border border-slate-300 rounded-lg bg-white"
+                    >
+                      <option value="XOF">FCFA (XOF)</option>
+                      <option value="EUR">Euro (€)</option>
+                      <option value="USD">Dollar ($)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Valorisation financière estimée
+                    </label>
+                    <div className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-200">
+                      {((isMultiDevAssignment && coDevId ? Number(leadHours) + Number(coDevHours) : Number(assigningHours) || 16) * (assigningCurrency === "XOF" ? 45000 : assigningCurrency === "EUR" ? 70 : 75)).toLocaleString("fr-FR")} {assigningCurrency === "XOF" ? "FCFA" : assigningCurrency === "EUR" ? "€" : "$"}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div>
