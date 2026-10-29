@@ -106,6 +106,15 @@ Les demandes traitées par la SME Business Unit sont catégorisées avec une num
 4. **Sélecteur Dynamique & Fiches Tickets** :
    - Un sélecteur de devise interactif en en-tête permet à la direction d'adapter l'affichage, et chaque formulaire de ticket permet d'affecter la devise propre au contrat client.
 
+### 3.2. Extensibilité Dynamique des Types de Besoins & Référentiel Clients par Aliko (HEAD)
+
+1. **Création & Suppression des Types de Besoins SAP** :
+   - **Aliko Getheme (`HEAD`)** peut ajouter en direct un nouveau type de besoin (ex. *Migration B1 v10, Audit Performance HANA, Passerelle WMS*) ou supprimer un type obsolète directement depuis le formulaire de création de ticket.
+2. **Référentiel Déroulant des Entreprises & Nouveaux Clients** :
+   - Le champ Entreprise ou Nouveau Client est structuré sous forme de liste déroulante normalisée (`<select>`).
+   - Aliko dispose des droits exclusifs pour créer instantanément une nouvelle entreprise cliente ou supprimer une entreprise de la liste.
+   - Les consultants fonctionnels choisissent leur client parmi ce référentiel certifié par Aliko, garantissant l'intégrité des données sans pollution de la base.
+
 ---
 
 ## 4. GUICHET CENTRAL DE QUALIFICATION & FLUX 100% IN-APP ORCHESTRÉ PAR ALIKO
@@ -369,6 +378,7 @@ L'application intègre un contrôle d'accès fondé sur les rôles (RBAC) garant
 | **Formulaire de Soumission Directe de Nouveau Besoin** | ✅ | ❌ | ✅ | ✅ |
 | **Définition & Chiffrage de l'Estimation du Temps (Charge en Heures)** | ✅ (Prérogative exclusive) | ❌ | ❌ (Non habilité) | ❌ |
 | **Estimation Financière (Prix) & Devise du Contrat (XOF, EUR, USD)** | ✅ (Décision exclusive Aliko) | ❌ | ❌ (Champs retirés) | ❌ |
+| **Création & Suppression de Types de Besoins et d'Entreprises / Clients** | ✅ (Prérogative exclusive Aliko) | ❌ | ❌ | ❌ |
 | **Intégration d'un Nouveau Développeur (Onboarding Équipe)** | ✅ | ❌ | ❌ | ✅ |
 | **Création de Profils Consultants & Attribution des Logins** | ✅ | ❌ | ❌ | ✅ |
 | **Validation Clôture Définitive (`CLOSED`)** | ✅ | ❌ | ❌ | ❌ |

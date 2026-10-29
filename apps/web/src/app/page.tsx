@@ -41,7 +41,8 @@ import {
   Bell,
   FileSpreadsheet,
   Printer,
-  ShieldCheck
+  ShieldCheck,
+  Trash2
 } from "lucide-react";
 
 const API_BASE = "/api/v1";
@@ -145,6 +146,31 @@ const SAP_ATTACHMENT_TEMPLATES: { label: string; fileName: string; fileSize: str
   { label: "📊 Extrait Écritures & Paramétrage (.xlsx)", fileName: "Extrait_Ecritures_Comptables_Client_SAP.xlsx", fileSize: "315 Ko", fileType: "XLSX" },
   { label: "🗄️ Script / Trace SQL HANA (.sql)", fileName: "Vue_Calcul_SQLScript_HANA_Trace.sql", fileSize: "48 Ko", fileType: "SQL" },
   { label: "🖼️ Capture d'Écran Anomalie SAP (.png)", fileName: "Capture_Erreur_ServiceLayer_SAP_B1.png", fileSize: "1.2 Mo", fileType: "PNG" }
+];
+
+export interface TicketTypeOption {
+  value: string;
+  label: string;
+}
+
+const INITIAL_TICKET_TYPES: TicketTypeOption[] = [
+  { value: "ADDON", label: "Addon SAP Business One" },
+  { value: "GATEWAY", label: "Passerelle Service Layer" },
+  { value: "S4HANA", label: "Évolution S/4HANA (ABAP/CDS)" },
+  { value: "REPORT", label: "Reporting SAP HANA" },
+  { value: "SUPPORT", label: "Support / Correctif" },
+  { value: "INTEGRATION", label: "Intégration API & Connecteur" },
+  { value: "MAINTENANCE", label: "Maintenance Technique & Patch" }
+];
+
+const INITIAL_CLIENTS: string[] = [
+  "Safir Consulting",
+  "Omega Distribution",
+  "Société Nouvelle Industrie",
+  "AgroTech Côte d'Ivoire",
+  "Client Alpha",
+  "Sénégal Logistique SA",
+  "Banque Régionale Ouest-Africaine"
 ];
 
 interface InboxEmail {
@@ -666,10 +692,21 @@ export default function TicketManagerPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
+
+  // Gestion dynamique des types de besoins SAP (Aliko HEAD)
+  const [ticketTypes, setTicketTypes] = useState<TicketTypeOption[]>(INITIAL_TICKET_TYPES);
+  const [showAddTypeInline, setShowAddTypeInline] = useState(false);
+  const [customTypeLabel, setCustomTypeLabel] = useState("");
+
+  // Gestion dynamique des entreprises et clients (Aliko HEAD)
+  const [clientsList, setClientsList] = useState<string[]>(INITIAL_CLIENTS);
+  const [showAddClientInline, setShowAddClientInline] = useState(false);
+  const [customClientName, setCustomClientName] = useState("");
+
   const [newType, setNewType] = useState("ADDON");
   const [newPriority, setNewPriority] = useState("HIGH");
   const [newHours, setNewHours] = useState(16);
-  const [newClient, setNewClient] = useState("");
+  const [newClient, setNewClient] = useState("Safir Consulting");
   const [newApplicant, setNewApplicant] = useState("");
   const [newCurrency, setNewCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
   const [activeCurrency, setActiveCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
@@ -747,6 +784,72 @@ export default function TicketManagerPage() {
     setAssigningHours(ticket.estimatedHours > 0 ? ticket.estimatedHours : 16);
     setAssigningCurrency(ticket.currency || "XOF");
     setSelectedDevId(ticket.assignedDeveloper?.id || "");
+  };
+
+  // Création dynamique d'un nouveau type de besoin SAP (Aliko HEAD)
+  const handleAddTicketType = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const label = customTypeLabel.trim();
+    if (!label) return;
+    const value = label.toUpperCase().replace(/[^A-Z0-9]/g, "_").slice(0, 15) || `TYPE_${Date.now()}`;
+    if (ticketTypes.some((t) => t.value === value || t.label.toLowerCase() === label.toLowerCase())) {
+      showToast(`Le type « ${label} » existe déjà`);
+      return;
+    }
+    const newTypeObj: TicketTypeOption = { value, label };
+    setTicketTypes((prev) => [...prev, newTypeObj]);
+    setNewType(value);
+    setCustomTypeLabel("");
+    setShowAddTypeInline(false);
+    showToast(`Nouveau type de besoin créé : « ${label} »`);
+  };
+
+  // Suppression d'un type de besoin SAP (Aliko HEAD)
+  const handleDeleteTicketType = (typeValueToDelete: string) => {
+    if (ticketTypes.length <= 1) {
+      showToast("Impossible de supprimer : au moins un type de besoin doit subsister.");
+      return;
+    }
+    const target = ticketTypes.find((t) => t.value === typeValueToDelete);
+    setTicketTypes((prev) => prev.filter((t) => t.value !== typeValueToDelete));
+    const remaining = ticketTypes.filter((t) => t.value !== typeValueToDelete);
+    if (newType === typeValueToDelete && remaining.length > 0) {
+      setNewType(remaining[0].value);
+    }
+    showToast(`Type de besoin « ${target?.label || typeValueToDelete} » supprimé`);
+  };
+
+  // Création dynamique d'une nouvelle entreprise / client (Aliko HEAD)
+  const handleAddClient = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const name = customClientName.trim();
+    if (!name) return;
+    if (clientsList.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      showToast(`L'entreprise « ${name} » existe déjà`);
+      setNewClient(name);
+      setShowAddClientInline(false);
+      setCustomClientName("");
+      return;
+    }
+    setClientsList((prev) => [...prev, name]);
+    setNewClient(name);
+    setCustomClientName("");
+    setShowAddClientInline(false);
+    showToast(`Nouvelle entreprise/client ajoutée : « ${name} »`);
+  };
+
+  // Suppression d'une entreprise / client de la liste (Aliko HEAD)
+  const handleDeleteClient = (clientToDelete: string) => {
+    if (clientsList.length <= 1) {
+      showToast("Impossible de supprimer : au moins un client doit subsister.");
+      return;
+    }
+    setClientsList((prev) => prev.filter((c) => c !== clientToDelete));
+    const remaining = clientsList.filter((c) => c !== clientToDelete);
+    if (newClient === clientToDelete && remaining.length > 0) {
+      setNewClient(remaining[0]);
+    }
+    showToast(`Client/Entreprise « ${clientToDelete} » supprimé de la liste`);
   };
 
   // Chargement synchronisé API
@@ -3475,34 +3578,89 @@ export default function TicketManagerPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Type de besoin SAP</label>
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value)}
-                    className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                  >
-                    <option value="ADDON">Addon SAP Business One</option>
-                    <option value="GATEWAY">Passerelle Service Layer</option>
-                    <option value="S4HANA">Évolution S/4HANA (ABAP/CDS)</option>
-                    <option value="REPORT">Reporting SAP HANA</option>
-                    <option value="SUPPORT">Support / Correctif</option>
-                  </select>
-                </div>
+              {/* Type de besoin SAP & Priorité (Gestion dynamique Aliko) */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Type de besoin SAP</label>
+                      {currentUser?.role === "HEAD" && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddTypeInline(!showAddTypeInline)}
+                            className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>+ Type</span>
+                          </button>
+                          {ticketTypes.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTicketType(newType)}
+                              title="Supprimer ce type de besoin"
+                              className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Suppr.</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Priorité</label>
-                  <select
-                    value={newPriority}
-                    onChange={(e) => setNewPriority(e.target.value)}
-                    className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                  >
-                    <option value="LOW">Basse</option>
-                    <option value="MEDIUM">Moyenne</option>
-                    <option value="HIGH">Haute</option>
-                    <option value="CRITICAL">Critique</option>
-                  </select>
+                    {showAddTypeInline && currentUser?.role === "HEAD" && (
+                      <div className="mb-2 p-2 bg-sky-50 rounded-lg border border-sky-200 flex gap-1.5 animate-in fade-in">
+                        <input
+                          type="text"
+                          placeholder="Nom du type (ex: Migration B1 v10)"
+                          value={customTypeLabel}
+                          onChange={(e) => setCustomTypeLabel(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1 border border-sky-300 rounded bg-white focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddTicketType()}
+                          className="px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
+                        >
+                          Ajouter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddTypeInline(false)}
+                          className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    <select
+                      value={newType}
+                      onChange={(e) => setNewType(e.target.value)}
+                      className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
+                    >
+                      {ticketTypes.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Priorité</label>
+                    <select
+                      value={newPriority}
+                      onChange={(e) => setNewPriority(e.target.value)}
+                      className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
+                    >
+                      <option value="LOW">Basse</option>
+                      <option value="MEDIUM">Moyenne</option>
+                      <option value="HIGH">Haute</option>
+                      <option value="CRITICAL">Critique</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -3536,22 +3694,81 @@ export default function TicketManagerPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client</label>
-                      <input
-                        type="text"
+                  {/* Entreprise ou Client : Liste déroulante avec création/suppression par Aliko */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-semibold text-slate-700">
+                          Entreprise / Nouveau Client
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddClientInline(!showAddClientInline)}
+                            className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>+ Client</span>
+                          </button>
+                          {clientsList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteClient(newClient)}
+                              title="Supprimer cette entreprise de la liste"
+                              className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Suppr.</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {showAddClientInline && (
+                        <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex gap-1.5 animate-in fade-in">
+                          <input
+                            type="text"
+                            placeholder="Nom de l'entreprise (ex: AgroTech CI)"
+                            value={customClientName}
+                            onChange={(e) => setCustomClientName(e.target.value)}
+                            className="w-full text-xs px-2.5 py-1 border border-emerald-300 rounded bg-white focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddClient()}
+                            className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
+                          >
+                            Ajouter
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddClientInline(false)}
+                            className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+
+                      <select
                         value={newClient}
                         onChange={(e) => setNewClient(e.target.value)}
-                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                      />
+                        className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
+                      >
+                        {clientsList.map((client) => (
+                          <option key={client} value={client}>
+                            {client}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Devise du Contrat</label>
                       <select
                         value={newCurrency}
                         onChange={(e) => setNewCurrency(e.target.value as "XOF" | "EUR" | "USD")}
-                        className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-medium"
+                        className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-medium bg-white"
                       >
                         <option value="XOF">FCFA (XOF)</option>
                         <option value="EUR">Euro (€)</option>
@@ -3574,13 +3791,17 @@ export default function TicketManagerPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client</label>
-                    <input
-                      type="text"
-                      placeholder="ex : Safir Consulting, AgroTech, Omega Logistics..."
+                    <select
                       value={newClient}
                       onChange={(e) => setNewClient(e.target.value)}
-                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                    />
+                      className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
+                    >
+                      {clientsList.map((client) => (
+                        <option key={client} value={client}>
+                          {client}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </>
               )}
