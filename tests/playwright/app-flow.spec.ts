@@ -559,11 +559,21 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     }
 
     // 3. Test du Chronomètre / Compteur de temps en direct (Règle mono-tâche stricte)
+    await expect(page.getByTestId("dev-timer-console")).toBeVisible();
+    await expect(page.getByTestId("dev-live-timer-display")).toHaveText("00:00:00");
+
     const startTimerBtn = page.getByRole("button", { name: /Démarrer chrono/i }).first();
     await startTimerBtn.click();
 
-    // Vérifier l'apparition du bandeau actif en temps réel
+    // Vérifier l'apparition du bandeau actif en temps réel et l'incrément réel des secondes
     await expect(page.getByText(/Compteur d'heures actif \(Règle mono-tâche\)/i)).toBeVisible();
+    await expect(page.getByTestId("dev-live-timer-display")).not.toHaveText("00:00:00", { timeout: 3000 });
+
+    // Tester la mise en pause et la reprise du chronomètre
+    await page.getByRole("button", { name: /^Pause$/i }).click();
+    await expect(page.getByTestId("dev-timer-console").getByText("EN PAUSE")).toBeVisible();
+    await page.getByRole("button", { name: /^Reprendre$/i }).click();
+
     await expect(page.getByRole("button", { name: /Arrêter & Enregistrer/i })).toBeVisible();
 
     // Arrêter le chrono et vérifier l'enregistrement
