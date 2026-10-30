@@ -5673,14 +5673,29 @@ export default function TicketManagerPage() {
       {showCreateModal && currentUser?.role !== "DEVELOPER" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="h-1 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] to-[#00B89C]" />
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-semibold text-slate-900 text-sm">Nouveau Ticket de Développement SAP</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600">
+              <div>
+                <h3 className="font-bold text-[#051638] text-sm">Nouveau Ticket de Développement SAP</h3>
+                <p className="text-[11px] text-[#5A7088]">
+                  Formulaire guidé • Les champs marqués d'un astérisque (<span className="text-rose-600 font-bold">*</span>) sont obligatoires
+                </p>
+              </div>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleCreateTicket} className="p-4 space-y-3.5">
+              {/* Bandeau d'aide au cadrage pour éviter les allers-retours de qualification */}
+              <div className="p-2.5 rounded-lg bg-blue-50/70 border border-blue-200 text-[11px] text-[#051638] flex items-start gap-2">
+                <Shield className="w-3.5 h-3.5 text-[#0062E6] shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-[#0052CC]">Guide de cadrage Guichet Central : </span>
+                  <span>Précisez l'objet SAP (ex: OPOR, OINV), le comportement attendu et joignez votre cahier des charges pour accélérer la qualification par Aliko.</span>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Titre de la demande *</label>
                 <input
