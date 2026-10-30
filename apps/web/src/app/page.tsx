@@ -3491,6 +3491,77 @@ export default function TicketManagerPage() {
               </div>
             </div>
 
+            {/* DASHBOARD DE CHARGE DÉVELOPPEUR (HEURES CONSOMMÉES VS ESTIMÉES — ANTI EFFET TUNNEL) */}
+            {(() => {
+              const totalEst = myAssignedTickets.reduce((acc, t) => acc + (t.estimatedHours || 0), 0);
+              const totalRaf = myAssignedTickets.reduce((acc, t) => acc + (t.remainingHours ?? t.estimatedHours ?? 0), 0);
+              const totalConsumed = Math.max(0, Math.round((totalEst - totalRaf) * 10) / 10);
+              const consumedPct = totalEst > 0 ? Math.min(100, Math.round((totalConsumed / totalEst) * 100)) : 0;
+              const criticalOrBlockedCount = myAssignedTickets.filter(
+                (t) => t.status === "BLOCKED" || t.priorityCode === "CRITICAL"
+              ).length;
+
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-[#0062E6] shadow-2xs">
+                    <div className="flex items-center justify-between text-[#5A7088] mb-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">
+                        {tr("Charge Consommée vs Estimée", "Consumed vs Estimated Load")}
+                      </span>
+                      <Clock className="w-4 h-4 text-[#0062E6]" />
+                    </div>
+                    <div className="text-xl font-bold text-[#051638] font-mono">
+                      {totalConsumed} h <span className="text-xs font-normal text-[#5A7088]">/ {totalEst} h ({consumedPct}%)</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                      <div className="h-full bg-[#0062E6] rounded-full transition-all" style={{ width: `${consumedPct}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-[#0D9488] shadow-2xs">
+                    <div className="flex items-center justify-between text-[#5A7088] mb-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">
+                        {tr("Reste à Faire (RAF Cumulé)", "Remaining Effort (Total RAF)")}
+                      </span>
+                      <Layers className="w-4 h-4 text-[#0D9488]" />
+                    </div>
+                    <div className="text-xl font-bold text-[#0D9488] font-mono">{totalRaf} h</div>
+                    <p className="text-[11px] text-[#5A7088] mt-1">
+                      {tr("Sur vos tickets actifs en portefeuille", "Across your active assigned tickets")}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-rose-500 shadow-2xs">
+                    <div className="flex items-center justify-between text-[#5A7088] mb-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">
+                        {tr("Urgences & Blocages", "Critical & Blocked")}
+                      </span>
+                      <AlertTriangle className="w-4 h-4 text-rose-600" />
+                    </div>
+                    <div className="text-xl font-bold text-rose-600 font-mono">{criticalOrBlockedCount}</div>
+                    <p className="text-[11px] text-[#5A7088] mt-1">
+                      {tr("Priorité critique ou Stop-the-line", "Critical priority or Stop-the-line")}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-emerald-500 shadow-2xs">
+                    <div className="flex items-center justify-between text-[#5A7088] mb-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">
+                        {tr("Prêts pour Recette / Livrés", "Ready for UAT / Delivered")}
+                      </span>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="text-xl font-bold text-emerald-700 font-mono">
+                      {myAssignedTickets.filter((t) => t.status === "DELIVERED" || t.status === "CLOSED").length}
+                    </div>
+                    <p className="text-[11px] text-[#5A7088] mt-1">
+                      {tr("Soumis à validation consultante", "Submitted for consultant UAT")}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* CONSOLE CHRONOMÈTRE EN TEMPS RÉEL (SESSION DE TRAVAIL MONO-TÂCHE TOUJOURS VISIBLE) */}
             {(() => {
               const activeT = activeTimerTicketId ? tickets.find((t) => t.id === activeTimerTicketId) : null;
@@ -3688,27 +3759,45 @@ export default function TicketManagerPage() {
                       (c) => c.id !== myContributorLot?.id
                     );
                     const isTimerRunningOnThisTicket = activeTimerTicketId === ticket.id;
+                    const devPriorityBorderClass =
+                      ticket.status === "BLOCKED" || ticket.priorityCode === "CRITICAL"
+                        ? "border-l-4 border-l-rose-600 bg-rose-50/20 hover:bg-rose-50/40"
+                        : ticket.priorityCode === "HIGH"
+                        ? "border-l-4 border-l-amber-500 hover:bg-slate-50/80"
+                        : isTimerRunningOnThisTicket
+                        ? "border-l-4 border-l-[#00B89C] bg-teal-50/20"
+                        : "border-l-4 border-l-[#0062E6] hover:bg-slate-50/80";
 
                     return (
-                      <div key={ticket.id} className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div key={ticket.id} className={`p-4 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${devPriorityBorderClass}`}>
                         <div className="space-y-2 flex-1 max-w-2xl">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono font-bold text-slate-900 text-sm">{ticket.reference}</span>
-                            <span className="px-2 py-0.5 rounded text-xs font-mono bg-slate-100 text-slate-700">
+                            <span className="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-slate-100 text-slate-800 border border-slate-200">
                               {ticket.typeCode}
                             </span>
                             {renderStatusBadge(ticket.status)}
+                            {ticket.priorityCode === "CRITICAL" && (
+                              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-950 border border-rose-400">
+                                🚨 PRIORITÉ CRITIQUE
+                              </span>
+                            )}
+                            {ticket.priorityCode === "HIGH" && (
+                              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-950 border border-amber-400">
+                                ⚡ HAUTE PRIORITÉ
+                              </span>
+                            )}
                             {ticket.contributors && ticket.contributors.length > 1 && (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-100 text-indigo-950 border border-indigo-300">
                                 👥 Multi-Développeurs ({ticket.contributors.length} lots)
                               </span>
                             )}
                             {isTimerRunningOnThisTicket && (
                               <span
                                 data-no-i18n="true"
-                                className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse flex items-center gap-1"
+                                className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-950 border border-emerald-400 animate-pulse flex items-center gap-1"
                               >
-                                <Timer className="w-3 h-3 text-emerald-600" />
+                                <Timer className="w-3 h-3 text-emerald-700" />
                                 <span>COMPTEUR EN COURS ({formatTimer(activeTimerSeconds)})</span>
                               </span>
                             )}
@@ -3909,6 +3998,74 @@ export default function TicketManagerPage() {
               </button>
             </div>
 
+            {/* DASHBOARD DE SUIVI CONSULTANTE (VISIBILITÉ GUICHET CENTRAL, AVANCEMENT & RECETTE) */}
+            {(() => {
+              const awaitingQualification = myConsultantDemands.filter((t) => t.estimatedHours === 0 && !t.assignedDeveloper).length;
+              const inDevCount = myConsultantDemands.filter((t) => t.status === "ASSIGNED" || t.status === "IN_PROGRESS").length;
+              const awaitingUatCount = myConsultantDemands.filter((t) => t.status === "DELIVERED").length;
+              const blockedCount = myConsultantDemands.filter((t) => t.status === "BLOCKED").length;
+
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-[#0062E6] shadow-2xs">
+                    <div className="flex items-center justify-between text-[#5A7088] mb-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">
+                        {tr("Statut Guichet Central", "Central Hub Status")}
+                      </span>
+                      <Shield className="w-4 h-4 text-[#0062E6]" />
+                    </div>
+                    <div className="text-xl font-bold text-[#051638] font-mono">
+                      {myConsultantDemands.length - awaitingQualification} <span className="text-xs font-normal text-[#5A7088]">/ {myConsultantDemands.length} qualifiés</span>
+                    </div>
+                    <p className="text-[11px] text-[#5A7088] mt-1">
+                      {awaitingQualification > 0
+                        ? `${awaitingQualification} demande(s) en attente d'estimation Aliko`
+                        : "100% de vos demandes sont qualifiées"}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-[#0D9488] shadow-2xs">
+                    <div className="flex items-center justify-between text-[#5A7088] mb-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">
+                        {tr("En Développement SAP", "In SAP Development")}
+                      </span>
+                      <Layers className="w-4 h-4 text-[#0D9488]" />
+                    </div>
+                    <div className="text-xl font-bold text-[#0D9488] font-mono">{inDevCount}</div>
+                    <p className="text-[11px] text-[#5A7088] mt-1">
+                      {tr("Pris en charge par l'équipe technique", "Handled by the technical team")}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-amber-500 shadow-2xs">
+                    <div className="flex items-center justify-between text-[#5A7088] mb-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">
+                        {tr("À Tester en Recette (UAT)", "Ready for UAT Testing")}
+                      </span>
+                      <FlaskConical className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <div className="text-xl font-bold text-amber-700 font-mono">{awaitingUatCount}</div>
+                    <p className="text-[11px] text-[#5A7088] mt-1">
+                      {tr("Livrés en attente de votre validation", "Delivered awaiting your approval")}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-rose-500 shadow-2xs">
+                    <div className="flex items-center justify-between text-[#5A7088] mb-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">
+                        {tr("Précisions Attendues", "Clarifications Needed")}
+                      </span>
+                      <AlertTriangle className="w-4 h-4 text-rose-600" />
+                    </div>
+                    <div className="text-xl font-bold text-rose-600 font-mono">{blockedCount}</div>
+                    <p className="text-[11px] text-[#5A7088] mt-1">
+                      {tr("Développeurs en attente de réponse", "Developers awaiting your reply")}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Bannière d'Alerte : Précision requise pour débloquer un ticket */}
             {myConsultantDemands.some((t) => t.status === "BLOCKED") && (
               <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 shadow-sm">
@@ -3958,16 +4115,37 @@ export default function TicketManagerPage() {
                   Vous n'avez pas encore émis de demande de développement. Cliquez sur "Soumettre un nouveau besoin SAP".
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100">
-                  {myConsultantDemands.map((ticket) => (
-                    <div key={ticket.id} className="p-5 hover:bg-slate-50/80 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                <div className="divide-y divide-slate-200/80">
+                  {myConsultantDemands.map((ticket) => {
+                    const consultantBorderClass =
+                      ticket.status === "BLOCKED"
+                        ? "border-l-4 border-l-rose-600 bg-rose-50/25 hover:bg-rose-50/40"
+                        : ticket.status === "DELIVERED"
+                        ? "border-l-4 border-l-amber-500 bg-amber-50/20 hover:bg-amber-50/40"
+                        : ticket.status === "CLOSED"
+                        ? "border-l-4 border-l-emerald-600 hover:bg-slate-50/80"
+                        : "border-l-4 border-l-[#0062E6] hover:bg-slate-50/80";
+
+                    const isQualifiedByGuichet = ticket.estimatedHours > 0 || !!ticket.assignedDeveloper || (ticket.contributors && ticket.contributors.length > 0);
+
+                    return (
+                    <div key={ticket.id} className={`p-5 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-5 ${consultantBorderClass}`}>
                       <div className="space-y-3 flex-1 max-w-3xl">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-bold text-slate-900 text-sm">{ticket.reference}</span>
-                          <span className="px-2 py-0.5 rounded text-xs font-mono bg-slate-100 text-slate-700">
+                          <span className="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-slate-100 text-slate-800 border border-slate-200">
                             {ticket.typeCode}
                           </span>
                           {renderStatusBadge(ticket.status)}
+                          {isQualifiedByGuichet ? (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-100 text-teal-950 border border-teal-300">
+                              ✓ Validé Guichet Central ({ticket.estimatedHours} h)
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-950 border border-amber-400">
+                              ⏳ En attente Qualification Guichet Central
+                            </span>
+                          )}
                         </div>
 
                         <div>
@@ -4133,7 +4311,8 @@ export default function TicketManagerPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
