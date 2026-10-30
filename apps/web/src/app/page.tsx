@@ -2641,58 +2641,58 @@ export default function TicketManagerPage() {
   // =========================================================================
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col justify-between text-slate-100 font-sans">
+      <div className="min-h-screen bg-[#F4F7FB] flex flex-col justify-between text-[#051638] font-sans">
+        {/* Bandeau chromatique supérieur Tandem (Marine -> Bleu Royal -> Turquoise) */}
+        <div className="h-1 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] to-[#00B89C]" />
+
         {/* Toast Notification sur l'écran de Login */}
         {toastMessage && (
-          <div className="fixed bottom-4 right-4 z-50 bg-sky-700 text-white px-4 py-2.5 rounded-xl shadow-xl text-sm flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-            <CheckCircle2 className="w-4 h-4 text-sky-200" />
+          <div className="fixed bottom-4 right-4 z-50 bg-[#051638] text-white px-4 py-2.5 rounded-xl shadow-xl text-sm flex items-center gap-2 border border-[#00B89C]/40 animate-in fade-in slide-in-from-bottom-2">
+            <CheckCircle2 className="w-4 h-4 text-[#00B89C]" />
             <span>{toastMessage}</span>
           </div>
         )}
 
-        {/* En-tête simplifié */}
-        <header className="border-b border-slate-800 bg-slate-900/70 backdrop-blur-md px-6 py-3.5">
+        {/* En-tête Corporate Blanc Pur (intégration native du logo Tandem) */}
+        <header className="border-b border-slate-200/90 bg-white px-6 py-3.5 shadow-[0_1px_3px_0_rgba(5,22,56,0.03)]">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3.5">
-              <div className="bg-white px-2.5 py-1 rounded-xl shadow-sm flex items-center justify-center">
-                <img
-                  src="/tandem-logo.jpg"
-                  alt="Tandem — Du besoin à la solution."
-                  className="h-9 w-auto object-contain"
-                />
-              </div>
-              <div>
+            <div className="flex items-center gap-4">
+              <img
+                src="/tandem-logo.jpg"
+                alt="Tandem — Du besoin à la solution."
+                className="h-10 w-auto object-contain"
+              />
+              <div className="hidden sm:block border-l border-slate-200 pl-3.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-white text-base tracking-tight">Tandem</span>
-                  <span className="text-slate-500">|</span>
-                  <span className="font-semibold text-slate-200 text-sm">Safir Consulting</span>
+                  <span className="font-bold text-[#051638] text-sm tracking-tight">Safir Consulting</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="font-medium text-[#5A7088] text-xs">Ticket Manager SAP</span>
                 </div>
-                <p className="text-xs text-slate-400">Du besoin à la solution. — Business Unit SME SAP</p>
+                <p className="text-[11px] text-[#5A7088]">Business Unit SME — Pilotage & Gouvernance SAP</p>
               </div>
             </div>
 
-            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700/80 shadow-sm">
-              <Shield className="w-3.5 h-3.5 text-sky-400" />
+            <div className="hidden sm:flex items-center gap-2 text-xs text-[#051638] bg-[#F4F7FB] px-3.5 py-1.5 rounded-full border border-slate-200/90 font-medium">
+              <Shield className="w-3.5 h-3.5 text-[#0062E6]" />
               <span>Authentification Sécurisée (Argon2id & RBAC)</span>
             </div>
           </div>
         </header>
 
         {/* Corps central : Formulaire de Connexion & Accès Démo Rapide */}
-        <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-6">
+        <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-4">
           <div className="w-full max-w-lg space-y-5">
-            <div className="bg-white text-slate-900 rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-              <div className="bg-slate-900 p-6 text-white text-center border-b border-slate-800">
-                <div className="inline-flex items-center justify-center bg-white px-4 py-2 rounded-xl mb-3 shadow-sm">
-                  <img
-                    src="/tandem-logo.jpg"
-                    alt="Tandem — Du besoin à la solution."
-                    className="h-11 w-auto object-contain"
-                  />
-                </div>
-                <h1 className="text-xl font-bold tracking-tight">Connexion à votre Espace Tandem</h1>
-                <p className="text-xs text-slate-300 mt-1 max-w-sm mx-auto">
-                  Du besoin à la solution. — Identifiez-vous avec votre adresse e-mail professionnelle pour accéder à votre portail dédié.
+            <div className="bg-white text-[#051638] rounded-2xl shadow-[0_12px_32px_-8px_rgba(5,22,56,0.08)] border border-slate-200/90 overflow-hidden">
+              <div className="h-1 w-full bg-gradient-to-r from-[#0062E6] to-[#00B89C]" />
+              <div className="bg-white pt-7 pb-5 px-6 text-center border-b border-slate-100">
+                <img
+                  src="/tandem-logo.jpg"
+                  alt="Tandem — Du besoin à la solution."
+                  className="h-14 w-auto object-contain mx-auto mb-3"
+                />
+                <h1 className="text-lg font-bold tracking-tight text-[#051638]">Connexion à votre Espace Tandem</h1>
+                <p className="text-xs text-[#5A7088] mt-1 max-w-sm mx-auto">
+                  Identifiez-vous avec votre adresse e-mail professionnelle pour accéder à votre portail dédié.
                 </p>
               </div>
 
@@ -2709,45 +2709,45 @@ export default function TicketManagerPage() {
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#051638] mb-1.5">
                       Adresse e-mail professionnelle (Login)
                     </label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <Mail className="w-4 h-4 text-[#5A7088] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="email"
                         required
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         placeholder="ex : aliko.getheme@safirconsulting.net"
-                        className="w-full text-sm pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-transparent transition-all"
+                        className="w-full text-sm pl-10 pr-3 py-2.5 bg-[#F8FAFC] border border-slate-300 rounded-xl text-[#051638] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062E6] focus:border-transparent transition-all"
                       />
                     </div>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-semibold text-slate-700">
+                      <label className="block text-xs font-semibold text-[#051638]">
                         Mot de passe
                       </label>
-                      <span className="text-[11px] text-slate-400">Chiffré via Argon2id</span>
+                      <span className="text-[11px] text-[#5A7088]">Chiffré via Argon2id</span>
                     </div>
                     <div className="relative">
-                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <Lock className="w-4 h-4 text-[#5A7088] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="password"
                         required
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full text-sm pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-transparent transition-all"
+                        className="w-full text-sm pl-10 pr-3 py-2.5 bg-[#F8FAFC] border border-slate-300 rounded-xl text-[#051638] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062E6] focus:border-transparent transition-all"
                       />
                     </div>
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-2.5 px-4 bg-sky-700 hover:bg-sky-800 active:bg-sky-900 text-white font-semibold text-sm rounded-xl shadow-md shadow-sky-900/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                    className="w-full py-2.5 px-4 bg-[#0062E6] hover:bg-[#0052CC] active:bg-[#051638] text-white font-semibold text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 group cursor-pointer"
                   >
                     <span>Se connecter à mon portail</span>
                     <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -2756,12 +2756,12 @@ export default function TicketManagerPage() {
 
                 {/* Section Accès Rapide Démo 1-Clic */}
                 <div className="pt-5 border-t border-slate-100">
-                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3 text-center">
+                  <div className="text-[11px] font-semibold text-[#5A7088] uppercase tracking-wider mb-3 text-center">
                     Accès direct corporate & démo (1-clic)
                   </div>
 
                   <div className="space-y-2">
-                    {/* Aliko - HEAD */}
+                    {/* Aliko - HEAD (Marine Tandem #051638) */}
                     <button
                       type="button"
                       onClick={() => {
@@ -2769,23 +2769,23 @@ export default function TicketManagerPage() {
                         setCurrentUser(aliko);
                         showToast(`Bienvenue, ${aliko.name} (Portail Direction)`);
                       }}
-                      className="w-full p-2.5 rounded-xl border border-sky-100 bg-sky-50/70 hover:bg-sky-100 transition-colors flex items-center justify-between text-left group cursor-pointer"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-blue-50/60 hover:border-[#0062E6]/40 transition-all flex items-center justify-between text-left group cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-sky-700 text-white font-bold text-xs flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-[#051638] text-white font-bold text-xs flex items-center justify-center shadow-2xs">
                           AG
                         </div>
                         <div>
-                          <div className="text-xs font-semibold text-slate-900 group-hover:text-sky-900">Aliko Getheme</div>
-                          <div className="text-[10px] text-slate-500">Direction BU SME — Arbitrage & Capacité</div>
+                          <div className="text-xs font-semibold text-[#051638] group-hover:text-[#0062E6]">Aliko Getheme</div>
+                          <div className="text-[10px] text-[#5A7088]">Direction BU SME — Arbitrage & Capacité</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-sky-200/80 text-sky-900">
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-[#051638]/10 text-[#051638]">
                         Portail Direction (HEAD)
                       </span>
                     </button>
 
-                    {/* Anoop - DEVELOPER */}
+                    {/* Anoop - DEVELOPER (Teal Tandem #0D9488) */}
                     <button
                       type="button"
                       onClick={() => {
@@ -2793,23 +2793,23 @@ export default function TicketManagerPage() {
                         setCurrentUser(anoop);
                         showToast(`Bienvenue, ${anoop.name} (Espace Développeur)`);
                       }}
-                      className="w-full p-2.5 rounded-xl border border-emerald-100 bg-emerald-50/70 hover:bg-emerald-100 transition-colors flex items-center justify-between text-left group cursor-pointer"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-teal-50/60 hover:border-teal-500/40 transition-all flex items-center justify-between text-left group cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white font-bold text-xs flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-[#0D9488] text-white font-bold text-xs flex items-center justify-center shadow-2xs">
                           AP
                         </div>
                         <div>
-                          <div className="text-xs font-semibold text-slate-900 group-hover:text-emerald-900">Anoop Pandimukkula</div>
-                          <div className="text-[10px] text-slate-500">Développeur SAP Business One Senior</div>
+                          <div className="text-xs font-semibold text-[#051638] group-hover:text-teal-800">Anoop Pandimukkula</div>
+                          <div className="text-[10px] text-[#5A7088]">Développeur SAP Business One Senior</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-200/80 text-emerald-900">
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-teal-100/80 text-teal-900">
                         Portail Développeur
                       </span>
                     </button>
 
-                    {/* Mélissa - CONSULTANT */}
+                    {/* Mélissa - CONSULTANT (Bleu Tandem #0062E6) */}
                     <button
                       type="button"
                       onClick={() => {
@@ -2817,18 +2817,18 @@ export default function TicketManagerPage() {
                         setCurrentUser(melissa);
                         showToast(`Bienvenue, ${melissa.name} (Espace Consultante)`);
                       }}
-                      className="w-full p-2.5 rounded-xl border border-purple-100 bg-purple-50/70 hover:bg-purple-100 transition-colors flex items-center justify-between text-left group cursor-pointer"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-blue-50/60 hover:border-[#0062E6]/40 transition-all flex items-center justify-between text-left group cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-purple-700 text-white font-bold text-xs flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-[#0062E6] text-white font-bold text-xs flex items-center justify-center shadow-2xs">
                           MD
                         </div>
                         <div>
-                          <div className="text-xs font-semibold text-slate-900 group-hover:text-purple-900">Mélissa Diakité</div>
-                          <div className="text-[10px] text-slate-500">Consultante Fonctionnelle SAP</div>
+                          <div className="text-xs font-semibold text-[#051638] group-hover:text-[#0062E6]">Mélissa Diakité</div>
+                          <div className="text-[10px] text-[#5A7088]">Consultante Fonctionnelle SAP</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-purple-200/80 text-purple-900">
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-100/80 text-[#0052CC]">
                         Portail Consultante
                       </span>
                     </button>
@@ -2838,14 +2838,14 @@ export default function TicketManagerPage() {
             </div>
 
             {/* Note de sécurité */}
-            <div className="text-center text-[11px] text-slate-400 space-y-1">
+            <div className="text-center text-[11px] text-[#5A7088] space-y-1">
               <p>Plateforme interne Safir Consulting — Tous droits réservés 2026</p>
-              <p className="text-slate-500">Cloisonnement strict RBAC • Chiffrement Argon2id • Conforme OWASP Top 10</p>
+              <p className="text-slate-400">Cloisonnement strict RBAC • Chiffrement Argon2id • Conforme OWASP Top 10</p>
             </div>
           </div>
         </main>
 
-        <footer className="py-4 border-t border-slate-800 text-center text-xs text-slate-500">
+        <footer className="py-4 bg-white border-t border-slate-200/80 text-center text-xs text-[#5A7088]">
           Tandem — Du besoin à la solution. | Safir Consulting © 2026 | Ticket Manager SAP
         </footer>
       </div>
@@ -2853,11 +2853,13 @@ export default function TicketManagerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">
+    <div className="min-h-screen bg-[#F4F7FB] text-[#051638] font-sans flex flex-col">
       {/* ================================================================= */}
       {/* BARRE DE NAVIGATION D'ENTREPRISE (TANDEM — SAFIR CONSULTING)      */}
       {/* ================================================================= */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(15,23,42,0.03)]">
+      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(5,22,56,0.04)]">
+        {/* Liseré identitaire Tandem : Marine (#051638) -> Bleu (#0062E6) -> Turquoise (#00B89C) */}
+        <div className="h-0.5 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] to-[#00B89C]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-3">
             {/* Logo Tandem & Identité Application */}
@@ -2870,9 +2872,9 @@ export default function TicketManagerPage() {
                 />
                 <div className="hidden lg:block border-l border-slate-200 pl-2.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-900 text-xs tracking-tight">Safir Consulting</span>
+                    <span className="font-bold text-[#051638] text-xs tracking-tight">Safir Consulting</span>
                   </div>
-                  <p className="text-[10px] text-slate-500 font-normal">BU SME — Gouvernance SAP</p>
+                  <p className="text-[10px] text-[#5A7088] font-normal">BU SME — Gouvernance SAP</p>
                 </div>
               </div>
 
@@ -2884,51 +2886,51 @@ export default function TicketManagerPage() {
                     <>
                       <button
                         onClick={() => handleTabChange("dashboard")}
-                        className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
+                        className={`px-3 py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
                           activeTab === "dashboard"
-                            ? "bg-slate-900 text-white font-semibold shadow-xs"
-                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium"
+                            ? "bg-[#051638] text-white font-semibold shadow-xs"
+                            : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                         }`}
                       >
                         Tableau de bord
                       </button>
                       <button
                         onClick={() => handleTabChange("tickets")}
-                        className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 ${
+                        className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                           activeTab === "tickets"
-                            ? "bg-slate-900 text-white font-semibold shadow-xs"
-                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium"
+                            ? "bg-[#051638] text-white font-semibold shadow-xs"
+                            : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                         }`}
                       >
                         <span>Tous les Tickets SAP</span>
                         <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono font-bold ${
-                          activeTab === "tickets" ? "bg-white/20 text-white" : "bg-slate-200/80 text-slate-700"
+                          activeTab === "tickets" ? "bg-[#00B89C]/25 text-[#22F0D2]" : "bg-slate-200/80 text-[#051638]"
                         }`}>
                           {tickets.length}
                         </span>
                       </button>
                       <button
                         onClick={() => handleTabChange("developers")}
-                        className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 ${
+                        className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                           activeTab === "developers"
-                            ? "bg-slate-900 text-white font-semibold shadow-xs"
-                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium"
+                            ? "bg-[#051638] text-white font-semibold shadow-xs"
+                            : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                         }`}
                       >
                         <span>Équipe & Capacité ({developers.length})</span>
                       </button>
                       <button
                         onClick={() => handleTabChange("inbox")}
-                        className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 ${
+                        className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                           activeTab === "inbox"
-                            ? "bg-slate-900 text-white font-semibold shadow-xs"
-                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium"
+                            ? "bg-[#051638] text-white font-semibold shadow-xs"
+                            : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                         }`}
                       >
                         <span>Guichet Central Demandes</span>
                         {stats.pendingEmailsCount > 0 && (
                           <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono font-bold ${
-                            activeTab === "inbox" ? "bg-amber-400 text-slate-900" : "bg-amber-100 text-amber-800"
+                            activeTab === "inbox" ? "bg-[#00B89C] text-[#051638]" : "bg-blue-100 text-[#0052CC]"
                           }`}>
                             {stats.pendingEmailsCount}
                           </span>
@@ -2941,13 +2943,13 @@ export default function TicketManagerPage() {
                   {currentUser.role === "DEVELOPER" && (
                     <button
                       onClick={() => handleTabChange("my-tickets")}
-                      className={`px-3.5 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 ${
+                      className={`px-3.5 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                         activeTab === "my-tickets"
-                          ? "bg-emerald-700 text-white font-semibold shadow-xs"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium"
+                          ? "bg-[#0D9488] text-white font-semibold shadow-xs"
+                          : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                       }`}
                     >
-                      <Briefcase className="w-3.5 h-3.5 text-emerald-300" />
+                      <Briefcase className="w-3.5 h-3.5 text-teal-200" />
                       <span>Mon Espace Développeur ({myAssignedTickets.length} tickets)</span>
                     </button>
                   )}
@@ -2956,13 +2958,13 @@ export default function TicketManagerPage() {
                   {currentUser.role === "CONSULTANT" && (
                     <button
                       onClick={() => handleTabChange("my-demands")}
-                      className={`px-3.5 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 ${
+                      className={`px-3.5 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                         activeTab === "my-demands"
-                          ? "bg-purple-700 text-white font-semibold shadow-xs"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium"
+                          ? "bg-[#0062E6] text-white font-semibold shadow-xs"
+                          : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                       }`}
                     >
-                      <Layers className="w-3.5 h-3.5 text-purple-300" />
+                      <Layers className="w-3.5 h-3.5 text-blue-200" />
                       <span>Mes Demandes Émises ({myConsultantDemands.length})</span>
                     </button>
                   )}
@@ -2975,7 +2977,7 @@ export default function TicketManagerPage() {
               {currentUser?.role === "HEAD" && (
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0062E6] hover:bg-[#0052CC] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Nouveau ticket</span>
@@ -3102,34 +3104,34 @@ export default function TicketManagerPage() {
                   >
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white ${
                       currentUser.role === "HEAD"
-                        ? "bg-slate-900"
+                        ? "bg-[#051638]"
                         : currentUser.role === "DEVELOPER"
-                        ? "bg-emerald-700"
-                        : "bg-purple-700"
+                        ? "bg-[#0D9488]"
+                        : "bg-[#0062E6]"
                     }`}>
                       {currentUser.initials}
                     </div>
                     <div className="hidden sm:block">
-                      <div className="text-xs font-semibold text-slate-900 flex items-center gap-1.5 leading-tight">
+                      <div className="text-xs font-semibold text-[#051638] flex items-center gap-1.5 leading-tight">
                         <span>{currentUser.name}</span>
                         <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold uppercase tracking-wider ${
                           currentUser.role === "HEAD"
-                            ? "bg-sky-50 text-sky-800 border border-sky-200"
+                            ? "bg-[#051638]/10 text-[#051638] border border-[#051638]/20"
                             : currentUser.role === "DEVELOPER"
-                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                            : "bg-purple-50 text-purple-800 border border-purple-200"
+                            ? "bg-teal-50 text-teal-800 border border-teal-200"
+                            : "bg-blue-50 text-[#0052CC] border border-blue-200"
                         }`}>
                           {currentUser.role}
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-500 leading-none mt-0.5 truncate max-w-[140px]">{currentUser.roleLabel}</div>
+                      <div className="text-[10px] text-[#5A7088] leading-none mt-0.5 truncate max-w-[140px]">{currentUser.roleLabel}</div>
                     </div>
                     <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
                   </button>
                 ) : (
                   <button
                     onClick={() => setShowLoginModal(true)}
-                    className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm"
+                    className="px-3.5 py-1.5 bg-[#051638] hover:bg-[#0062E6] text-white text-xs font-semibold rounded-lg shadow-sm"
                   >
                     Se connecter
                   </button>
@@ -3827,56 +3829,56 @@ export default function TicketManagerPage() {
         {/* =============================================================== */}
         {currentUser?.role === "HEAD" && activeTab === "dashboard" && (
           <div className="space-y-6">
-            {/* 4 Indicateurs Clés Métier */}
+            {/* 4 Indicateurs Clés Métier (Palette Tandem) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between text-slate-500 mb-2">
-                  <span className="text-xs font-medium uppercase tracking-wider">Tickets en cours</span>
-                  <Layers className="w-4 h-4 text-slate-400" />
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-[#0062E6] shadow-2xs">
+                <div className="flex items-center justify-between text-[#5A7088] mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider">Tickets en cours</span>
+                  <Layers className="w-4 h-4 text-[#0062E6]" />
                 </div>
-                <div className="text-2xl font-bold text-slate-900">{stats.activeTicketsCount}</div>
-                <p className="text-xs text-slate-500 mt-1">Demandes de développement actives</p>
+                <div className="text-2xl font-bold text-[#051638]">{stats.activeTicketsCount}</div>
+                <p className="text-xs text-[#5A7088] mt-1">Demandes de développement actives</p>
               </div>
 
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between text-slate-500 mb-2">
-                  <span className="text-xs font-medium uppercase tracking-wider">Capacité disponible</span>
-                  <Clock className="w-4 h-4 text-slate-400" />
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-[#0D9488] shadow-2xs">
+                <div className="flex items-center justify-between text-[#5A7088] mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider">Capacité disponible</span>
+                  <Clock className="w-4 h-4 text-[#0D9488]" />
                 </div>
-                <div className="text-2xl font-bold text-slate-900">
-                  {stats.totalFree} <span className="text-sm font-normal text-slate-500">/ {stats.totalWeeklyCap} h</span>
+                <div className="text-2xl font-bold text-[#051638]">
+                  {stats.totalFree} <span className="text-sm font-normal text-[#5A7088]">/ {stats.totalWeeklyCap} h</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">Heures de développement libres cette semaine</p>
+                <p className="text-xs text-[#5A7088] mt-1">Heures de développement libres cette semaine</p>
               </div>
 
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between text-slate-500 mb-2">
-                  <span className="text-xs font-medium uppercase tracking-wider">Alertes Blocage</span>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-rose-500 shadow-2xs">
+                <div className="flex items-center justify-between text-[#5A7088] mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider">Alertes Blocage</span>
                   <AlertTriangle className={`w-4 h-4 ${stats.blockedTicketsCount > 0 ? "text-rose-500" : "text-slate-400"}`} />
                 </div>
                 <div className="text-2xl font-bold text-rose-600">{stats.blockedTicketsCount}</div>
-                <p className="text-xs text-slate-500 mt-1">Développeurs arrêtés en attente d'arbitrage</p>
+                <p className="text-xs text-[#5A7088] mt-1">Développeurs arrêtés en attente d'arbitrage</p>
               </div>
 
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between text-slate-500 mb-2">
-                  <span className="text-xs font-medium uppercase tracking-wider">Guichet Central Demandes</span>
-                  <Inbox className="w-4 h-4 text-slate-400" />
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-[#051638] shadow-2xs">
+                <div className="flex items-center justify-between text-[#5A7088] mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider">Guichet Central Demandes</span>
+                  <Inbox className="w-4 h-4 text-[#051638]" />
                 </div>
-                <div className="text-2xl font-bold text-slate-900">{stats.pendingEmailsCount}</div>
-                <p className="text-xs text-slate-500 mt-1">Demandes In-App soumises à qualifier par Aliko</p>
+                <div className="text-2xl font-bold text-[#051638]">{stats.pendingEmailsCount}</div>
+                <p className="text-xs text-[#5A7088] mt-1">Demandes In-App soumises à qualifier par Aliko</p>
               </div>
             </div>
 
             {/* Barre de Pilotage Exécutif & Export Reporting Direction 1-Clic */}
-            <div className="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="bg-[#051638] text-white p-4 rounded-xl shadow-sm border border-[#051638] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-sky-500/20 rounded-xl border border-sky-400/30 text-sky-300">
+                <div className="p-2.5 bg-[#0062E6]/25 rounded-xl border border-[#0062E6]/40 text-[#38BDF8]">
                   <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold uppercase tracking-wider text-sky-300">
-                    Gouvernance Centrale In-App — Point Focal Unique : Aliko Getheme
+                  <div className="text-xs font-bold uppercase tracking-wider text-[#22F0D2]">
+                    Gouvernance Centrale Tandem — Point Focal Unique : Aliko Getheme
                   </div>
                   <p className="text-xs text-slate-300 mt-0.5">
                     100% des flux (demandes consultants, arbitrages, affectations multi-lots, pièces jointes et clôtures) s'exécutent dans l'application.
@@ -3887,7 +3889,7 @@ export default function TicketManagerPage() {
                 <button
                   type="button"
                   onClick={handleExportCsvReport}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#0D9488] hover:bg-[#0F766E] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Télécharger CSV / Excel</span>
@@ -3908,15 +3910,15 @@ export default function TicketManagerPage() {
             {/* ========================================================================= */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               {/* En-tête Live Monitor */}
-              <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="p-4 sm:p-5 border-b border-slate-800 bg-[#051638] text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-start gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#00B89C]/20 border border-[#00B89C]/40 flex items-center justify-center text-[#22F0D2] shrink-0">
                     <Activity className="w-5 h-5 animate-pulse" />
                   </div>
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#00B89C]/20 text-[#22F0D2] border border-[#00B89C]/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#22F0D2] animate-ping" />
                         LIVE TEMPS RÉEL
                       </span>
                       <h2 className="text-base font-bold text-white">
