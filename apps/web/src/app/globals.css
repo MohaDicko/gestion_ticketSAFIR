@@ -97,3 +97,10 @@ html.dark-theme img[src="/tandem-logo.jpg"] {
   padding: 2px 6px;
   border-radius: 0.5rem;
 }
+
+/* Masquer tout badge flottant dev-tools susceptible de se superposer aux notifications */
+nextjs-portal,
+[data-nextjs-toast],
+[data-nextjs-dialog-overlay] {
+  display: none !important;
+}

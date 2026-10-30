@@ -3035,7 +3035,7 @@ export default function TicketManagerPage() {
 
               {/* Navigation conditionnelle selon les GRANTS de l'utilisateur connecté */}
               {currentUser && (
-                <nav className="hidden md:flex items-center space-x-1">
+                <nav className="hidden md:flex items-center space-x-1" data-no-i18n="true">
                   {/* Vue Direction (HEAD) */}
                   {currentUser.role === "HEAD" && (
                     <>
@@ -3047,17 +3047,17 @@ export default function TicketManagerPage() {
                             : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                         }`}
                       >
-                        Tableau de bord
+                        {tr("Tableau de bord", "Dashboard")}
                       </button>
                       <button
                         onClick={() => handleTabChange("tickets")}
-                        className={`w-[164px] py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer shrink-0 ${
+                        className={`w-[164px] py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                           activeTab === "tickets"
                             ? "bg-[#051638] text-white font-semibold shadow-xs"
                             : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                         }`}
                       >
-                        <span>Tous les Tickets SAP</span>
+                        <span>{tr("Tous les Tickets SAP", "All SAP Tickets")}</span>
                         <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono font-bold ${
                           activeTab === "tickets" ? "bg-[#00B89C]/25 text-[#22F0D2]" : "bg-slate-200/80 text-[#051638]"
                         }`}>
@@ -3066,23 +3066,23 @@ export default function TicketManagerPage() {
                       </button>
                       <button
                         onClick={() => handleTabChange("developers")}
-                        className={`w-[156px] py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer shrink-0 ${
+                        className={`w-[158px] py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center whitespace-nowrap cursor-pointer shrink-0 ${
                           activeTab === "developers"
                             ? "bg-[#051638] text-white font-semibold shadow-xs"
                             : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                         }`}
                       >
-                        <span>Équipe & Capacité ({developers.length})</span>
+                        <span>{`${tr("Équipe & Capacité", "Team & Capacity")} (${developers.length})`}</span>
                       </button>
                       <button
                         onClick={() => handleTabChange("inbox")}
-                        className={`w-[194px] py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer shrink-0 ${
+                        className={`w-[194px] py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                           activeTab === "inbox"
                             ? "bg-[#051638] text-white font-semibold shadow-xs"
                             : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
                         }`}
                       >
-                        <span>Guichet Central Demandes</span>
+                        <span>{tr("Guichet Central Demandes", "Central Request Hub")}</span>
                         {stats.pendingEmailsCount > 0 && (
                           <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono font-bold ${
                             activeTab === "inbox" ? "bg-[#00B89C] text-[#051638]" : "bg-blue-100 text-[#0052CC]"
@@ -3105,7 +3105,7 @@ export default function TicketManagerPage() {
                       }`}
                     >
                       <Briefcase className="w-3.5 h-3.5 text-teal-200 shrink-0" />
-                      <span>Mon Espace Développeur ({myAssignedTickets.length} tickets)</span>
+                      <span>{`${tr("Mon Espace Développeur", "My Developer Workspace")} (${myAssignedTickets.length} tickets)`}</span>
                     </button>
                   )}
 
@@ -3120,7 +3120,7 @@ export default function TicketManagerPage() {
                       }`}
                     >
                       <Layers className="w-3.5 h-3.5 text-blue-200 shrink-0" />
-                      <span>Mes Demandes Émises ({myConsultantDemands.length})</span>
+                      <span>{`${tr("Mes Demandes Émises", "My Submitted Requests")} (${myConsultantDemands.length})`}</span>
                     </button>
                   )}
                 </nav>
@@ -3128,15 +3128,18 @@ export default function TicketManagerPage() {
             </div>
 
             {/* Droite : Boutons d'action, Notifications Temps Réel et Sélecteur de Rôle RBAC */}
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0" data-no-i18n="true">
               {currentUser?.role === "HEAD" && (
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center justify-center gap-1 w-[118px] py-1.5 bg-[#0062E6] hover:bg-[#0052CC] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors whitespace-nowrap cursor-pointer shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5 shrink-0" />
-                  <span>Nouveau ticket</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex items-center justify-center gap-1.5 w-[124px] py-1.5 bg-[#0062E6] hover:bg-[#0052CC] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors whitespace-nowrap cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                    <span>{tr("Nouveau ticket", "New Ticket")}</span>
+                  </button>
+                  <div className="hidden sm:block h-5 w-px bg-slate-200" />
+                </>
               )}
 
               {/* SÉLECTEUR MULTI-DEVISES (AFRIQUE DE L'OUEST FCFA PAR DÉFAUT + EUR / USD) - RÉSERVÉ À ALIKO (HEAD) */}
@@ -3194,7 +3197,7 @@ export default function TicketManagerPage() {
                 <span>{themeMode === "light" ? tr("Sombre", "Dark") : tr("Clair", "Light")}</span>
               </button>
 
-              {/* CLOCHE DE NOTIFICATIONS TEMPS RÉEL IN-APP */}
+              {/* CLOCHE DE NOTIFICATIONS TEMPS RÉEL IN-APP (AVEC BACKDROP & CONTENEUR DÉLIMITÉ) */}
               <div className="relative">
                 <button
                   type="button"
@@ -3203,7 +3206,11 @@ export default function TicketManagerPage() {
                     setShowUserMenu(false);
                   }}
                   aria-label="Notifications In-App"
-                  className="relative p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                  className={`relative p-2 rounded-lg border transition-colors cursor-pointer shadow-2xs ${
+                    showNotificationsPanel
+                      ? "border-[#0062E6] bg-blue-50 text-[#0062E6] ring-2 ring-[#0062E6]/20"
+                      : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                  }`}
                   title="Centre de Notifications Temps Réel In-App"
                 >
                   <Bell className={`w-4 h-4 ${unreadNotificationsCount > 0 ? "text-amber-600" : "text-slate-500"}`} />
@@ -3215,73 +3222,92 @@ export default function TicketManagerPage() {
                 </button>
 
                 {showNotificationsPanel && (
-                  <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in">
-                    <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Bell className="w-4 h-4 text-amber-400" />
-                        <span className="text-xs font-bold tracking-wide">Notifications Temps Réel In-App</span>
-                        <span className="px-1.5 py-0.2 rounded-full bg-white/15 text-[10px] font-mono">
-                          {unreadNotificationsCount} non lues
-                        </span>
-                      </div>
-                      {unreadNotificationsCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={markAllNotificationsRead}
-                          className="text-[11px] text-sky-300 hover:text-white underline cursor-pointer"
-                        >
-                          Tout marquer lu
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
-                      {myNotifications.length === 0 ? (
-                        <div className="p-6 text-center text-xs text-slate-400">
-                          Aucune notification pour votre espace.
+                  <>
+                    {/* Backdrop assombri permettant de fermer le volet au clic extérieur et d'isoler le contenu */}
+                    <div
+                      className="fixed inset-0 top-16 bg-[#051638]/25 backdrop-blur-[1px] z-40 animate-in fade-in"
+                      onClick={() => setShowNotificationsPanel(false)}
+                    />
+                    <div className="absolute right-0 mt-2.5 w-80 sm:w-[400px] bg-white rounded-2xl shadow-[0_24px_48px_-12px_rgba(5,22,56,0.35)] border-2 border-slate-200 ring-1 ring-[#051638]/10 z-50 overflow-hidden animate-in fade-in">
+                      <div className="p-3.5 bg-[#051638] text-white flex items-center justify-between border-b border-white/10">
+                        <div className="flex items-center gap-2">
+                          <Bell className="w-4 h-4 text-[#00B89C]" />
+                          <span className="text-xs font-bold tracking-wide">
+                            {tr("Notifications Temps Réel In-App", "Real-Time In-App Notifications")}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded-full bg-white/15 text-[10px] font-mono">
+                            {unreadNotificationsCount} {tr("non lues", "unread")}
+                          </span>
                         </div>
-                      ) : (
-                        myNotifications.map((n) => (
-                          <div
-                            key={n.id}
-                            onClick={() => {
-                              setNotifications((prev) =>
-                                prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
-                              );
-                              if (n.ticketId) {
-                                const found = tickets.find((t) => t.id === n.ticketId);
-                                if (found) {
-                                  if (currentUser?.role === "HEAD") {
-                                    setSupervisingTicket(found);
-                                  } else {
-                                    setDiscussingTicket(found);
+                        <div className="flex items-center gap-2">
+                          {unreadNotificationsCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={markAllNotificationsRead}
+                              className="text-[11px] text-[#22F0D2] hover:text-white underline cursor-pointer"
+                            >
+                              {tr("Tout marquer lu", "Mark all read")}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setShowNotificationsPanel(false)}
+                            aria-label="Fermer les notifications"
+                            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 bg-white">
+                        {myNotifications.length === 0 ? (
+                          <div className="p-6 text-center text-xs text-slate-400">
+                            {tr("Aucune notification pour votre espace.", "No notifications for your workspace.")}
+                          </div>
+                        ) : (
+                          myNotifications.map((n) => (
+                            <div
+                              key={n.id}
+                              onClick={() => {
+                                setNotifications((prev) =>
+                                  prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+                                );
+                                if (n.ticketId) {
+                                  const found = tickets.find((t) => t.id === n.ticketId);
+                                  if (found) {
+                                    if (currentUser?.role === "HEAD") {
+                                      setSupervisingTicket(found);
+                                    } else {
+                                      setDiscussingTicket(found);
+                                    }
                                   }
                                 }
-                              }
-                              setShowNotificationsPanel(false);
-                            }}
-                            className={`p-3 text-xs hover:bg-slate-50 transition-colors cursor-pointer ${
-                              !n.read ? "bg-sky-50/50 border-l-4 border-l-sky-600" : ""
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <span className="font-bold text-slate-900 line-clamp-1">{n.title}</span>
-                              <span className="text-[10px] text-slate-400 shrink-0">{n.createdAt}</span>
+                                setShowNotificationsPanel(false);
+                              }}
+                              className={`p-3.5 text-xs hover:bg-slate-50 transition-colors cursor-pointer ${
+                                !n.read ? "bg-sky-50/70 border-l-4 border-l-[#0062E6]" : ""
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <span className="font-bold text-[#051638] line-clamp-1">{n.title}</span>
+                                <span className="text-[10px] text-slate-500 font-medium shrink-0">{n.createdAt}</span>
+                              </div>
+                              <p className="text-slate-600 text-[11px] leading-relaxed">{n.message}</p>
+                              <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-500">
+                                <span>Acteur : <strong className="text-slate-800">{n.actorName}</strong></span>
+                                {n.ticketReference && (
+                                  <span className="font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 border border-slate-200 font-semibold">
+                                    {n.ticketReference}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <p className="text-slate-600 text-[11px] leading-relaxed">{n.message}</p>
-                            <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-500">
-                              <span>Acteur : <strong className="text-slate-700">{n.actorName}</strong></span>
-                              {n.ticketReference && (
-                                <span className="font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 border border-slate-200">
-                                  {n.ticketReference}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      )}
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
 
@@ -5053,63 +5079,103 @@ export default function TicketManagerPage() {
               </span>
             </div>
 
-            <div className="divide-y divide-slate-100">
-              {emails.map((email) => (
-                <div key={email.id} className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-900 text-sm">{email.senderName}</span>
-                      <span className="text-xs text-slate-500 font-mono">&lt;{email.senderEmail}&gt;</span>
+            <div className="divide-y divide-slate-200/80">
+              {emails.map((email) => {
+                const isExternalVigilance = email.isPersonalDomain;
+                const borderAccentClass = isExternalVigilance
+                  ? "border-l-4 border-l-rose-600 bg-amber-50/40 hover:bg-amber-50/70"
+                  : email.senderKind === "CONSULTANT"
+                  ? "border-l-4 border-l-[#0062E6] hover:bg-slate-50/80"
+                  : "border-l-4 border-l-[#0D9488] hover:bg-slate-50/80";
 
-                      {email.senderKind === "CONSULTANT" && (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                          Consultante interne Safir (Portail In-App)
-                        </span>
-                      )}
-                      {email.senderKind === "CLIENT_CONTACT" && (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                          Besoin Client Référencé
-                        </span>
-                      )}
-                      {email.isPersonalDomain && (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                          Tiers externe / Vigilance Direction
+                const senderInitials = email.senderName
+                  .split(" ")
+                  .map((p) => p[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase();
+
+                return (
+                  <div
+                    key={email.id}
+                    className={`p-4 transition-colors grid grid-cols-1 lg:grid-cols-12 items-center gap-4 ${borderAccentClass}`}
+                  >
+                    {/* Colonne 1 (Gauche) : Demandeur, Adresse & Tag Haute Lisibilité WCAG */}
+                    <div className="lg:col-span-4 flex items-start gap-3">
+                      <div
+                        className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 ${
+                          isExternalVigilance
+                            ? "bg-rose-600 text-white shadow-xs"
+                            : email.senderKind === "CONSULTANT"
+                            ? "bg-[#051638] text-white"
+                            : "bg-[#0D9488] text-white"
+                        }`}
+                      >
+                        {senderInitials}
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-[#051638] text-sm leading-tight">{email.senderName}</span>
+                          <span className="text-[11px] text-[#5A7088] font-mono truncate">&lt;{email.senderEmail}&gt;</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {email.senderKind === "CONSULTANT" && (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-950 border border-indigo-300">
+                              Consultante interne Safir (Portail In-App)
+                            </span>
+                          )}
+                          {email.senderKind === "CLIENT_CONTACT" && (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-100 text-teal-950 border border-teal-300">
+                              Besoin Client Référencé
+                            </span>
+                          )}
+                          {isExternalVigilance && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-950 border border-rose-400 shadow-2xs">
+                              <AlertTriangle className="w-3 h-3 text-rose-700 shrink-0" />
+                              <span>Tiers externe / Vigilance Direction</span>
+                            </span>
+                          )}
+                          <span className="text-[11px] text-[#5A7088] font-medium">• {email.receivedAt}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Colonne 2 (Centre) : Objet & Description de la demande */}
+                    <div className="lg:col-span-5 space-y-1">
+                      <div className="font-bold text-[#051638] text-sm leading-snug">{email.subject}</div>
+                      <p className="text-xs text-[#5A7088] line-clamp-2 leading-relaxed">{email.bodyPreview}</p>
+                    </div>
+
+                    {/* Colonne 3 (Droite dédiée) : Action alignée verticalement */}
+                    <div className="lg:col-span-3 flex lg:justify-end">
+                      {email.processingStatus === "PENDING_QUALIFICATION" ? (
+                        <button
+                          onClick={() => {
+                            setNewTitle(email.subject);
+                            setNewDesc(email.bodyPreview);
+                            setNewApplicant(email.senderName);
+                            setNewClient(email.isPersonalDomain ? "Externe" : "Safir Consulting");
+                            setEmails((prev) =>
+                              prev.map((m) => (m.id === email.id ? { ...m, processingStatus: "QUALIFIED_IN_APP" } : m))
+                            );
+                            setShowCreateModal(true);
+                          }}
+                          className="inline-flex items-center justify-center gap-1.5 w-[188px] py-2 bg-[#0062E6] hover:bg-[#0052CC] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5 shrink-0" />
+                          <span>Qualifier en ticket SAP</span>
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center justify-center gap-1.5 w-[188px] py-1.5 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 text-xs font-bold shrink-0">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                          <span>Ticket qualifié In-App</span>
                         </span>
                       )}
                     </div>
-
-                    <div className="font-medium text-slate-800 text-sm">{email.subject}</div>
-                    <p className="text-xs text-slate-600 line-clamp-2">{email.bodyPreview}</p>
-                    <div className="text-[11px] text-slate-400">{email.receivedAt}</div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    {email.processingStatus === "PENDING_QUALIFICATION" ? (
-                      <button
-                        onClick={() => {
-                          setNewTitle(email.subject);
-                          setNewDesc(email.bodyPreview);
-                          setNewApplicant(email.senderName);
-                          setNewClient(email.isPersonalDomain ? "Externe" : "Safir Consulting");
-                          setEmails((prev) =>
-                            prev.map((m) => (m.id === email.id ? { ...m, processingStatus: "QUALIFIED_IN_APP" } : m))
-                          );
-                          setShowCreateModal(true);
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-medium rounded-lg shadow-sm cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Qualifier en ticket SAP</span>
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-medium">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Ticket qualifié In-App
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
