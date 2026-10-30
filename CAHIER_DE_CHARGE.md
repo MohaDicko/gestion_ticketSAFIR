@@ -512,6 +512,10 @@ L'application arbore l'identité visuelle officielle **Tandem** sur l'ensemble d
   - **Bleu Royal (`#0062E6` / `#0052CC`)** : Boutons d'action primaires, anneaux de focus et espace Consultante (`CONSULTANT`).
   - **Turquoise / Menthe (`#0D9488` / `#00B89C`)** : Indicateurs d'activité en direct, compteurs, exports CSV/Excel et espace Développeur (`DEVELOPER`).
   - **Gris Acier (`#5A7088`) & Fond Clair (`#F4F7FB`)** : Sous-titres métier et arrière-plan de travail sobre à haut contraste.
+- **Interface Bilingue Français / Anglais (`FR` / `EN`)** :
+  - Sélecteur de langue instantané accessible dès l'écran de connexion et dans la barre de navigation principale pour permettre aux collaborateurs anglophones (ex: *Anoop Pandimukkula*) et francophones de travailler dans leur langue de préférence.
+- **Thème Clair & Mode Sombre (`Light Mode` / `Dark Mode`)** :
+  - Bascule instantanée entre le thème Clair Corporate (`#F4F7FB` / `#FFFFFF`) et le Mode Sombre Entreprise Tandem (`.dark-theme` — `#070F1E` / `#0D1829`) pour le confort visuel prolongé des développeurs et de la direction.
 
 ---
 

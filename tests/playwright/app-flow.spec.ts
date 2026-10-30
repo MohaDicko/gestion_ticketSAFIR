@@ -669,4 +669,35 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     // Fermer le rapport
     await page.getByRole("button", { name: /Fermer le rapport/i }).click();
   });
+
+  test("19. Support Bilingue (Français / Anglais) & Bascule Thème Clair / Sombre (Light / Dark Mode)", async ({ page }) => {
+    await page.goto("/");
+
+    // 1. Tester le passage en Anglais (EN) sur l'écran de connexion
+    const langBtn = page.getByLabel("Sélecteur de langue FR / EN");
+    await expect(langBtn).toBeVisible();
+    await langBtn.click();
+    await expect(page.locator("body")).toContainText("Sign in to your Tandem Workspace");
+    await expect(page.locator("body")).toContainText("Corporate Email Address (Login)");
+
+    // 2. Tester le Mode Sombre (Dark Mode) et retour en Mode Clair (Light Mode)
+    const themeBtn = page.getByLabel("Basculer le mode Clair / Sombre");
+    await expect(themeBtn).toBeVisible();
+    await themeBtn.click();
+    await expect(page.locator("html")).toHaveClass(/dark-theme/);
+
+    // 3. Connexion au portail en Anglais & Mode Sombre
+    await page.getByRole("button", { name: /Aliko Getheme/i }).first().click();
+    await expect(page.locator("body")).toContainText("Active Tickets");
+    await expect(page.locator("body")).toContainText("Available Capacity");
+    await expect(page.locator("body")).toContainText("Live Developer Activity Supervision");
+
+    // 4. Retour en Français (FR) et Mode Clair (Light Mode)
+    await page.getByLabel("Sélecteur de langue FR / EN").click();
+    await expect(page.locator("body")).toContainText("Tickets en cours");
+    await expect(page.locator("body")).toContainText("Capacité disponible");
+
+    await page.getByLabel("Basculer le mode Clair / Sombre").click();
+    await expect(page.locator("html")).not.toHaveClass(/dark-theme/);
+  });
 });

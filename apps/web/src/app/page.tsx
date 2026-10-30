@@ -49,7 +49,10 @@ import {
   Pause,
   Timer,
   Square,
-  Activity
+  Activity,
+  Sun,
+  Moon,
+  Globe
 } from "lucide-react";
 
 const API_BASE = "/api/v1";
@@ -1224,6 +1227,102 @@ export default function TicketManagerPage() {
   const [devLiveActivities, setDevLiveActivities] = useState<Record<string, DeveloperLiveActivity>>(INITIAL_DEV_LIVE_ACTIVITIES);
   const [liveSupervisionFilter, setLiveSupervisionFilter] = useState<"ALL" | "WORKING" | "BLOCKED" | "AVAILABLE">("ALL");
   const [liveSupervisionSearch, setLiveSupervisionSearch] = useState("");
+
+  // Langue Bilingue (FR / EN) & Mode d'Affichage (Light / Dark)
+  const [appLang, setAppLang] = useState<"fr" | "en">("fr");
+  const [themeMode, setThemeMode] = useState<"light" | "dark">("light");
+  const tr = (fr: string, en: string) => (appLang === "en" ? en : fr);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("dark-theme", themeMode === "dark");
+      document.documentElement.lang = appLang;
+    }
+  }, [themeMode, appLang]);
+
+  // Traducteur automatique des noeuds texte profonds (Tableaux, Statuts, Modales, Rapports) FR <-> EN
+  const originalTextMapRef = useRef<WeakMap<Node, string>>(new WeakMap());
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const FR_TO_EN_PHRASES: Array<[string, string]> = [
+      ["Tickets en cours", "Active Tickets"],
+      ["Demandes de développement actives", "Active development requests"],
+      ["Capacité disponible", "Available Capacity"],
+      ["Heures de développement libres cette semaine", "Free development hours this week"],
+      ["Alertes Blocage", "Blocker Alerts"],
+      ["Développeurs arrêtés en attente d'arbitrage", "Developers paused awaiting arbitration"],
+      ["Guichet Central Demandes", "Central Request Hub"],
+      ["Demandes In-App soumises à qualifier par Aliko", "In-App requests awaiting Aliko's qualification"],
+      ["Supervision de l'Activité des Développeurs en Direct", "Live Developer Activity Supervision"],
+      ["LIVE TEMPS RÉEL", "REAL-TIME LIVE"],
+      ["En production :", "Working:"],
+      ["Bloqué (Stop-the-line) :", "Blocked (Stop-the-line):"],
+      ["Disponible :", "Available:"],
+      ["Imprimer son rapport", "Print Report"],
+      ["Imprimer mon rapport d'heures", "Print My Timesheet Report"],
+      ["Voir projet", "View Project"],
+      ["Suivre", "Track"],
+      ["Affecter", "Assign"],
+      ["Réaffecter", "Reassign"],
+      ["Nouveau ticket", "New Ticket"],
+      ["Tableau de bord", "Dashboard"],
+      ["Tous les Tickets SAP", "All SAP Tickets"],
+      ["Équipe & Capacité", "Team & Capacity"],
+      ["Mon Espace Développeur", "My Developer Workspace"],
+      ["Mes Demandes Émises", "My Submitted Requests"],
+      ["Déconnexion", "Sign Out"],
+      ["En cours", "In Progress"],
+      ["Bloqué", "Blocked"],
+      ["Livré (En Recette)", "Delivered (In UAT)"],
+      ["Clôturé", "Closed"],
+      ["Prêt à affecter", "Ready to Assign"],
+      ["Assigné", "Assigned"],
+      ["Envoyer en test chez le consultant", "Send to Consultant for Testing"],
+      ["Tester & Approuver la Recette (Conforme)", "Test & Approve UAT (Compliant)"],
+      ["Renvoyer à l'Équipe Dév (Problème / Anomalie)", "Return to Dev Team (Issue / Defect)"],
+      ["Valider la Clôture Définitive (Recette Approuvée)", "Validate Final Closure (UAT Approved)"],
+      ["Clôturer le Ticket (Réglé)", "Close Ticket (Resolved)"],
+      ["Télécharger CSV / Excel", "Download CSV / Excel"],
+      ["Synthèse Comité Direction", "Executive Committee Summary"],
+      ["Fermer", "Close"],
+      ["Annuler", "Cancel"],
+    ];
+
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes: Text[] = [];
+    let current = walker.nextNode();
+    while (current) {
+      nodes.push(current as Text);
+      current = walker.nextNode();
+    }
+
+    for (const node of nodes) {
+      const val = node.nodeValue;
+      if (!val || !val.trim()) continue;
+      if (!originalTextMapRef.current.has(node)) {
+        const matchesAny = FR_TO_EN_PHRASES.some(([frStr]) => val.includes(frStr));
+        if (!matchesAny) continue;
+        originalTextMapRef.current.set(node, val);
+      }
+      const orig = originalTextMapRef.current.get(node);
+      if (!orig) continue;
+      if (appLang === "fr") {
+        if (node.nodeValue !== orig) {
+          node.nodeValue = orig;
+        }
+      } else {
+        let translated = orig;
+        for (const [frStr, enStr] of FR_TO_EN_PHRASES) {
+          if (translated.includes(frStr)) {
+            translated = translated.split(frStr).join(enStr);
+          }
+        }
+        if (node.nodeValue !== translated) {
+          node.nodeValue = translated;
+        }
+      }
+    }
+  }, [appLang, activeTab, currentUser, showCreateModal, supervisingTicket, discussingTicket, printingReport, showReportModal]);
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -2672,9 +2771,47 @@ export default function TicketManagerPage() {
               </div>
             </div>
 
-            <div className="hidden sm:flex items-center gap-2 text-xs text-[#051638] bg-[#F4F7FB] px-3.5 py-1.5 rounded-full border border-slate-200/90 font-medium">
-              <Shield className="w-3.5 h-3.5 text-[#0062E6]" />
-              <span>Authentification Sécurisée (Argon2id & RBAC)</span>
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2 text-xs text-[#051638] bg-[#F4F7FB] px-3 py-1.5 rounded-full border border-slate-200/90 font-medium">
+                <Shield className="w-3.5 h-3.5 text-[#0062E6]" />
+                <span>{tr("Authentification Sécurisée (Argon2id & RBAC)", "Secure Authentication (Argon2id & RBAC)")}</span>
+              </div>
+
+              {/* Sélecteur Bilingue FR / EN */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = appLang === "fr" ? "en" : "fr";
+                  setAppLang(next);
+                  showToast(next === "en" ? "Language switched to English (EN)" : "Langue basculée en Français (FR)");
+                }}
+                aria-label="Sélecteur de langue FR / EN"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-[#051638] transition-colors cursor-pointer shadow-2xs"
+                title={tr("Passer en Anglais (EN)", "Switch to French (FR)")}
+              >
+                <Globe className="w-3.5 h-3.5 text-[#0062E6]" />
+                <span>{appLang === "fr" ? "FR" : "EN"}</span>
+              </button>
+
+              {/* Bascule Mode Clair / Sombre (Light / Dark) */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = themeMode === "light" ? "dark" : "light";
+                  setThemeMode(next);
+                  showToast(next === "dark" ? tr("Mode sombre activé", "Dark mode enabled") : tr("Mode clair activé", "Light mode enabled"));
+                }}
+                aria-label="Basculer le mode Clair / Sombre"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-[#051638] transition-colors cursor-pointer shadow-2xs"
+                title={themeMode === "light" ? tr("Activer le mode sombre", "Enable Dark Mode") : tr("Activer le mode clair", "Enable Light Mode")}
+              >
+                {themeMode === "light" ? (
+                  <Moon className="w-3.5 h-3.5 text-[#051638]" />
+                ) : (
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                )}
+                <span className="hidden sm:inline">{themeMode === "light" ? tr("Sombre", "Dark") : tr("Clair", "Light")}</span>
+              </button>
             </div>
           </div>
         </header>
@@ -2690,9 +2827,14 @@ export default function TicketManagerPage() {
                   alt="Tandem — Du besoin à la solution."
                   className="h-14 w-auto object-contain mx-auto mb-3"
                 />
-                <h1 className="text-lg font-bold tracking-tight text-[#051638]">Connexion à votre Espace Tandem</h1>
+                <h1 className="text-lg font-bold tracking-tight text-[#051638]">
+                  {tr("Connexion à votre Espace Tandem", "Sign in to your Tandem Workspace")}
+                </h1>
                 <p className="text-xs text-[#5A7088] mt-1 max-w-sm mx-auto">
-                  Identifiez-vous avec votre adresse e-mail professionnelle pour accéder à votre portail dédié.
+                  {tr(
+                    "Identifiez-vous avec votre adresse e-mail professionnelle pour accéder à votre portail dédié.",
+                    "Sign in with your corporate email address to access your dedicated portal."
+                  )}
                 </p>
               </div>
 
@@ -2701,7 +2843,7 @@ export default function TicketManagerPage() {
                   <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2.5 animate-in fade-in">
                     <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-semibold">Erreur d'authentification : </span>
+                      <span className="font-semibold">{tr("Erreur d'authentification : ", "Authentication error: ")}</span>
                       {loginError}
                     </div>
                   </div>
@@ -2710,7 +2852,7 @@ export default function TicketManagerPage() {
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-[#051638] mb-1.5">
-                      Adresse e-mail professionnelle (Login)
+                      {tr("Adresse e-mail professionnelle (Login)", "Corporate Email Address (Login)")}
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-[#5A7088] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -2728,9 +2870,9 @@ export default function TicketManagerPage() {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="block text-xs font-semibold text-[#051638]">
-                        Mot de passe
+                        {tr("Mot de passe", "Password")}
                       </label>
-                      <span className="text-[11px] text-[#5A7088]">Chiffré via Argon2id</span>
+                      <span className="text-[11px] text-[#5A7088]">{tr("Chiffré via Argon2id", "Encrypted via Argon2id")}</span>
                     </div>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-[#5A7088] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -2749,7 +2891,7 @@ export default function TicketManagerPage() {
                     type="submit"
                     className="w-full py-2.5 px-4 bg-[#0062E6] hover:bg-[#0052CC] active:bg-[#051638] text-white font-semibold text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 group cursor-pointer"
                   >
-                    <span>Se connecter à mon portail</span>
+                    <span>{tr("Se connecter à mon portail", "Sign in to my portal")}</span>
                     <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                   </button>
                 </form>
@@ -2757,7 +2899,7 @@ export default function TicketManagerPage() {
                 {/* Section Accès Rapide Démo 1-Clic */}
                 <div className="pt-5 border-t border-slate-100">
                   <div className="text-[11px] font-semibold text-[#5A7088] uppercase tracking-wider mb-3 text-center">
-                    Accès direct corporate & démo (1-clic)
+                    {tr("Accès direct corporate & démo (1-clic)", "Direct Corporate & Demo Access (1-click)")}
                   </div>
 
                   <div className="space-y-2">
@@ -2861,17 +3003,17 @@ export default function TicketManagerPage() {
         {/* Liseré identitaire Tandem : Marine (#051638) -> Bleu (#0062E6) -> Turquoise (#00B89C) */}
         <div className="h-0.5 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] to-[#00B89C]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-3">
+          <div className="flex items-center justify-between h-16 gap-2">
             {/* Logo Tandem & Identité Application */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0">
                 <img
                   src="/tandem-logo.jpg"
                   alt="Tandem — Du besoin à la solution."
-                  className="h-10 w-auto object-contain"
+                  className="h-8 w-auto object-contain"
                 />
-                <div className="hidden lg:block border-l border-slate-200 pl-2.5">
-                  <div className="flex items-center gap-1.5">
+                <div className="hidden 2xl:block border-l border-slate-200 pl-2">
+                  <div className="flex items-center gap-1">
                     <span className="font-bold text-[#051638] text-xs tracking-tight">Tandem</span>
                     <span className="text-slate-300">•</span>
                     <span className="font-medium text-[#5A7088] text-[11px]">Safir Consulting</span>
@@ -2882,13 +3024,13 @@ export default function TicketManagerPage() {
 
               {/* Navigation conditionnelle selon les GRANTS de l'utilisateur connecté */}
               {currentUser && (
-                <nav className="hidden md:flex items-center space-x-1 ml-1">
+                <nav className="hidden md:flex items-center space-x-0.5">
                   {/* Vue Direction (HEAD) */}
                   {currentUser.role === "HEAD" && (
                     <>
                       <button
                         onClick={() => handleTabChange("dashboard")}
-                        className={`px-3 py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
+                        className={`px-2.5 py-1.5 text-xs rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                           activeTab === "dashboard"
                             ? "bg-[#051638] text-white font-semibold shadow-xs"
                             : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
@@ -2898,7 +3040,7 @@ export default function TicketManagerPage() {
                       </button>
                       <button
                         onClick={() => handleTabChange("tickets")}
-                        className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        className={`px-2.5 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
                           activeTab === "tickets"
                             ? "bg-[#051638] text-white font-semibold shadow-xs"
                             : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
@@ -2913,7 +3055,7 @@ export default function TicketManagerPage() {
                       </button>
                       <button
                         onClick={() => handleTabChange("developers")}
-                        className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        className={`px-2.5 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
                           activeTab === "developers"
                             ? "bg-[#051638] text-white font-semibold shadow-xs"
                             : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
@@ -2923,7 +3065,7 @@ export default function TicketManagerPage() {
                       </button>
                       <button
                         onClick={() => handleTabChange("inbox")}
-                        className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        className={`px-2.5 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
                           activeTab === "inbox"
                             ? "bg-[#051638] text-white font-semibold shadow-xs"
                             : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
@@ -2945,7 +3087,7 @@ export default function TicketManagerPage() {
                   {currentUser.role === "DEVELOPER" && (
                     <button
                       onClick={() => handleTabChange("my-tickets")}
-                      className={`px-3.5 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                         activeTab === "my-tickets"
                           ? "bg-[#0D9488] text-white font-semibold shadow-xs"
                           : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
@@ -2960,7 +3102,7 @@ export default function TicketManagerPage() {
                   {currentUser.role === "CONSULTANT" && (
                     <button
                       onClick={() => handleTabChange("my-demands")}
-                      className={`px-3.5 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      className={`px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                         activeTab === "my-demands"
                           ? "bg-[#0062E6] text-white font-semibold shadow-xs"
                           : "text-[#5A7088] hover:text-[#051638] hover:bg-slate-100/80 font-medium"
@@ -2975,11 +3117,11 @@ export default function TicketManagerPage() {
             </div>
 
             {/* Droite : Boutons d'action, Notifications Temps Réel et Sélecteur de Rôle RBAC */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {currentUser?.role === "HEAD" && (
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0062E6] hover:bg-[#0052CC] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#0062E6] hover:bg-[#0052CC] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors whitespace-nowrap cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Nouveau ticket</span>
@@ -2988,8 +3130,7 @@ export default function TicketManagerPage() {
 
               {/* SÉLECTEUR MULTI-DEVISES (AFRIQUE DE L'OUEST FCFA PAR DÉFAUT + EUR / USD) - RÉSERVÉ À ALIKO (HEAD) */}
               {currentUser?.role === "HEAD" && (
-                <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs" title="Devise contractuelle (Prérogative Aliko)">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Devise :</span>
+                <div className="hidden 2xl:flex items-center gap-1 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs" title="Devise contractuelle (Prérogative Aliko)">
                   <select
                     value={activeCurrency}
                     onChange={(e) => {
@@ -3005,6 +3146,41 @@ export default function TicketManagerPage() {
                   </select>
                 </div>
               )}
+
+              {/* SÉLECTEUR DE LANGUE BILINGUE (FR / EN) */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = appLang === "fr" ? "en" : "fr";
+                  setAppLang(next);
+                  showToast(next === "en" ? "Language switched to English (EN)" : "Langue basculée en Français (FR)");
+                }}
+                aria-label="Sélecteur de langue FR / EN"
+                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-[#051638] transition-colors cursor-pointer shadow-2xs"
+                title={tr("Passer en Anglais (EN)", "Switch to French (FR)")}
+              >
+                <Globe className="w-3.5 h-3.5 text-[#0062E6]" />
+                <span>{appLang === "fr" ? "FR" : "EN"}</span>
+              </button>
+
+              {/* BASCULE MODE CLAIR / SOMBRE (LIGHT / DARK MODE) */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = themeMode === "light" ? "dark" : "light";
+                  setThemeMode(next);
+                  showToast(next === "dark" ? tr("Mode sombre activé", "Dark mode enabled") : tr("Mode clair activé", "Light mode enabled"));
+                }}
+                aria-label="Basculer le mode Clair / Sombre"
+                className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[#051638] transition-colors cursor-pointer shadow-2xs"
+                title={themeMode === "light" ? tr("Activer le mode sombre", "Enable Dark Mode") : tr("Activer le mode clair", "Enable Light Mode")}
+              >
+                {themeMode === "light" ? (
+                  <Moon className="w-4 h-4 text-[#051638]" />
+                ) : (
+                  <Sun className="w-4 h-4 text-amber-400" />
+                )}
+              </button>
 
               {/* CLOCHE DE NOTIFICATIONS TEMPS RÉEL IN-APP */}
               <div className="relative">
@@ -3113,10 +3289,10 @@ export default function TicketManagerPage() {
                     }`}>
                       {currentUser.initials}
                     </div>
-                    <div className="hidden sm:block">
-                      <div className="text-xs font-semibold text-[#051638] flex items-center gap-1.5 leading-tight">
+                    <div className="hidden xl:block">
+                      <div className="text-xs font-semibold text-[#051638] flex items-center gap-1 leading-tight whitespace-nowrap">
                         <span>{currentUser.name}</span>
-                        <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold uppercase tracking-wider ${
+                        <span className={`hidden 2xl:inline text-[9px] px-1.5 py-0.2 rounded font-mono font-bold uppercase tracking-wider ${
                           currentUser.role === "HEAD"
                             ? "bg-[#051638]/10 text-[#051638] border border-[#051638]/20"
                             : currentUser.role === "DEVELOPER"
@@ -3126,7 +3302,7 @@ export default function TicketManagerPage() {
                           {currentUser.role}
                         </span>
                       </div>
-                      <div className="text-[10px] text-[#5A7088] leading-none mt-0.5 truncate max-w-[140px]">{currentUser.roleLabel}</div>
+                      <div className="hidden 2xl:block text-[10px] text-[#5A7088] leading-none mt-0.5 truncate max-w-[140px]">{currentUser.roleLabel}</div>
                     </div>
                     <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
                   </button>
