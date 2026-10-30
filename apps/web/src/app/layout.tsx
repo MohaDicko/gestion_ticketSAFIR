@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ticket Manager — Safir Consulting",
-  description: "Plateforme intelligente de gestion des tickets, des addons SAP B1 / S/4HANA et de la capacité de développement pour la SME Business Unit.",
+  title: "Tandem — Du besoin à la solution. | Ticket Manager — Safir Consulting",
+  description: "Tandem — Du besoin à la solution. Plateforme de gouvernance des tickets, addons SAP B1 / S/4HANA et capacité de développement pour Safir Consulting.",
 };
 
 export default function RootLayout({

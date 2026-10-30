@@ -2651,19 +2651,23 @@ export default function TicketManagerPage() {
         )}
 
         {/* En-tête simplifié */}
-        <header className="border-b border-slate-800 bg-slate-900/70 backdrop-blur-md px-6 py-4">
+        <header className="border-b border-slate-800 bg-slate-900/70 backdrop-blur-md px-6 py-3.5">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 text-white flex items-center justify-center font-bold text-xl shadow-sm">
-                S
+            <div className="flex items-center gap-3.5">
+              <div className="bg-white px-2.5 py-1 rounded-xl shadow-sm flex items-center justify-center">
+                <img
+                  src="/tandem-logo.jpg"
+                  alt="Tandem — Du besoin à la solution."
+                  className="h-9 w-auto object-contain"
+                />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-white text-base tracking-tight">Safir Consulting</span>
+                  <span className="font-bold text-white text-base tracking-tight">Tandem</span>
                   <span className="text-slate-500">|</span>
-                  <span className="font-semibold text-slate-200 text-sm">Ticket Manager</span>
+                  <span className="font-semibold text-slate-200 text-sm">Safir Consulting</span>
                 </div>
-                <p className="text-xs text-slate-400">Business Unit SME — Pilotage Développements SAP</p>
+                <p className="text-xs text-slate-400">Du besoin à la solution. — Business Unit SME SAP</p>
               </div>
             </div>
 
@@ -2679,12 +2683,16 @@ export default function TicketManagerPage() {
           <div className="w-full max-w-lg space-y-5">
             <div className="bg-white text-slate-900 rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
               <div className="bg-slate-900 p-6 text-white text-center border-b border-slate-800">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/10 text-sky-400 mb-3 border border-white/10 shadow-inner">
-                  <Lock className="w-6 h-6" />
+                <div className="inline-flex items-center justify-center bg-white px-4 py-2 rounded-xl mb-3 shadow-sm">
+                  <img
+                    src="/tandem-logo.jpg"
+                    alt="Tandem — Du besoin à la solution."
+                    className="h-11 w-auto object-contain"
+                  />
                 </div>
-                <h1 className="text-xl font-bold tracking-tight">Connexion à votre Espace</h1>
+                <h1 className="text-xl font-bold tracking-tight">Connexion à votre Espace Tandem</h1>
                 <p className="text-xs text-slate-300 mt-1 max-w-sm mx-auto">
-                  Identifiez-vous avec votre adresse e-mail professionnelle pour accéder à votre portail dédié.
+                  Du besoin à la solution. — Identifiez-vous avec votre adresse e-mail professionnelle pour accéder à votre portail dédié.
                 </p>
               </div>
 
@@ -2838,7 +2846,7 @@ export default function TicketManagerPage() {
         </main>
 
         <footer className="py-4 border-t border-slate-800 text-center text-xs text-slate-500">
-          Safir Consulting © 2026 | Ticket Manager SAP
+          Tandem — Du besoin à la solution. | Safir Consulting © 2026 | Ticket Manager SAP
         </footer>
       </div>
     );
@@ -2847,24 +2855,24 @@ export default function TicketManagerPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">
       {/* ================================================================= */}
-      {/* BARRE DE NAVIGATION D'ENTREPRISE (DESIGN CORPORATE SAP HAUTE PRÉCISION) */}
+      {/* BARRE DE NAVIGATION D'ENTREPRISE (TANDEM — SAFIR CONSULTING)      */}
       {/* ================================================================= */}
       <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(15,23,42,0.03)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-3">
-            {/* Logo Entreprise */}
-            <div className="flex items-center gap-5">
+            {/* Logo Tandem & Identité Application */}
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-2.5 shrink-0">
-                <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-base shadow-sm ring-1 ring-slate-800/20">
-                  <span className="font-mono tracking-tighter">S</span>
-                </div>
-                <div>
+                <img
+                  src="/tandem-logo.jpg"
+                  alt="Tandem — Du besoin à la solution."
+                  className="h-10 w-auto object-contain"
+                />
+                <div className="hidden lg:block border-l border-slate-200 pl-2.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-900 text-sm tracking-tight">Safir Consulting</span>
-                    <span className="text-slate-300">|</span>
-                    <span className="font-semibold text-slate-700 text-xs tracking-tight">Ticket Manager</span>
+                    <span className="font-bold text-slate-900 text-xs tracking-tight">Safir Consulting</span>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-normal">BU SME — Gouvernance SAP</p>
+                  <p className="text-[10px] text-slate-500 font-normal">BU SME — Gouvernance SAP</p>
                 </div>
               </div>
 
@@ -7005,12 +7013,17 @@ export default function TicketManagerPage() {
               {/* En-tête d'Entreprise Corporate */}
               <div className="border-b-2 border-slate-900 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-sky-900 text-white font-black flex items-center justify-center text-base">S</span>
-                    <span className="text-lg font-black tracking-tight text-slate-900">Safir Consulting</span>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="/tandem-logo.jpg"
+                      alt="Tandem — Du besoin à la solution."
+                      className="h-10 w-auto object-contain"
+                    />
+                    <span className="text-slate-300">|</span>
+                    <span className="text-base font-black tracking-tight text-slate-900">Safir Consulting</span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1 font-medium">
-                    Business Unit SME — Pilotage des Développements & Intégrations SAP
+                    Tandem — Du besoin à la solution. | Business Unit SME — Pilotage des Développements & Intégrations SAP
                   </p>
                 </div>
 
