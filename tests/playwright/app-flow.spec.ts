@@ -683,10 +683,15 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
   test("19. Support Bilingue (Français / Anglais) & Bascule Thème Clair / Sombre (Light / Dark Mode)", async ({ page }) => {
     await page.goto("/");
 
-    // 1. Tester le passage en Anglais (EN) sur l'écran de connexion
+    // 1. Tester le passage en Anglais (EN) sur l'écran de connexion et vérifier zéro décalage (0px shift)
     const langBtn = page.getByLabel("Sélecteur de langue FR / EN");
     await expect(langBtn).toBeVisible();
+    const loginLangBoxBefore = await langBtn.boundingBox();
     await langBtn.click();
+    const loginLangBoxAfter = await langBtn.boundingBox();
+    expect(Math.round(loginLangBoxAfter!.x)).toBe(Math.round(loginLangBoxBefore!.x));
+    expect(Math.round(loginLangBoxAfter!.width)).toBe(Math.round(loginLangBoxBefore!.width));
+
     await expect(page.locator("body")).toContainText("Sign in to your Tandem Workspace");
     await expect(page.locator("body")).toContainText("Corporate Email Address (Login)");
 
@@ -702,8 +707,18 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.locator("body")).toContainText("Available Capacity");
     await expect(page.locator("body")).toContainText("Live Developer Activity Supervision");
 
-    // 4. Retour en Français (FR) et Mode Clair (Light Mode)
+    // 4. Retour en Français (FR) et Mode Clair (Light Mode) — vérifier 0px de décalage dans la navbar principale
+    const navLangBoxEN = await page.getByLabel("Sélecteur de langue FR / EN").boundingBox();
+    const navThemeBoxEN = await page.getByLabel("Basculer le mode Clair / Sombre").boundingBox();
     await page.getByLabel("Sélecteur de langue FR / EN").click();
+    const navLangBoxFR = await page.getByLabel("Sélecteur de langue FR / EN").boundingBox();
+    const navThemeBoxFR = await page.getByLabel("Basculer le mode Clair / Sombre").boundingBox();
+
+    expect(Math.round(navLangBoxFR!.x)).toBe(Math.round(navLangBoxEN!.x));
+    expect(Math.round(navLangBoxFR!.width)).toBe(Math.round(navLangBoxEN!.width));
+    expect(Math.round(navThemeBoxFR!.x)).toBe(Math.round(navThemeBoxEN!.x));
+    expect(Math.round(navThemeBoxFR!.width)).toBe(Math.round(navThemeBoxEN!.width));
+
     await expect(page.locator("body")).toContainText("Tickets en cours");
     await expect(page.locator("body")).toContainText("Capacité disponible");
 
