@@ -6,10 +6,11 @@
 | **Document** | **Cahier des Charges Fonctionnel & Technique** |
 |---|---|
 | **Application / Projet** | **Tandem** (*« Du besoin à la solution. »* — Plateforme de pilotage BU SME) |
+| **Identité Visuelle** | Logo officiel **Tandem** (`/tandem-logo.jpg`) — Palette Marine `#051638`, Bleu Royal `#0062E6` & Turquoise `#00B89C` |
 | **Entreprise** | **Safir Consulting** |
 | **Destinataire / Validateur** | **Aliko Getheme** — *Head of SME Business Unit & Development Team* |
-| **Version** | **1.0 (Référence de Présentation Direction)** |
-| **Statut** | **Validé & Prêt pour Exploitation** |
+| **Version** | **2.0 (Édition Finale de Livraison Client)** |
+| **Statut** | **Validé, Testé à 100% & Prêt pour Exploitation Immédiate** |
 | **Dépôt Source** | [https://github.com/MohaDicko/gestion_ticketSAFIR](https://github.com/MohaDicko/gestion_ticketSAFIR) |
 
 ---
@@ -125,7 +126,7 @@ Toute la logique opérationnelle se déroule **intégralement à l'intérieur de
 sequenceDiagram
     autonumber
     actor Consultant as Consultante / Demandeur
-    participant App as Ticket Manager (Guichet Central In-App)
+    participant App as Tandem (Guichet Central In-App)
     actor Aliko as Aliko Getheme (HEAD - Point Central)
     actor Dev as Développeur(s) Affecté(s)
 
@@ -321,7 +322,7 @@ graph TB
 | **ORM & Typage** | **Prisma ORM v5** | Schéma unifié, migrations automatiques, requêtes paramétrées avec immunité aux injections SQL. |
 | **Base de Données** | **PostgreSQL 16** (Supabase Cloud ou Local) | 22 tables relationnelles, intégrité référentielle, indexation avancée et conformité ACID. |
 | **Cryptographie** | **Argon2id** (`argon2`) | Algorithme standard OWASP pour le hachage des mots de passe de connexion. |
-| **Tests E2E & Unitaires** | **Playwright + Vitest** | 12 scénarios E2E navigateur Chromium + 36 tests métier automatisés. |
+| **Tests E2E & Unitaires** | **Playwright + Vitest** | 18 scénarios E2E navigateur Chromium + 36 tests métier et sécurité automatisés (100% PASS). |
 | **Sécurité & Audit** | **OWASP ZAP** | 11 contrôles d'étanchéité, en-têtes de sécurité HSTS / CSP / anti-clickjacking. |
 
 ### 9.3. Architecture d'Hébergement & Coexistence avec les Serveurs SAP
@@ -355,7 +356,7 @@ Pour répondre aux contraintes d'infrastructure de Safir Consulting, le système
 ### 9.4. Les 4 Garanties d'Étage Technique :
 1. **Étanchéité Logicielle** : Fonctionnement sous conteneurs légers Docker / Podman (`docker-compose.yml`) avec réseau pont privé.
 2. **Indépendance des Données** : Base de données **PostgreSQL 16** dédiée (actuellement connectée sur Supabase en cloud, déployable localement sur le serveur SAP via conteneur sans polluer l'instance HANA).
-3. **Aucun Conflit de Ports** : Les ports de Ticket Manager (`3000` et `4000`) sont totalement disjoints des ports réservés SAP (`30015`, `50000`, etc.).
+3. **Aucun Conflit de Ports** : Les ports de **Tandem** (`3000` et `4000`) sont totalement disjoints des ports réservés SAP (`30015`, `50000`, etc.).
 4. **Fiabilité des Notifications (Outbox Pattern)** : Tout envoi d'e-mail ou alerte est consigné en base avant expédition. En cas d'indisponibilité momentanée du réseau, le message n'est jamais perdu et part dès le rétablissement.
 
 ---
@@ -501,6 +502,16 @@ Pour répondre à l'exigence de pilotage opérationnel en direct de la Business 
 
 ### 10.11. Sélecteur de Profil Corporate Sécurisé (Sur Page de Connexion)
 - Sélecteur de profil corporate intégré sur l'écran d'accueil permettant de tester les différents accès dans le respect de l'isolation stricte des sessions.
+
+### 10.12. Identité Visuelle & Charte Graphique Officielle « Tandem — Du besoin à la solution. »
+L'application arbore l'identité visuelle officielle **Tandem** sur l'ensemble de ses écrans et documents édités :
+- **Nom & Signature** : **Tandem** — *« Du besoin à la solution. »*
+- **Logo Officiel (`/tandem-logo.jpg`)** : Intégré nativement sur fond blanc pur dans l'en-tête et la carte centrale de connexion, la barre de navigation principale et l'en-tête des rapports d'activité périodiques imprimables.
+- **Palette Chromatique Corporate** :
+  - **Marine Profond (`#051638`)** : Typographie principale, onglets actifs Direction (`HEAD`), bandeaux exécutifs et supervision temps réel.
+  - **Bleu Royal (`#0062E6` / `#0052CC`)** : Boutons d'action primaires, anneaux de focus et espace Consultante (`CONSULTANT`).
+  - **Turquoise / Menthe (`#0D9488` / `#00B89C`)** : Indicateurs d'activité en direct, compteurs, exports CSV/Excel et espace Développeur (`DEVELOPER`).
+  - **Gris Acier (`#5A7088`) & Fond Clair (`#F4F7FB`)** : Sous-titres métier et arrière-plan de travail sobre à haut contraste.
 
 ---
 
