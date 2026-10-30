@@ -12,9 +12,10 @@ async function loginAsAliko(page: any) {
 test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
   test("1. Affiche par défaut la page de login Safir Consulting, s'authentifie et accède au portail Direction", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle(/Ticket Manager/i);
+    await expect(page).toHaveTitle(/Tandem/i);
 
     // Vérifier l'écran de Login initial par défaut
+    await expect(page.locator("body")).toContainText("Tandem");
     await expect(page.locator("body")).toContainText("Safir Consulting");
     await expect(page.locator("body")).toContainText("Connexion à votre Espace");
     await expect(page.locator("body")).toContainText("Adresse e-mail professionnelle (Login)");

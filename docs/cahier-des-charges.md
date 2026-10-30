@@ -1,9 +1,9 @@
-# Cahier des charges — DevCapacity Manager
+# Cahier des charges — Tandem (Du besoin à la solution.)
 
-> **Plateforme intelligente de gestion des tickets, des addons et des ressources de développement**
+> **Tandem — Plateforme intelligente de gestion des tickets, des addons SAP et des ressources de développement**
 > Client : **Safir Consulting** — Équipe de développement SME Business Unit
 > Statut du document : **Référence contractuelle du projet** (version 1.0)
-> Nom de travail du produit : **DevCapacity Manager** (nom configurable, personnalisable selon l'identité visuelle de l'entreprise)
+> Nom officiel du produit : **Tandem** (*« Du besoin à la solution. »*)
 
 ---
 

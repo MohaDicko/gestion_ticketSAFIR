@@ -1,6 +1,6 @@
-# Ticket Manager — Documentation du Projet
+# Tandem — Du besoin à la solution. (Documentation du Projet)
 
-Bienvenue dans le dépôt du projet **Ticket Manager**, la plateforme intelligente de gestion des tickets, des addons et de la capacité de développement conçue pour l'équipe SME Business Unit de **Safir Consulting**.
+Bienvenue dans le dépôt du projet **Tandem** (*« Du besoin à la solution. »*), la plateforme intelligente de gestion des tickets, des addons SAP et de la capacité de développement conçue pour l'équipe SME Business Unit de **Safir Consulting**.
 
 ---
 

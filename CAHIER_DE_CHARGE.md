@@ -1,11 +1,11 @@
-# 📋 CAHIER DES CHARGES — TICKET MANAGER
-## Plateforme Intelligente de Gestion des Tickets, des Addons SAP et de la Capacité de Développement
+# 📋 CAHIER DES CHARGES — TANDEM
+## Tandem — Du besoin à la solution. (Plateforme Intelligente de Gestion des Tickets, des Addons SAP et de la Capacité de Développement)
 
 ---
 
 | **Document** | **Cahier des Charges Fonctionnel & Technique** |
 |---|---|
-| **Projet** | **Ticket Manager** (Plateforme de pilotage BU SME) |
+| **Application / Projet** | **Tandem** (*« Du besoin à la solution. »* — Plateforme de pilotage BU SME) |
 | **Entreprise** | **Safir Consulting** |
 | **Destinataire / Validateur** | **Aliko Getheme** — *Head of SME Business Unit & Development Team* |
 | **Version** | **1.0 (Référence de Présentation Direction)** |

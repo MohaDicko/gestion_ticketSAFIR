@@ -2664,11 +2664,11 @@ export default function TicketManagerPage() {
               />
               <div className="hidden sm:block border-l border-slate-200 pl-3.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#051638] text-sm tracking-tight">Safir Consulting</span>
+                  <span className="font-bold text-[#051638] text-sm tracking-tight">Tandem</span>
                   <span className="text-slate-300">•</span>
-                  <span className="font-medium text-[#5A7088] text-xs">Ticket Manager SAP</span>
+                  <span className="font-medium text-[#5A7088] text-xs">Safir Consulting</span>
                 </div>
-                <p className="text-[11px] text-[#5A7088]">Business Unit SME — Pilotage & Gouvernance SAP</p>
+                <p className="text-[11px] text-[#5A7088]">Du besoin à la solution. — Business Unit SME SAP</p>
               </div>
             </div>
 
@@ -2839,14 +2839,14 @@ export default function TicketManagerPage() {
 
             {/* Note de sécurité */}
             <div className="text-center text-[11px] text-[#5A7088] space-y-1">
-              <p>Plateforme interne Safir Consulting — Tous droits réservés 2026</p>
+              <p>Application Tandem (Safir Consulting) — Du besoin à la solution. • Tous droits réservés 2026</p>
               <p className="text-slate-400">Cloisonnement strict RBAC • Chiffrement Argon2id • Conforme OWASP Top 10</p>
             </div>
           </div>
         </main>
 
         <footer className="py-4 bg-white border-t border-slate-200/80 text-center text-xs text-[#5A7088]">
-          Tandem — Du besoin à la solution. | Safir Consulting © 2026 | Ticket Manager SAP
+          Tandem — Du besoin à la solution. | Safir Consulting © 2026
         </footer>
       </div>
     );
@@ -2872,9 +2872,11 @@ export default function TicketManagerPage() {
                 />
                 <div className="hidden lg:block border-l border-slate-200 pl-2.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-[#051638] text-xs tracking-tight">Safir Consulting</span>
+                    <span className="font-bold text-[#051638] text-xs tracking-tight">Tandem</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="font-medium text-[#5A7088] text-[11px]">Safir Consulting</span>
                   </div>
-                  <p className="text-[10px] text-[#5A7088] font-normal">BU SME — Gouvernance SAP</p>
+                  <p className="text-[10px] text-[#5A7088] font-normal">Du besoin à la solution.</p>
                 </div>
               </div>
 
@@ -4829,14 +4831,17 @@ export default function TicketManagerPage() {
       {/* MODALE D'AUTHENTIFICATION / LOGIN FORMULAIRE                      */}
       {/* ================================================================= */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#051638]/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-5 border-b border-slate-100 text-center bg-slate-50/50">
-              <div className="w-10 h-10 rounded-xl bg-sky-700 text-white font-bold flex items-center justify-center mx-auto mb-2 text-lg shadow-sm">
-                S
-              </div>
-              <h3 className="font-bold text-slate-900 text-base">Connexion — Ticket Manager</h3>
-              <p className="text-xs text-slate-500">Safir Consulting — SME Business Unit</p>
+            <div className="h-1 w-full bg-gradient-to-r from-[#0062E6] to-[#00B89C]" />
+            <div className="p-5 border-b border-slate-100 text-center bg-white">
+              <img
+                src="/tandem-logo.jpg"
+                alt="Tandem — Du besoin à la solution."
+                className="h-11 w-auto object-contain mx-auto mb-2"
+              />
+              <h3 className="font-bold text-[#051638] text-base">Connexion — Tandem</h3>
+              <p className="text-xs text-[#5A7088]">Du besoin à la solution. — Safir Consulting (BU SME)</p>
             </div>
 
             <form onSubmit={handleLoginSubmit} className="p-5 space-y-3.5">
@@ -6754,14 +6759,14 @@ export default function TicketManagerPage() {
       {showReportModal && currentUser?.role === "HEAD" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900 text-white">
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-[#051638] text-white">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-400/30">
+                <div className="p-2.5 bg-[#00B89C]/20 text-[#22F0D2] rounded-xl border border-[#00B89C]/30">
                   <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                    Reporting Comité de Direction — Safir Consulting
+                  <span className="text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#00B89C]/20 text-[#22F0D2] border border-[#00B89C]/30">
+                    Tandem — Reporting Comité de Direction — Safir Consulting
                   </span>
                   <h3 className="font-bold text-base sm:text-lg text-white mt-1">
                     Synthèse Hebdomadaire d'Activité & Valorisation Financière BU SME
@@ -6920,11 +6925,11 @@ export default function TicketManagerPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:p-0 print:bg-white print:static">
           <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden print:border-none print:shadow-none print:max-w-full print:max-h-none print:overflow-visible">
             {/* Barre de contrôle d'impression (masquée à l'impression réelle) */}
-            <div className="p-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden">
+            <div className="p-4 bg-[#051638] text-white flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden">
               <div className="flex items-center gap-2.5">
-                <Printer className="w-5 h-5 text-sky-400" />
+                <Printer className="w-5 h-5 text-[#22F0D2]" />
                 <div>
-                  <h3 className="font-bold text-sm">Rapport d'Activité & Feuilles de Temps — Safir Consulting</h3>
+                  <h3 className="font-bold text-sm">Tandem • Rapport d'Activité & Feuilles de Temps — Safir Consulting</h3>
                   <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px]">
                     <span className="text-slate-400">Collaborateur (Changer de développeur) :</span>
                     {currentUser?.role === "HEAD" && printingReport.targetType === "DEVELOPER" ? (

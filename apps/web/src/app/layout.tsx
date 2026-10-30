@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tandem — Du besoin à la solution. | Ticket Manager — Safir Consulting",
+  title: "Tandem — Du besoin à la solution. | Safir Consulting",
   description: "Tandem — Du besoin à la solution. Plateforme de gouvernance des tickets, addons SAP B1 / S/4HANA et capacité de développement pour Safir Consulting.",
 };
 
