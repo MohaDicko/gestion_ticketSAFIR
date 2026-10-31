@@ -237,7 +237,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByText(/doit d'abord tester et approuver la recette/i)).toBeVisible();
 
     // Fermer la modale de supervision
-    await page.getByRole("button", { name: /Fermer/i }).first().click();
+    await page.getByTestId("close-email-alerts-btn").click();
     await expect(page.getByText("Supervision Métier")).not.toBeVisible();
   });
 
@@ -340,7 +340,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     // Déclencher le téléchargement CSV/Excel depuis la modale
     await page.getByRole("button", { name: /Télécharger Export Excel \/ CSV/i }).click();
     await expect(page.locator("body")).toContainText("Export Excel/CSV généré avec succès");
-    await page.getByRole("button", { name: /Fermer/i }).first().click();
+    await page.getByTestId("close-email-alerts-btn").click();
 
     // 3. Tester les Pièces Jointes SAP sécurisées dans la Supervision 360° et le Fil d'Échange
     const followBtn = page.getByRole("button", { name: /Suivre/i }).first();
@@ -1006,7 +1006,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     expect(download.suggestedFilename()).toContain(".csv");
 
     // 7. Fermer la modale
-    await page.getByRole("button", { name: /Fermer/i }).first().click();
+    await page.getByTestId("close-email-alerts-btn").click();
   });
 
   test("25. Validation des 6 Derniers Retours Critiques Administrateur (Gethème Aliko)", async ({ page }) => {
@@ -1048,7 +1048,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await page.getByTestId("send-test-email-btn").click();
     await expect(page.getByText(/Alerte e-mail envoyée/i)).toBeVisible();
     // Fermer le centre d'alertes
-    await page.getByRole("button", { name: /Fermer/i }).first().click();
+    await page.getByTestId("close-email-alerts-btn").click();
 
     // POINT 5 : Gestion des Compétences d'un développeur existant
     await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
