@@ -37,6 +37,55 @@ function loadEnvFallback() {
 loadEnvFallback();
 
 /**
+ * Envoi d'e-mail via l'API REST HTTPS Brevo (Garantit le passage à travers tous les pare-feux et FAI sur port 443)
+ */
+async function sendViaBrevoHttpApi(apiKey: string, emailData: {
+  senderName: string;
+  senderEmail: string;
+  recipients: string[];
+  replyTo: string;
+  subject: string;
+  htmlContent: string;
+  textContent: string;
+}) {
+  const payload = {
+    sender: {
+      name: emailData.senderName,
+      email: emailData.senderEmail || "notifications@safirconsulting.net",
+    },
+    to: emailData.recipients.map((email) => ({ email })),
+    replyTo: {
+      email: emailData.replyTo,
+      name: emailData.senderName,
+    },
+    subject: emailData.subject,
+    htmlContent: emailData.htmlContent,
+    textContent: emailData.textContent,
+  };
+
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": apiKey,
+      "accept": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Erreur API Brevo (${response.status}): ${errorBody}`);
+  }
+
+  const result = await response.json();
+  return {
+    messageId: result.messageId || `brevo-${Date.now()}`,
+    service: "BREVO_HTTPS_API",
+  };
+}
+
+/**
  * Obtient un transporteur Nodemailer fonctionnel.
  */
 async function getTransporter() {
@@ -50,7 +99,7 @@ async function getTransporter() {
 
   // 1. Si un hôte SMTP réel est configuré par l'utilisateur
   if (host) {
-    console.log(`[send-email] Utilisation du transporteur SMTP configuré : ${host}:${port} (user: ${user || "anonyme"})`);
+    console.log(`[send-email] Connexion au transporteur SMTP configuré : ${host}:${port} (user: ${user || "anonyme"})`);
     return nodemailer.createTransport({
       host,
       port,
@@ -63,10 +112,9 @@ async function getTransporter() {
   }
 
   // 2. Si aucun serveur SMTP n'est renseigné, génération d'un vrai compte SMTP de test Ethereal
-  // permettant un envoi SMTP réel avec boîte de réception en ligne et URL de consultation
   try {
     const testAccount = await nodemailer.createTestAccount();
-    console.log(`[send-email] Création d'un compte SMTP de test Ethereal actif : ${testAccount.user}`);
+    console.log(`[send-email] Compte SMTP test Ethereal généré : ${testAccount.user}`);
     return nodemailer.createTransport({
       host: "smtp.ethereal.email",
       port: 587,
@@ -83,13 +131,14 @@ async function getTransporter() {
 }
 
 /**
- * Endpoint API pour l'envoi d'e-mails réels (Nodemailer)
+ * Endpoint API pour l'envoi d'e-mails réels (Nodemailer & Brevo HTTPS)
  */
 export async function POST(req: Request) {
   try {
+    loadEnvFallback();
     const body = await req.json();
 
-    // Normalisation des destinataires (accepte string[], string séparé par virgules, ou array d'objets { email })
+    // Normalisation des destinataires
     let recipientList: string[] = [];
     if (Array.isArray(body.recipientEmails)) {
       recipientList = body.recipientEmails;
@@ -103,7 +152,7 @@ export async function POST(req: Request) {
       recipientList = body.to.split(",").map((s: string) => s.trim());
     }
 
-    // Filtrer les adresses vides et dédoublonner
+    // Filtrer et dédoublonner
     recipientList = Array.from(new Set(recipientList.filter((e) => e && e.includes("@"))));
 
     if (recipientList.length === 0) {
@@ -199,39 +248,65 @@ export async function POST(req: Request) {
 </body>
 </html>`;
 
-    const transporter = await getTransporter();
+    const subject = `[SAP Tandem] Nouveau ticket créé : ${ticketTitle} (${safeId})`;
+    const textContent = `Nouveau Ticket SAP : ${ticketTitle} (${safeId})\nCréé par : ${creatorName} (${creatorEmail})\n\nDescription :\n${ticketDescription}\n\nLien : ${ticketUrl}`;
 
-    // Expéditeur : le compte SMTP authentifié sous le nom du créateur
+    // 1. Détection prioritaire Clé API Brevo (Port 443 HTTPS sans blocage réseau)
+    const brevoApiKey = process.env.BREVO_API_KEY?.trim() || (process.env.SMTP_PASS?.trim().startsWith("xkeysib-") ? process.env.SMTP_PASS.trim() : null);
+    if (brevoApiKey) {
+      console.log(`[send-email] 🚀 Envoi direct via l'API REST HTTPS Brevo vers ${recipientList.join(", ")}...`);
+      const brevoSenderEmail = process.env.SMTP_USER?.trim() || "notifications@safirconsulting.net";
+      const apiResult = await sendViaBrevoHttpApi(brevoApiKey, {
+        senderName: creatorName,
+        senderEmail: brevoSenderEmail,
+        recipients: recipientList,
+        replyTo: creatorEmail,
+        subject,
+        htmlContent: html,
+        textContent,
+      });
+
+      console.log(`[send-email] ✅ E-mail réel délivré via API Brevo ! MessageId:`, apiResult.messageId);
+      return NextResponse.json({
+        success: true,
+        messageId: apiResult.messageId,
+        to: recipientList,
+        service: "BREVO_API",
+      });
+    }
+
+    // 2. Envoi via Transporteur SMTP Nodemailer standard
+    const transporter = await getTransporter();
     const authSmtpUser = process.env.SMTP_USER || "notifications@safirconsulting.net";
     const from = `"${creatorName}" <${authSmtpUser}>`;
     const replyTo = creatorEmail;
     const to = recipientList.join(", ");
-    const subject = `[SAP Tandem] Nouveau ticket créé : ${ticketTitle} (${safeId})`;
 
     const mailOptions = {
       from,
       replyTo,
       to,
       subject,
-      text: `Nouveau Ticket SAP : ${ticketTitle} (${safeId})\nCréé par : ${creatorName} (${creatorEmail})\n\nDescription :\n${ticketDescription}\n\nLien : ${ticketUrl}`,
+      text: textContent,
       html,
     };
 
     const info = await transporter.sendMail(mailOptions);
     const previewUrl = nodemailer.getTestMessageUrl(info) || null;
 
-    console.log(`[send-email] ✅ E-mail réel envoyé avec succès ! MessageId: ${info.messageId}, Destinataires: ${to}${previewUrl ? `, Preview: ${previewUrl}` : ""}`);
+    console.log(`[send-email] ✅ E-mail délivré avec succès via SMTP ! MessageId: ${info.messageId}, Destinataires: ${to}${previewUrl ? `, Preview: ${previewUrl}` : ""}`);
 
     return NextResponse.json({
       success: true,
       messageId: info?.messageId || `sent-${Date.now()}`,
       to: recipientList,
       previewUrl,
+      service: "SMTP",
     });
   } catch (error: any) {
-    console.error("[send-email] ❌ Erreur lors de l'envoi SMTP :", error?.message || error);
+    console.error("[send-email] ❌ Erreur lors de l'envoi :", error?.message || error);
     return NextResponse.json(
-      { success: false, error: error?.message || "Erreur interne SMTP" },
+      { success: false, error: error?.message || "Erreur interne d'envoi" },
       { status: 500 }
     );
   }
