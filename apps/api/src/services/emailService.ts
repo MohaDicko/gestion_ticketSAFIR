@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import fs from "fs";
+import path from "path";
 
 export interface TicketCreatedNotificationData {
   creatorName: string;
@@ -11,35 +13,64 @@ export interface TicketCreatedNotificationData {
 }
 
 /**
+ * Charge les variables d'environnement depuis .env si besoin.
+ */
+function loadEnvFallback() {
+  const possiblePaths = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(process.cwd(), "../../.env"),
+    path.resolve(process.cwd(), "../.env"),
+  ];
+
+  for (const envPath of possiblePaths) {
+    if (fs.existsSync(envPath)) {
+      try {
+        const content = fs.readFileSync(envPath, "utf-8");
+        const lines = content.split(/\r?\n/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
+            const [k, ...v] = trimmed.split("=");
+            const key = k.trim();
+            const val = v.join("=").trim().replace(/^["']|["']$/g, "");
+            if (!process.env[key] && val) {
+              process.env[key] = val;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+  }
+}
+
+loadEnvFallback();
+
+/**
  * Transporteur Nodemailer réutilisable basé sur les variables d'environnement.
  */
 function createTransporter() {
-  const host = process.env.SMTP_HOST || "";
+  loadEnvFallback();
+  const host = process.env.SMTP_HOST?.trim();
   const port = Number(process.env.SMTP_PORT) || 587;
-  const secure = process.env.SMTP_SECURE === "true";
-  const user = process.env.SMTP_USER || "";
-  const pass = process.env.SMTP_PASS || "";
+  const secure = process.env.SMTP_SECURE === "true" || port === 465;
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim();
 
-  // Si aucun hôte SMTP n'est spécifié, le transporteur peut utiliser le flux jsonTransport en local/test
-  if (!host) {
+  if (host) {
     return nodemailer.createTransport({
-      jsonTransport: true,
+      host,
+      port,
+      secure,
+      auth: user ? { user, pass } : undefined,
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
   }
 
+  // Fallback jsonTransport pour tests unitaires et intégration sans serveur local
   return nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: user
-      ? {
-          user,
-          pass,
-        }
-      : undefined,
-    tls: {
-      rejectUnauthorized: process.env.NODE_ENV === "production",
-    },
+    jsonTransport: true,
   });
 }
 
@@ -52,7 +83,6 @@ export const emailTransporter = createTransporter();
 function generateTicketEmailHtml(data: TicketCreatedNotificationData): string {
   const { creatorName, creatorEmail, ticketId, ticketTitle, ticketDescription, ticketUrl } = data;
   
-  // Échappement HTML basique pour éviter toute injection
   const escapeHtml = (str: string) =>
     (str || "")
       .replace(/&/g, "&amp;")
@@ -90,9 +120,7 @@ function generateTicketEmailHtml(data: TicketCreatedNotificationData): string {
     .desc-box { background: #ffffff; border-left: 3px solid #0062E6; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #334155; line-height: 1.6; }
     .cta-container { text-align: center; margin: 32px 0 16px; }
     .btn { display: inline-block; background-color: #0062E6; color: #ffffff !important; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 28px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 98, 230, 0.25); }
-    .btn:hover { background-color: #0050bc; }
     .footer { padding: 20px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8; }
-    .footer a { color: #0062E6; text-decoration: none; }
   </style>
 </head>
 <body>
@@ -112,7 +140,7 @@ function generateTicketEmailHtml(data: TicketCreatedNotificationData): string {
         </div>
         <div class="info-row">
           <span class="info-label">Créé par :</span>
-          <span class="info-value">${safeCreator} (&lt;a href="mailto:${safeCreatorEmail}" style="color: #0062E6; text-decoration: none;"&gt;${safeCreatorEmail}&lt;/a&gt;)</span>
+          <span class="info-value">${safeCreator} (${safeCreatorEmail})</span>
         </div>
         <div class="info-row" style="margin-top: 12px; flex-direction: column;">
           <span class="info-label" style="width: 100%; margin-bottom: 4px;">Spécifications / Description de la demande :</span>
@@ -181,4 +209,3 @@ export default {
   sendTicketCreatedNotification,
   emailTransporter,
 };
-

@@ -359,7 +359,7 @@ const SYSTEM_USERS: AuthUser[] = [
   {
     id: "user-aliko",
     name: "Getheme Aliko",
-    email: "aliko.getheme@safirconsulting.net",
+    email: "admin@safirconsulting.net",
     role: "HEAD",
     adminLevel: "SUPER_ADMIN",
     roleLabel: "Super Administrateur & Direction BU SME",
@@ -884,7 +884,7 @@ const INITIAL_TIME_LOGS: TimeLog[] = [
   }
 ];
 
-// État Temps Réel initial de l'activité de l'équipe des Développeurs (Supervision Direction Aliko)
+// État Temps Réel initial de l'activité de l'équipe des Développeurs (Supervision Direction & Administration)
 const INITIAL_DEV_LIVE_ACTIVITIES: Record<string, DeveloperLiveActivity> = {
   "dev-anoop": {
     developerId: "dev-anoop",
@@ -1466,7 +1466,7 @@ export default function TicketManagerPage() {
       ["Alertes Blocage", "Blocker Alerts"],
       ["Développeurs arrêtés en attente d'arbitrage", "Developers paused awaiting arbitration"],
       ["Guichet Central Demandes", "Central Request Hub"],
-      ["Demandes In-App soumises à qualifier par Aliko", "In-App requests awaiting Aliko's qualification"],
+      ["Demandes In-App soumises à qualifier par l'Administration", "In-App requests awaiting Admin qualification"],
       ["Supervision de l'Activité des Développeurs en Direct", "Live Developer Activity Supervision"],
       ["LIVE TEMPS RÉEL", "REAL-TIME LIVE"],
       ["En production :", "Working:"],
@@ -1611,17 +1611,30 @@ export default function TicketManagerPage() {
     showToast(`📧 Alerte e-mail envoyée à ${uniqueRecipients.length} destinataire(s) (${recSummary})`);
 
     // Trace backend d'envoi SMTP (avec catch silencieux si hors ligne)
-    try {
-      fetch(`${API_BASE}/emails/simulate`, {
+    // Envoi réel d'e-mail via le module Nodemailer en tâche de fond non bloquante
+    if (typeof window !== "undefined" && uniqueRecipients.length > 0) {
+      const recipientEmailsList = uniqueRecipients.map((r) => r.email).filter(Boolean);
+      fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subject: params.subject,
-          reference: params.ticketReference,
-          recipients: uniqueRecipients.map((r) => r.email)
-        })
-      }).catch(() => {});
-    } catch (_) {}
+          creatorName: currentUser?.name || "Collaborateur Safir",
+          creatorEmail: currentUser?.email || "notifications@safirconsulting.net",
+          recipientEmails: recipientEmailsList,
+          ticketId: params.ticketReference,
+          ticketTitle: params.ticketTitle,
+          ticketDescription: params.subject,
+          ticketUrl: `${window.location.origin}/#ticket-${params.ticketReference}`,
+        }),
+      }).then(async (res) => {
+        const data = await res.json().catch(() => null);
+        if (data?.success) {
+          console.log(`[EmailNotification] E-mail délivré avec succès à ${recipientEmailsList.join(", ")} ! ID:`, data.messageId);
+        }
+      }).catch((err) => {
+        console.error("[EmailNotification] Erreur non-bloquante lors de l'envoi SMTP :", err);
+      });
+    }
     return dispatchRecord;
   };
 
@@ -2244,7 +2257,7 @@ export default function TicketManagerPage() {
         setActiveTimerSeconds(computeElapsedSeconds());
       }
 
-      // 2. Incrément temps réel pour tous les développeurs au statut WORKING dans la supervision d'Aliko
+      // 2. Incrément temps réel pour tous les développeurs au statut WORKING dans la supervision de l'Administration
       setDevLiveActivities((prev) => {
         let changed = false;
         const next = { ...prev };
@@ -2315,7 +2328,7 @@ export default function TicketManagerPage() {
       );
     }
 
-    // Mettre à jour l'activité temps réel du développeur dans la supervision d'Aliko
+    // Mettre à jour l'activité temps réel du développeur dans la supervision de l'Administration
     const currentDevId = currentUser?.developerId || currentUser?.id || "dev-anoop";
     setDevLiveActivities((prev) => ({
       ...prev,
@@ -2695,7 +2708,7 @@ export default function TicketManagerPage() {
     if (target) {
       pushInAppNotification({
         title: `📦 Ticket ${target.reference} envoyé en test chez le consultant`,
-        message: `${currentUser?.name || "Le développeur"} a terminé les développements de « ${target.title} » et l'a envoyé en test chez le consultant (${target.applicantName || "Mélissa Diakité"}).`,
+        message: `${currentUser?.name || "Le développeur"} a terminé les développements de « ${target.title} » et l'a envoyé en test chez le consultant (${target.applicantName || "Demandeur"}).`,
         category: "DELIVERY",
         targetRoles: ["HEAD", "CONSULTANT"],
         ticketId: target.id,
@@ -2715,10 +2728,10 @@ export default function TicketManagerPage() {
 
     const autoMessage: TicketMessage = {
       id: `msg-${Date.now()}`,
-      authorName: currentUser?.name || "Mélissa Diakité",
+      authorName: currentUser?.name || "Demandeur",
       authorRole: "CONSULTANT",
-      authorEmail: currentUser?.email || "melissa.diakite@safirconsulting.net",
-      message: `✅ Recette fonctionnelle SAP validée avec succès par le demandeur (${currentUser?.name || "Mélissa Diakité"}). La solution a été testée et certifiée conforme aux spécifications métier. Le ticket est désormais transmis à l'Administrateur (${activeAdminUser.name}) pour clôture définitive.`,
+      authorEmail: currentUser?.email || "demandeur@safirconsulting.net",
+      message: `✅ Recette fonctionnelle SAP validée avec succès par le demandeur (${currentUser?.name || "Demandeur"}). La solution a été testée et certifiée conforme aux spécifications métier. Le ticket est désormais transmis à l'Administrateur (${activeAdminUser.name}) pour clôture définitive.`,
       timestamp: `Aujourd'hui à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`,
       isConsultantReply: true
     };
@@ -2738,12 +2751,12 @@ export default function TicketManagerPage() {
 
     pushInAppNotification({
       title: `✅ Recette Approuvée par le Demandeur (${target.reference})`,
-      message: `${currentUser?.name || "Mélissa Diakité"} a testé et approuvé la conformité de « ${target.title} ». L'Administrateur (${activeAdminUser.name}) est désormais habilité à prononcer la clôture définitive.`,
+      message: `${currentUser?.name || "Demandeur"} a testé et approuvé la conformité de « ${target.title} ». L'Administrateur (${activeAdminUser.name}) est désormais habilité à prononcer la clôture définitive.`,
       category: "DELIVERY",
       targetRoles: ["HEAD", "DEVELOPER"],
       ticketId: target.id,
       ticketReference: target.reference,
-      actorName: currentUser?.name || "Mélissa Diakité"
+      actorName: currentUser?.name || "Demandeur"
     });
 
     showToast(`✅ Recette approuvée ! Ticket transmis à l'Administrateur (${activeAdminUser.name}) pour validation de clôture.`);
@@ -2763,8 +2776,8 @@ export default function TicketManagerPage() {
 
     const targetId = rejectingTicket.id;
     const targetRef = rejectingTicket.reference;
-    const demandeurName = currentUser?.name || "Mélissa Diakité";
-    const demandeurEmail = currentUser?.email || "melissa.diakite@safirconsulting.net";
+    const demandeurName = currentUser?.name || "Demandeur";
+    const demandeurEmail = currentUser?.email || "demandeur@safirconsulting.net";
 
     const autoMessage: TicketMessage = {
       id: `msg-${Date.now()}`,
@@ -2929,7 +2942,7 @@ export default function TicketManagerPage() {
   };
 
   // Action Administrateur (HEAD) : Arbitrer et lever un blocage
-  const handleUnblockByAliko = (ticketId: string) => {
+  const handleUnblockTicket = (ticketId: string) => {
     const unblockedTicket = tickets.find((t) => t.id === ticketId);
     setTickets((prev) =>
       prev.map((t) =>
@@ -3210,7 +3223,7 @@ export default function TicketManagerPage() {
             fileName: attachmentNameToUse,
             fileSize: uploadedTicketFile?.fileSize || "520 Ko",
             fileType: resolvedFileType,
-            uploadedBy: currentUser?.name || "Mélissa Diakité",
+            uploadedBy: currentUser?.name || "Demandeur",
             uploadedRole: currentUser?.role || "CONSULTANT",
             uploadedAt: "À l'instant",
             scanStatus: "VERIFIED_CLEAN"
@@ -3230,12 +3243,12 @@ export default function TicketManagerPage() {
         ? currentUser.name
         : newApplicant.trim() && newApplicant.trim().toLowerCase() !== (currentUser?.name || "").toLowerCase()
         ? newApplicant.trim()
-        : consultants[0]?.name || "Mélissa Diakité";
+        : consultants[0]?.name || "Demandeur";
     const matchedConsultant = consultants.find((c) => c.name.toLowerCase() === resolvedApplicantName.toLowerCase());
     const resolvedApplicantEmail =
       currentUser?.role === "CONSULTANT"
         ? currentUser.email
-        : matchedConsultant?.email || "melissa.diakite@safirconsulting.net";
+        : matchedConsultant?.email || "demandeur@safirconsulting.net";
 
     const newTicket: Ticket = {
       id: `tix-${Date.now()}`,
@@ -3612,8 +3625,8 @@ export default function TicketManagerPage() {
     const assignRecipients: { name: string; email: string; roleLabel: string }[] = [
       { name: adminName, email: currentUser?.email || activeAdminUser.email, roleLabel: "Administrateur" },
       {
-        name: assigningTicket.applicantName || "Mélissa Diakité",
-        email: assigningTicket.applicantEmail || "melissa.diakite@safirconsulting.net",
+        name: assigningTicket.applicantName || "Demandeur",
+        email: assigningTicket.applicantEmail || "demandeur@safirconsulting.net",
         roleLabel: "Demandeur / Consultant"
       },
       { name: dev.name, email: dev.email, roleLabel: "Développeur Assigné" }
@@ -3960,7 +3973,7 @@ export default function TicketManagerPage() {
                         required
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        placeholder="aliko.getheme@safirconsulting.net"
+                        placeholder="admin@safirconsulting.net"
                         className="w-full text-sm pl-10 pr-3 py-2.5 bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl text-[#051638] dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0062E6] focus:border-transparent transition-all"
                       />
                     </div>
@@ -3976,8 +3989,8 @@ export default function TicketManagerPage() {
                         onClick={() =>
                           showToast(
                             tr(
-                              "Pour réinitialiser votre mot de passe, contactez le Super Administrateur (Getheme Aliko).",
-                              "To reset your password, please contact the Super Administrator (Getheme Aliko)."
+                              "Pour réinitialiser votre mot de passe, contactez le Super Administrateur.",
+                              "To reset your password, please contact the Super Administrator."
                             )
                           )
                         }
@@ -4040,7 +4053,7 @@ export default function TicketManagerPage() {
                     {/* 1. SUPER ADMINISTRATEUR — Getheme Aliko (Or & Marine Prestige) */}
                     <button
                       type="button"
-                      data-testid="quick-login-superadmin-btn"
+                      data-testid="quick-login-superadmin-btn" aria-label="Portail Super Administrateur & Direction (Getheme Aliko)"
                       onClick={() => {
                         const superAdmin =
                           systemUsers.find((u) => u.id === "user-aliko") ||
@@ -4065,7 +4078,7 @@ export default function TicketManagerPage() {
                             </span>
                           </div>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                            Getheme Aliko • Pleins pouvoirs BU SME & Gouvernance
+                            Super Administrateur • Pleins pouvoirs BU SME & Gouvernance
                           </div>
                         </div>
                       </div>
@@ -4080,6 +4093,7 @@ export default function TicketManagerPage() {
                         setCurrentUser(anoop);
                         showToast(`Bienvenue, ${anoop.name} (Espace Développeur)`);
                       }}
+                      aria-label="Portail Développeur (Anoop Pandimukkula)"
                       className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800/80 hover:bg-orange-50/70 dark:hover:bg-slate-700/80 hover:border-[#F58220]/50 transition-all flex items-center justify-between text-left group cursor-pointer shadow-2xs"
                     >
                       <div className="flex items-center gap-3">
@@ -4091,7 +4105,7 @@ export default function TicketManagerPage() {
                             {tr("Portail Développeur", "Developer Portal")}
                           </div>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                            Anoop Pandimukkula • Senior Addons SAP B1
+                            Développeur • Réalisation technique & Suivi de temps
                           </div>
                         </div>
                       </div>
@@ -4106,6 +4120,7 @@ export default function TicketManagerPage() {
                         setCurrentUser(melissa);
                         showToast(`Bienvenue, ${melissa.name} (Espace Demandeur)`);
                       }}
+                      aria-label="Portail Demandeur (Mélissa Diakité)"
                       className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800/80 hover:bg-blue-50/70 dark:hover:bg-slate-700/80 hover:border-[#0062E6]/50 transition-all flex items-center justify-between text-left group cursor-pointer shadow-2xs"
                     >
                       <div className="flex items-center gap-3">
@@ -4117,7 +4132,7 @@ export default function TicketManagerPage() {
                             {tr("Portail Demandeur", "Requester Portal")}
                           </div>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                            Mélissa Diakité • Consultante SAP & Demandes
+                            Demandeur / Consultant • Dépôt de besoins & Recette SAP
                           </div>
                         </div>
                       </div>
@@ -4834,7 +4849,7 @@ export default function TicketManagerPage() {
               {filteredDevTickets.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 text-sm">
                   {myAssignedTickets.length === 0
-                    ? "Aucun ticket ne vous est actuellement affecté. Consultez Aliko en cas de disponibilité."
+                    ? "Aucun ticket ne vous est actuellement affecté. Consultez l'Administrateur en cas de disponibilité."
                     : "Aucun ticket ne correspond à vos filtres de recherche (projet / entreprise)."}
                 </div>
               ) : (
@@ -5876,7 +5891,7 @@ export default function TicketManagerPage() {
                           )}
                         </div>
 
-                        {/* 3. Actions Aliko : Imprimer son rapport + Suivre le ticket */}
+                        {/* 3. Actions Administrateur : Imprimer son rapport + Suivre le ticket */}
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
@@ -7453,7 +7468,7 @@ export default function TicketManagerPage() {
                         </div>
                       </div>
 
-                      {/* Développeur concerné (Optionnel / Dispatch Aliko) */}
+                      {/* Développeur concerné (Optionnel / Affectation Administrateur) */}
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1.5">Développeur concerné</label>
                         <select
@@ -8209,7 +8224,7 @@ export default function TicketManagerPage() {
         </div>
       )}
       {/* ================================================================= */}
-      {/* MODALE 6 : CRÉATION D'UN PROFIL CONSULTANT PAR ALIKO (HEAD EXCLUSIF) */}
+      {/* MODALE 6 : CRÉATION D'UN PROFIL CONSULTANT PAR L'ADMINISTRATION (HEAD EXCLUSIF) */}
       {/* ================================================================= */}
       {showAddConsultantModal && currentUser?.role === "HEAD" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
@@ -8703,7 +8718,7 @@ export default function TicketManagerPage() {
                   </div>
                   <div className="pt-2 flex justify-end">
                     <button
-                      onClick={() => handleUnblockByAliko(supervisingTicket.id)}
+                      onClick={() => handleUnblockTicket(supervisingTicket.id)}
                       className="px-3.5 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <Check className="w-3.5 h-3.5" />
@@ -8999,7 +9014,7 @@ export default function TicketManagerPage() {
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                       <div>
-                        <span className="font-bold">Recette approuvée par le demandeur ({supervisingTicket.applicantName || "Mélissa Diakité"}). </span>
+                        <span className="font-bold">Recette approuvée par le demandeur ({supervisingTicket.applicantName || "Demandeur"}). </span>
                         <span className="text-emerald-800">Toutes les conditions contractuelles sont remplies pour la clôture définitive.</span>
                       </div>
                     </div>
@@ -9014,7 +9029,7 @@ export default function TicketManagerPage() {
                       <div>
                         <span className="font-bold">Clôture souveraine verrouillée : </span>
                         <span className="text-amber-800">
-                          Le demandeur ({supervisingTicket.applicantName || "Mélissa Diakité"}) doit d'abord tester la solution livrée et certifier la conformité de la recette.
+                          Le demandeur ({supervisingTicket.applicantName || "Demandeur"}) doit d'abord tester la solution livrée et certifier la conformité de la recette.
                         </span>
                       </div>
                     </div>
@@ -9153,7 +9168,7 @@ export default function TicketManagerPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-slate-500 font-medium">Demandeur :</span>
-                <span className="font-semibold text-slate-900">{discussingTicket.applicantName || "Mélissa Diakité"}</span>
+                <span className="font-semibold text-slate-900">{discussingTicket.applicantName || "Demandeur"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-slate-500 font-medium">Progression :</span>
@@ -9789,7 +9804,7 @@ export default function TicketManagerPage() {
                                 </span>
                               ) : (
                                 <span className="text-[11px] text-slate-700">
-                                  {t.assignedDeveloper ? t.assignedDeveloper.name : "En attente Aliko"}
+                                  {t.assignedDeveloper ? t.assignedDeveloper.name : "En attente d'affectation"}
                                 </span>
                               )}
                             </td>
@@ -10188,7 +10203,9 @@ export default function TicketManagerPage() {
                       Validation & Conformité Hiérarchique
                     </div>
                     <div className="text-xs font-bold text-[#051638]">
-                      Getheme Aliko — Administrateur BU SME
+                      {currentUser?.name
+                        ? `${currentUser.name} — ${currentUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"} BU SME`
+                        : "Direction & Administration BU SME"}
                     </div>
                     <div className="text-[11px] text-slate-600">
                       Environnements SAP : SAP Business One & SAP S/4HANA
@@ -10363,7 +10380,9 @@ export default function TicketManagerPage() {
                         Approbation & Visa Direction BU SME
                       </span>
                       <p className="text-[11px] text-slate-600 mt-0.5">
-                        Getheme Aliko — Administrateur BU SME
+                        {currentUser?.name
+                          ? `${currentUser.name} — ${currentUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"} BU SME`
+                          : "Direction & Administration BU SME"}
                       </p>
                       <p className="text-[10px] text-slate-500 italic mt-1">
                         « Validé pour ordonnancement comptable, archivage et clôture de période. »
