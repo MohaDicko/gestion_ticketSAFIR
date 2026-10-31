@@ -3291,6 +3291,26 @@ export default function TicketManagerPage() {
       recipients: emailRecipients
     });
 
+    // Envoi réel d'e-mail via le module Nodemailer en tâche de fond non bloquante
+    const realRecipientEmails = emailRecipients.map((r) => r.email).filter(Boolean);
+    if (typeof window !== "undefined" && realRecipientEmails.length > 0) {
+      fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          creatorName: resolvedApplicantName,
+          creatorEmail: resolvedApplicantEmail,
+          recipientEmails: realRecipientEmails,
+          ticketId: refCode,
+          ticketTitle: newTicket.title,
+          ticketDescription: newTicket.description,
+          ticketUrl: `${window.location.origin}/#ticket-${refCode}`,
+        }),
+      }).catch((err) => {
+        console.error("[EmailNotification] Erreur non-bloquante lors de l'envoi SMTP :", err);
+      });
+    }
+
     // Si la demande est émise par un demandeur (consultant), elle alimente automatiquement le Guichet Central
     if (currentUser?.role === "CONSULTANT") {
       setEmails((prev) => [

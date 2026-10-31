@@ -70,7 +70,7 @@ export class ConsultantsService {
           action: "CONSULTANT_CREATED",
           entityType: "Consultant",
           entityId: consultant.id,
-          payloadAfter: {
+          metadata: {
             name: consultant.name,
             email: consultant.email,
             login: consultant.email,
