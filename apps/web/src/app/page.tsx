@@ -54,6 +54,7 @@ import {
   Moon,
   Globe
 } from "lucide-react";
+import { ChangePasswordModal } from "@/components/modals/ChangePasswordModal";
 
 const API_BASE = "/api/v1";
 
@@ -306,6 +307,9 @@ interface AuthUser {
   roleLabel: string;
   developerId?: string;
   initials: string;
+  isFirstLogin?: boolean;
+  passwordHash?: string;
+  passwordChangedAt?: string;
 }
 
 // Rôles et Briques Techniques pour la multi-affectation par lot
@@ -347,7 +351,8 @@ const SYSTEM_USERS: AuthUser[] = [
     role: "HEAD",
     adminLevel: "SUPER_ADMIN",
     roleLabel: "Super Administrateur & Direction BU SME",
-    initials: "GA"
+    initials: "GA",
+    isFirstLogin: true
   },
   {
     id: "user-admin-koffi",
@@ -356,7 +361,8 @@ const SYSTEM_USERS: AuthUser[] = [
     role: "HEAD",
     adminLevel: "ADMIN",
     roleLabel: "Administrateur — Pilotage SAP",
-    initials: "KM"
+    initials: "KM",
+    isFirstLogin: true
   },
   {
     id: "user-anoop",
@@ -365,7 +371,8 @@ const SYSTEM_USERS: AuthUser[] = [
     role: "DEVELOPER",
     roleLabel: "Senior Développeur SAP B1 & Addons",
     developerId: "dev-anoop",
-    initials: "AP"
+    initials: "AP",
+    isFirstLogin: true
   },
   {
     id: "user-moha",
@@ -374,7 +381,8 @@ const SYSTEM_USERS: AuthUser[] = [
     role: "DEVELOPER",
     roleLabel: "Lead Développeur Full-Stack & Architecte",
     developerId: "dev-moha",
-    initials: "MD"
+    initials: "MD",
+    isFirstLogin: true
   },
   {
     id: "user-hassane",
@@ -383,7 +391,8 @@ const SYSTEM_USERS: AuthUser[] = [
     role: "DEVELOPER",
     roleLabel: "Lead Développeur SAP S/4HANA & ABAP",
     developerId: "dev-hassane",
-    initials: "HB"
+    initials: "HB",
+    isFirstLogin: true
   },
   {
     id: "user-melissa",
@@ -391,7 +400,8 @@ const SYSTEM_USERS: AuthUser[] = [
     email: "melissa.diakite@safirconsulting.net",
     role: "CONSULTANT",
     roleLabel: "Demandeur — Mélissa Diakité",
-    initials: "MD"
+    initials: "MD",
+    isFirstLogin: true
   }
 ];
 
@@ -1199,6 +1209,7 @@ export default function TicketManagerPage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   // Nom dynamique de l'administrateur actif (ou administrateur par défaut Getheme Aliko)
   const activeAdminUser = useMemo(
@@ -1967,6 +1978,29 @@ export default function TicketManagerPage() {
     setLoginEmail("");
     setLoginPassword("");
     showToast(`Connexion réussie — Bienvenue sur votre espace, ${found.name}`);
+  };
+
+  // Modification du mot de passe utilisateur (première connexion ou à tout moment)
+  const handleUserPasswordChanged = (newPassword: string) => {
+    if (!currentUser) return;
+    const nowStr = new Date().toLocaleDateString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    setSystemUsers((prev) =>
+      prev.map((u) =>
+        u.id === currentUser.id
+          ? { ...u, isFirstLogin: false, passwordChangedAt: nowStr }
+          : u
+      )
+    );
+    setCurrentUser((prev) =>
+      prev ? { ...prev, isFirstLogin: false, passwordChangedAt: nowStr } : null
+    );
+    pushInAppNotification({
+      title: "🔒 Mot de passe modifié avec succès",
+      message: `${currentUser.name} a personnalisé son mot de passe avec succès. Le compte est sécurisé.`,
+      category: "ASSIGNMENT",
+      targetRoles: ["HEAD", currentUser.role],
+      actorName: currentUser.name
+    });
   };
 
   // Statistiques calculées
@@ -4152,6 +4186,7 @@ export default function TicketManagerPage() {
               <div className="relative">
                 {currentUser ? (
                   <button
+                    data-testid="user-profile-menu-btn"
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50/80 hover:border-slate-300 transition-all text-left shadow-2xs cursor-pointer"
                   >
@@ -4235,7 +4270,25 @@ export default function TicketManagerPage() {
                       <span><strong>Cloisonnement étanche :</strong> Pour changer de rôle, vous devez obligatoirement vous déconnecter et vous authentifier avec le compte correspondant.</span>
                     </div>
 
-                    <div className="pt-1 px-3">
+                    <div className="pt-1 px-3 space-y-1.5">
+                      <button
+                        type="button"
+                        data-testid="open-change-password-modal-btn"
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowChangePasswordModal(true);
+                        }}
+                        className="w-full text-left text-xs text-sky-800 hover:text-sky-950 hover:bg-sky-50 p-2 rounded-lg flex items-center justify-between font-semibold transition-colors cursor-pointer border border-sky-200"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Key className="w-3.5 h-3.5 text-sky-600" />
+                          <span>Modifier mon mot de passe</span>
+                        </div>
+                        <span className="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-mono font-bold">
+                          Sécurité
+                        </span>
+                      </button>
+
                       <button
                         onClick={() => {
                           setCurrentUser(null);
@@ -4268,6 +4321,29 @@ export default function TicketManagerPage() {
           </div>
         </div>
       </header>
+
+      {/* Bannière Première Connexion : Incitation à personnaliser le mot de passe */}
+      {currentUser && currentUser.isFirstLogin && (
+        <div
+          data-testid="first-login-password-banner"
+          className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-xs text-amber-950 shadow-2xs animate-in fade-in"
+        >
+          <div className="flex items-center gap-2">
+            <Key className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Première connexion détectée :</strong> Pour garantir la sécurité de votre compte Safir Consulting, vous pouvez personnaliser votre mot de passe dès maintenant.
+            </span>
+          </div>
+          <button
+            type="button"
+            data-testid="banner-change-password-btn"
+            onClick={() => setShowChangePasswordModal(true)}
+            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-semibold shrink-0 cursor-pointer transition shadow-2xs"
+          >
+            Changer mon mot de passe
+          </button>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toastMessage && (
@@ -9593,6 +9669,15 @@ export default function TicketManagerPage() {
           </div>
         );
       })()}
+
+      {/* Modale de Modification du Mot de Passe Sécurisé (Première connexion ou mise à jour profil) */}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+        user={currentUser}
+        onPasswordChanged={handleUserPasswordChanged}
+        showToast={showToast}
+      />
     </div>
   );
 }

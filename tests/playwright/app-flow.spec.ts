@@ -932,4 +932,51 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.locator("body")).toContainText("Interfaçage Balance Électronique & SAP B1");
     await expect(page.locator("body")).toContainText("Drissa Coulibaly");
   });
+
+  test("23. Sécurité & Gestion des Mots de Passe : Notification première connexion, modification sécurisée et validation via le menu profil", async ({ page }) => {
+    // 1. Connexion en tant que développeur Anoop Pandimukkula
+    await page.goto("http://localhost:3000");
+    await page.getByRole("button", { name: /Anoop Pandimukkula/i }).first().click();
+
+    // 2. Vérifier la présence du bandeau d'alerte Première Connexion
+    const banner = page.getByTestId("first-login-password-banner");
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText("Première connexion détectée");
+
+    // 3. Ouvrir la modale depuis le bouton du bandeau
+    await page.getByTestId("banner-change-password-btn").click();
+    const modal = page.getByTestId("change-password-modal");
+    await expect(modal).toBeVisible();
+
+    // 4. Tester la validation de sécurité (mot de passe trop court ou non conforme)
+    const submitBtn = page.getByTestId("submit-change-password-btn");
+    await expect(submitBtn).toBeDisabled();
+
+    await page.getByTestId("old-password-input").fill("Safir2026!");
+    await page.getByTestId("new-password-input").fill("Court1!");
+    await page.getByTestId("confirm-password-input").fill("Court1!");
+    // Doit rester désactivé car moins de 8 caractères
+    await expect(submitBtn).toBeDisabled();
+
+    // Saisir un mot de passe robuste conforme aux 4 critères (longueur, majuscule, chiffre, symbole)
+    await page.getByTestId("new-password-input").fill("Safir2026!Securise");
+    await page.getByTestId("confirm-password-input").fill("Safir2026!Securise");
+    await expect(submitBtn).toBeEnabled();
+
+    // Soumettre le formulaire
+    await submitBtn.click();
+
+    // 5. Vérifier que la modale est fermée et que le bandeau première connexion a disparu
+    await expect(modal).not.toBeVisible();
+    await expect(banner).not.toBeVisible();
+
+    // 6. Vérifier que l'utilisateur peut ré-accéder au changement de mot de passe via son menu profil en haut à droite
+    await page.getByTestId("user-profile-menu-btn").click();
+    const changePwdMenuBtn = page.getByTestId("open-change-password-modal-btn");
+    await expect(changePwdMenuBtn).toBeVisible();
+    await changePwdMenuBtn.click();
+    await expect(modal).toBeVisible();
+    await page.getByRole("button", { name: /Annuler/i }).click();
+    await expect(modal).not.toBeVisible();
+  });
 });
