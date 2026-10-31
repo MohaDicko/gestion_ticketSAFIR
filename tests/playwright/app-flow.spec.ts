@@ -979,4 +979,33 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await page.getByRole("button", { name: /Annuler/i }).click();
     await expect(modal).not.toBeVisible();
   });
+
+  test("24. Finance & Comptabilité : Export du bordereau officiel d'ordonnancement de paiement (CSV/SEPA) pour transmission au service comptabilité", async ({ page }) => {
+    // 1. Connexion en tant qu'Administrateur (Getheme Aliko)
+    await loginAsAliko(page);
+
+    // 2. Aller dans l'espace Équipe & Capacité
+    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+
+    // 3. Ouvrir le rapport d'heures du développeur
+    const reportBtn = page.getByRole("button", { name: /Imprimer son rapport|Rapport d'heures/i }).first();
+    await expect(reportBtn).toBeVisible();
+    await reportBtn.click();
+
+    // 4. Vérifier la présence du bouton d'export de bordereau comptable
+    const exportPayrollBtn = page.getByTestId("export-payroll-csv-btn");
+    await expect(exportPayrollBtn).toBeVisible();
+
+    // 5. Déclencher le téléchargement du bordereau officiel
+    const downloadPromise = page.waitForEvent("download");
+    await exportPayrollBtn.click();
+    const download = await downloadPromise;
+
+    // 6. Vérifier que le fichier est bien un CSV de comptabilité
+    expect(download.suggestedFilename()).toContain("Bordereau_Comptabilite");
+    expect(download.suggestedFilename()).toContain(".csv");
+
+    // 7. Fermer la modale
+    await page.getByRole("button", { name: /Fermer/i }).first().click();
+  });
 });

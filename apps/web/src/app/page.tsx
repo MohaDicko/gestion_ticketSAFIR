@@ -2523,6 +2523,88 @@ export default function TicketManagerPage() {
     showToast(`✅ Feuille de temps de ${devName} validée par la Direction et transmise au service Comptabilité pour signature finale et ordonnancement de paiement.`);
   };
 
+  // Export officiel du Bordereau de Virement / Mandat Comptable (Séparation Direction -> Comptabilité pour paiement)
+  const handleExportPayrollCsv = (targetId: string, targetName: string, targetEmail: string, jobTitle?: string) => {
+    const targetEmailLower = targetEmail.toLowerCase();
+    const devLogs = timeLogs.filter(
+      (l) =>
+        l.developerEmail.toLowerCase() === targetEmailLower ||
+        l.developerId === targetId ||
+        l.developerName.toLowerCase() === targetName.toLowerCase()
+    );
+
+    const filteredLogs = devLogs.filter((l) => {
+      if (reportPeriod === "CUSTOM") {
+        if (reportDateFrom && l.date < reportDateFrom) return false;
+        if (reportDateTo && l.date > reportDateTo) return false;
+        return true;
+      }
+      if (reportPeriod === "DAILY") return l.date === "2026-10-29";
+      if (reportPeriod === "WEEKLY") return l.date >= "2026-10-26" && l.date <= "2026-10-31";
+      if (reportPeriod === "MONTHLY") return l.date.startsWith("2026-10");
+      if (reportPeriod === "QUARTERLY") return l.date >= "2026-10-01" && l.date <= "2026-12-31";
+      if (reportPeriod === "SEMESTER") return l.date >= "2026-07-01" && l.date <= "2026-12-31";
+      if (reportPeriod === "YEARLY") return l.date.startsWith("2026");
+      return true;
+    });
+
+    const totalHours = filteredLogs.reduce((sum, l) => sum + (l.durationHours || 0), 0);
+    const hourlyRate = activeCurrency === "EUR" ? 65 : activeCurrency === "USD" ? 70 : 42500;
+    const grossAmount = Math.round(totalHours * hourlyRate);
+    const mandateRef = `PAY-SAFIR-${Date.now().toString().slice(-6)}`;
+    const todayStr = new Date().toISOString().split("T")[0];
+    const periodStr = reportPeriod === "CUSTOM" ? `du_${reportDateFrom}_au_${reportDateTo}` : reportPeriod;
+
+    const csvRows = [
+      "BORDEREAU OFFICIEL D'ORDONNANCEMENT ET TRANSMISSION COMPTABILITÉ - SAFIR CONSULTING",
+      `Mandat de Règlement N°;${mandateRef};Date d'émission;${todayStr}`,
+      `Bénéficiaire;${targetName} <${targetEmail}>;Intitulé Poste;${jobTitle || "Développeur Solutions SAP"}`,
+      `Période Validée;${periodStr};Devise de Paiement;${activeCurrency}`,
+      `Validation Hiérarchique;Visa Direction BU SME (${activeAdminUser.name});Destinataire;Service Comptabilité & Trésorerie`,
+      "",
+      "Ticket Réf;Titre du Projet SAP;Client / Entreprise;Date de Session;Durée Heures;Note d'intervention",
+      ...filteredLogs.map((l) =>
+        [
+          l.ticketReference,
+          `"${l.ticketTitle.replace(/"/g, '""')}"`,
+          `"${(l.clientCompany || "Safir Consulting").replace(/"/g, '""')}"`,
+          l.date,
+          l.durationHours.toFixed(2),
+          `"${(l.note || "").replace(/"/g, '""')}"`
+        ].join(";")
+      ),
+      "",
+      `TOTAL CUMULÉ DES HEURES;${totalHours.toFixed(2)} h`,
+      `TAUX HORAIRE CONVENTIONNÉ;${hourlyRate} ${activeCurrency} / heure`,
+      `MONTANT TOTAL NET À ORDONNANCER;${grossAmount.toLocaleString("fr-FR")} ${activeCurrency}`,
+      `MENTION LÉGALE;Feuille de temps certifiée sincère et conforme. Paiement à ordonnancer par virement bancaire.`
+    ];
+
+    const csvContent = "\uFEFF" + csvRows.join("\n");
+    try {
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Bordereau_Comptabilite_${targetName.replace(/\s+/g, "_")}_${periodStr}_${activeCurrency}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback
+    }
+
+    pushInAppNotification({
+      title: `💰 Bordereau comptable généré (${targetName})`,
+      message: `Mandat ${mandateRef} de ${grossAmount.toLocaleString("fr-FR")} ${activeCurrency} (${totalHours.toFixed(1)}h) exporté pour transmission au service Comptabilité.`,
+      category: "DELIVERY",
+      targetRoles: ["HEAD"],
+      actorName: activeAdminUser.name
+    });
+    showToast(`💰 Bordereau comptable généré : ${grossAmount.toLocaleString("fr-FR")} ${activeCurrency} (${totalHours.toFixed(1)}h). Transmis pour paiement.`);
+  };
+
   // Action Développeur : Débloquer / Reprendre (le déblocage est répercuté en temps réel sur le tableau de bord Administrateur)
   const handleResumeTicket = (ticketId: string) => {
     const target = tickets.find((t) => t.id === ticketId);
@@ -9406,9 +9488,9 @@ export default function TicketManagerPage() {
                   </div>
                 </div>
 
-                {/* Actions principales pour le profil DÉVELOPPEUR */}
-                {isDevRole && (
-                  <div className="flex items-center gap-2">
+                {/* Actions contextuelles : DÉVELOPPEUR vs ADMINISTRATEUR */}
+                {isDevRole ? (
+                  <div className="flex items-center gap-2 flex-wrap">
                     {currentTimesheetStatus?.status === "SUBMITTED" || currentTimesheetStatus?.status === "APPROVED_PAYROLL" ? (
                       <div
                         data-testid="timesheet-validated-badge"
@@ -9426,9 +9508,65 @@ export default function TicketManagerPage() {
                         title={`Valider l'intervalle choisi manuellement (du ${reportDateFrom} au ${reportDateTo}) et l'envoyer à l'Administrateur`}
                       >
                         <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                        <span>Valider la feuille de temps ({reportPeriod === "CUSTOM" ? `${reportDateFrom} au ${reportDateTo}` : "période choisie"}) & Envoyer à l'Admin</span>
+                        <span>Valider la feuille de temps & Envoyer à l'Admin</span>
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      data-testid="export-payroll-csv-btn"
+                      onClick={() => handleExportPayrollCsv(printingReport.targetId, printingReport.targetName, printingReport.targetEmail, printingReport.jobTitle)}
+                      className="px-3 py-1.5 bg-sky-700 hover:bg-sky-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+                      title="Télécharger le bordereau officiel au format comptable CSV / Excel"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Bordereau Comptable</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                      title="Imprimer / Exporter en PDF"
+                    >
+                      <Printer className="w-3 h-3" />
+                      <span>Imprimer</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPrintingReport(null)}
+                      aria-label="Fermer le rapport"
+                      className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-medium cursor-pointer"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Actions Direction / Administrateur */}
+                    {currentTimesheetStatus?.status === "SUBMITTED" && (
+                      <button
+                        type="button"
+                        data-testid="admin-approve-timesheet-btn"
+                        onClick={() => handleAdminApproveTimesheetPayroll(printingReport.targetId, printingReport.targetName)}
+                        className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer transition"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Viser & Transmettre à la Comptabilité</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      data-testid="export-payroll-csv-btn"
+                      onClick={() => handleExportPayrollCsv(printingReport.targetId, printingReport.targetName, printingReport.targetEmail, printingReport.jobTitle)}
+                      className="px-3.5 py-1.5 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer transition"
+                      title="Générer le bordereau de mandat de paiement pour le service comptabilité"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-sky-200" />
+                      <span>Ordonnancer Paie (CSV)</span>
+                    </button>
 
                     <button
                       type="button"
