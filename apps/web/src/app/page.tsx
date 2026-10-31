@@ -9645,8 +9645,9 @@ export default function TicketManagerPage() {
                       eventType: "TICKET_CREATED",
                       recipients: [
                         { name: activeAdminUser.name, email: activeAdminUser.email, roleLabel: "Direction BU SME" },
-                        { name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net", roleLabel: "Développeur" },
-                        { name: "Mélissa Diakité", email: "melissa.diakite@safirconsulting.net", roleLabel: "Demandeur" }
+                        { name: "Moha Dicko", email: "mohadicko95@gmail.com", roleLabel: "Lead Développeur SAP" },
+                        { name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net", roleLabel: "Développeur SAP" },
+                        { name: "Demandeur SAP", email: "demandeur@safirconsulting.net", roleLabel: "Demandeur" }
                       ]
                     });
                   }}
