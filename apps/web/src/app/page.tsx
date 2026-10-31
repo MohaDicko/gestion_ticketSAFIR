@@ -272,6 +272,15 @@ const INITIAL_CLIENTS: string[] = [
   "Banque Régionale Ouest-Africaine"
 ];
 
+const INITIAL_APPLICANTS: string[] = [
+  "Mélissa Diakité",
+  "Koffi N'Guessan",
+  "Christian Durand",
+  "Alain Moreau",
+  "Consultant Interne Safir",
+  "Responsable Projet SAP Client"
+];
+
 interface InboxEmail {
   id: string;
   senderName: string;
@@ -1268,6 +1277,10 @@ export default function TicketManagerPage() {
   const [showAddClientInline, setShowAddClientInline] = useState(false);
   const [customClientName, setCustomClientName] = useState("");
 
+  const [applicantsList, setApplicantsList] = useState<string[]>(INITIAL_APPLICANTS);
+  const [showAddApplicantInline, setShowAddApplicantInline] = useState(false);
+  const [customApplicantName, setCustomApplicantName] = useState("");
+
   const [lotRolesList, setLotRolesList] = useState(TECHNICAL_LOT_ROLES);
   const [showAddLotRoleInline, setShowAddLotRoleInline] = useState(false);
   const [customLotRoleLabel, setCustomLotRoleLabel] = useState("");
@@ -1694,6 +1707,21 @@ export default function TicketManagerPage() {
     showToast(`Nouveau type de priorité ajouté : « ${label} »`);
   };
 
+  // Suppression d'un niveau de priorité (Administrateur)
+  const handleDeletePriorityOption = (valToDelete: string) => {
+    if (priorityOptions.length <= 1) {
+      showToast("Impossible de supprimer : au moins un niveau de priorité doit subsister.");
+      return;
+    }
+    const target = priorityOptions.find((p) => p.value === valToDelete);
+    setPriorityOptions((prev) => prev.filter((p) => p.value !== valToDelete));
+    const remaining = priorityOptions.filter((p) => p.value !== valToDelete);
+    if (newPriority === valToDelete && remaining.length > 0) {
+      setNewPriority(remaining[0].value);
+    }
+    showToast(`Niveau de priorité « ${target?.label || valToDelete} » supprimé`);
+  };
+
   // Création dynamique d'une nouvelle brique technique / lot (Administrateur)
   const handleAddLotRoleOption = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1822,6 +1850,39 @@ export default function TicketManagerPage() {
       setNewClient(remaining[0]);
     }
     showToast(`Client/Entreprise « ${clientToDelete} » supprimé de la liste`);
+  };
+
+  // Création dynamique d'un nouveau demandeur / consultant (Administrateur)
+  const handleAddApplicant = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const name = customApplicantName.trim();
+    if (!name) return;
+    if (applicantsList.some((a) => a.toLowerCase() === name.toLowerCase())) {
+      showToast(`Le demandeur « ${name} » existe déjà`);
+      setNewApplicant(name);
+      setShowAddApplicantInline(false);
+      setCustomApplicantName("");
+      return;
+    }
+    setApplicantsList((prev) => [...prev, name]);
+    setNewApplicant(name);
+    setCustomApplicantName("");
+    setShowAddApplicantInline(false);
+    showToast(`Nouveau demandeur ajouté : « ${name} »`);
+  };
+
+  // Suppression d'un demandeur de la liste (Administrateur)
+  const handleDeleteApplicant = (applicantToDelete: string) => {
+    if (applicantsList.length <= 1) {
+      showToast("Impossible de supprimer : au moins un demandeur doit subsister.");
+      return;
+    }
+    setApplicantsList((prev) => prev.filter((a) => a !== applicantToDelete));
+    const remaining = applicantsList.filter((a) => a !== applicantToDelete);
+    if (newApplicant === applicantToDelete && remaining.length > 0) {
+      setNewApplicant(remaining[0]);
+    }
+    showToast(`Demandeur « ${applicantToDelete} » supprimé de la liste`);
   };
 
   // Chargement synchronisé API
@@ -6567,6 +6628,7 @@ export default function TicketManagerPage() {
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
+                            data-testid="add-type-inline-btn"
                             onClick={() => setShowAddTypeInline(!showAddTypeInline)}
                             className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
                           >
@@ -6576,6 +6638,7 @@ export default function TicketManagerPage() {
                           {ticketTypes.length > 1 && (
                             <button
                               type="button"
+                              data-testid="delete-type-inline-btn"
                               onClick={() => handleDeleteTicketType(newType)}
                               title="Supprimer ce type de besoin"
                               className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
@@ -6592,13 +6655,22 @@ export default function TicketManagerPage() {
                       <div className="mb-2 p-2 bg-sky-50 rounded-lg border border-sky-200 flex gap-1.5 animate-in fade-in">
                         <input
                           type="text"
+                          data-testid="custom-type-input"
                           placeholder="Nom du type (ex: Migration B1 v10)"
                           value={customTypeLabel}
                           onChange={(e) => setCustomTypeLabel(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddTicketType();
+                            }
+                          }}
+                          autoFocus
                           className="w-full text-xs px-2.5 py-1 border border-sky-300 rounded bg-white focus:outline-none"
                         />
                         <button
                           type="button"
+                          data-testid="confirm-add-type-btn"
                           onClick={() => handleAddTicketType()}
                           className="px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
                         >
@@ -6614,32 +6686,84 @@ export default function TicketManagerPage() {
                       </div>
                     )}
 
-                    <select
-                      value={newType}
-                      onChange={(e) => setNewType(e.target.value)}
-                      className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
-                    >
-                      {ticketTypes.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        data-testid="create-modal-type-select"
+                        value={newType}
+                        onChange={(e) => {
+                          if (e.target.value === "__NEW_TYPE__") {
+                            setShowAddTypeInline(true);
+                          } else {
+                            setNewType(e.target.value);
+                          }
+                        }}
+                        className="flex-1 text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
+                      >
+                        {currentUser?.role === "HEAD" && (
+                          <option value="__NEW_TYPE__" className="text-sky-700 font-bold bg-sky-50">
+                            ➕ [Ajouter un nouveau type...]
+                          </option>
+                        )}
+                        <optgroup label="Types de besoin SAP">
+                          {ticketTypes.map((t) => (
+                            <option key={t.value} value={t.value}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+                      {currentUser?.role === "HEAD" && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddTypeInline(true)}
+                            title="Ajouter un type de besoin"
+                            className="p-2 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-sky-700" />
+                          </button>
+                          {ticketTypes.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTicketType(newType)}
+                              title={`Supprimer « ${newType} »`}
+                              className="p-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-xs font-semibold text-slate-700">Priorité</label>
                       {currentUser?.role === "HEAD" && (
-                        <button
-                          type="button"
-                          data-testid="add-priority-inline-btn"
-                          onClick={() => setShowAddPriorityInline(!showAddPriorityInline)}
-                          className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>+ Priorité</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            data-testid="add-priority-inline-btn"
+                            onClick={() => setShowAddPriorityInline(!showAddPriorityInline)}
+                            className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>+ Priorité</span>
+                          </button>
+                          {priorityOptions.length > 1 && (
+                            <button
+                              type="button"
+                              data-testid="delete-priority-inline-btn"
+                              onClick={() => handleDeletePriorityOption(newPriority)}
+                              title="Supprimer ce niveau de priorité"
+                              className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Suppr.</span>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -6651,6 +6775,13 @@ export default function TicketManagerPage() {
                           placeholder="Nouvelle priorité (ex: Urgence Absolue)"
                           value={customPriorityLabel}
                           onChange={(e) => setCustomPriorityLabel(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddPriorityOption();
+                            }
+                          }}
+                          autoFocus
                           className="w-full text-xs px-2.5 py-1 border border-sky-300 rounded bg-white focus:outline-none"
                         />
                         <button
@@ -6661,20 +6792,65 @@ export default function TicketManagerPage() {
                         >
                           Ajouter
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddPriorityInline(false)}
+                          className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
+                        >
+                          ✕
+                        </button>
                       </div>
                     )}
 
-                    <select
-                      value={newPriority}
-                      onChange={(e) => setNewPriority(e.target.value)}
-                      className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
-                    >
-                      {priorityOptions.map((p) => (
-                        <option key={p.value} value={p.value}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        data-testid="create-modal-priority-select"
+                        value={newPriority}
+                        onChange={(e) => {
+                          if (e.target.value === "__NEW_PRIORITY__") {
+                            setShowAddPriorityInline(true);
+                          } else {
+                            setNewPriority(e.target.value);
+                          }
+                        }}
+                        className="flex-1 text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
+                      >
+                        {currentUser?.role === "HEAD" && (
+                          <option value="__NEW_PRIORITY__" className="text-sky-700 font-bold bg-sky-50">
+                            ➕ [Ajouter une nouvelle priorité...]
+                          </option>
+                        )}
+                        <optgroup label="Niveaux de priorité">
+                          {priorityOptions.map((p) => (
+                            <option key={p.value} value={p.value}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+                      {currentUser?.role === "HEAD" && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddPriorityInline(true)}
+                            title="Ajouter une priorité"
+                            className="p-2 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-sky-700" />
+                          </button>
+                          {priorityOptions.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePriorityOption(newPriority)}
+                              title={`Supprimer « ${newPriority} »`}
+                              className="p-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -6699,13 +6875,113 @@ export default function TicketManagerPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Demandeur / Consultant</label>
-                      <input
-                        type="text"
-                        value={newApplicant}
-                        onChange={(e) => setNewApplicant(e.target.value)}
-                        className="w-full text-xs px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                      />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-semibold text-slate-700">Demandeur / Consultant</label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            data-testid="add-applicant-inline-btn"
+                            onClick={() => setShowAddApplicantInline(!showAddApplicantInline)}
+                            className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>+ Demandeur</span>
+                          </button>
+                          {applicantsList.length > 1 && (
+                            <button
+                              type="button"
+                              data-testid="delete-applicant-inline-btn"
+                              onClick={() => handleDeleteApplicant(newApplicant)}
+                              title="Supprimer ce demandeur de la liste"
+                              className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Suppr.</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {showAddApplicantInline && (
+                        <div className="mb-2 p-2 bg-sky-50 rounded-lg border border-sky-200 flex gap-1.5 animate-in fade-in">
+                          <input
+                            type="text"
+                            data-testid="custom-applicant-input"
+                            placeholder="Nom du demandeur (ex: Koffi N'Guessan)"
+                            value={customApplicantName}
+                            onChange={(e) => setCustomApplicantName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddApplicant();
+                              }
+                            }}
+                            autoFocus
+                            className="w-full text-xs px-2.5 py-1 border border-sky-300 rounded bg-white focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            data-testid="confirm-add-applicant-btn"
+                            onClick={() => handleAddApplicant()}
+                            className="px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
+                          >
+                            Ajouter
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddApplicantInline(false)}
+                            className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          data-testid="create-modal-applicant-select"
+                          value={newApplicant}
+                          onChange={(e) => {
+                            if (e.target.value === "__NEW_APPLICANT__") {
+                              setShowAddApplicantInline(true);
+                            } else {
+                              setNewApplicant(e.target.value);
+                            }
+                          }}
+                          className="flex-1 text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
+                        >
+                          <option value="__NEW_APPLICANT__" className="text-sky-700 font-bold bg-sky-50">
+                            ➕ [Nouveau Demandeur...]
+                          </option>
+                          <optgroup label="Demandeurs enregistrés">
+                            {applicantsList.map((app) => (
+                              <option key={app} value={app}>
+                                {app}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddApplicantInline(true)}
+                            title="Ajouter un demandeur"
+                            className="p-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-sky-700" />
+                          </button>
+                          {applicantsList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteApplicant(newApplicant)}
+                              title={`Supprimer « ${newApplicant} »`}
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -6735,6 +7011,7 @@ export default function TicketManagerPage() {
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
+                          data-testid="add-client-inline-btn"
                           onClick={() => setShowAddClientInline(!showAddClientInline)}
                           className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
                         >
@@ -6744,6 +7021,7 @@ export default function TicketManagerPage() {
                         {clientsList.length > 1 && (
                           <button
                             type="button"
+                            data-testid="delete-client-inline-btn"
                             onClick={() => handleDeleteClient(newClient)}
                             title="Supprimer cette entreprise de la liste"
                             className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
@@ -6759,9 +7037,128 @@ export default function TicketManagerPage() {
                       <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex gap-1.5 animate-in fade-in">
                         <input
                           type="text"
+                          data-testid="custom-client-input"
                           placeholder="Nom de l'entreprise (ex: AgroTech CI)"
                           value={customClientName}
                           onChange={(e) => setCustomClientName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddClient();
+                            }
+                          }}
+                          autoFocus
+                          className="w-full text-xs px-2.5 py-1 border border-emerald-300 rounded bg-white focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          data-testid="confirm-add-client-btn"
+                          onClick={() => handleAddClient()}
+                          className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
+                        >
+                          Ajouter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddClientInline(false)}
+                          className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        data-testid="create-modal-client-select"
+                        value={newClient}
+                        onChange={(e) => {
+                          if (e.target.value === "__NEW_CLIENT__") {
+                            setShowAddClientInline(true);
+                          } else {
+                            setNewClient(e.target.value);
+                          }
+                        }}
+                        className="flex-1 text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
+                      >
+                        <option value="__NEW_CLIENT__" className="text-sky-700 font-bold bg-sky-50">
+                          ➕ [Ajouter une nouvelle entreprise / client...]
+                        </option>
+                        <optgroup label="Entreprises / Clients SAP enregistrés">
+                          {clientsList.map((client) => (
+                            <option key={client} value={client}>
+                              {client}
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          data-testid="add-client-action-btn"
+                          onClick={() => setShowAddClientInline(true)}
+                          title="Ajouter un nouveau client"
+                          className="px-2 py-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-sky-700" />
+                          <span className="hidden sm:inline">Ajouter</span>
+                        </button>
+                        {clientsList.length > 1 && (
+                          <button
+                            type="button"
+                            data-testid="delete-client-action-btn"
+                            onClick={() => handleDeleteClient(newClient)}
+                            title={`Supprimer « ${newClient} » de la liste déroulante`}
+                            className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                            <span className="hidden sm:inline">Supprimer</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Demandeur connecté</label>
+                    <div
+                      data-testid="create-modal-demandeur-badge"
+                      className="w-full text-xs px-3 py-2 border border-purple-200 rounded-lg bg-purple-50/70 text-purple-950 font-semibold flex items-center gap-1.5"
+                    >
+                      <Users className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                      <span className="truncate">Demandeur : {currentUser?.name}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Entreprise / Client</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddClientInline(!showAddClientInline)}
+                        className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>+ Client</span>
+                      </button>
+                    </div>
+
+                    {showAddClientInline && (
+                      <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex gap-1.5 animate-in fade-in">
+                        <input
+                          type="text"
+                          placeholder="Nom de l'entreprise (ex: AgroTech CI)"
+                          value={customClientName}
+                          onChange={(e) => setCustomClientName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddClient();
+                            }
+                          }}
+                          autoFocus
                           className="w-full text-xs px-2.5 py-1 border border-emerald-300 rounded bg-white focus:outline-none"
                         />
                         <button
@@ -6783,41 +7180,25 @@ export default function TicketManagerPage() {
 
                     <select
                       value={newClient}
-                      onChange={(e) => setNewClient(e.target.value)}
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
-                    >
-                      {clientsList.map((client) => (
-                        <option key={client} value={client}>
-                          {client}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Demandeur connecté</label>
-                    <div
-                      data-testid="create-modal-demandeur-badge"
-                      className="w-full text-xs px-3 py-2 border border-purple-200 rounded-lg bg-purple-50/70 text-purple-950 font-semibold flex items-center gap-1.5"
-                    >
-                      <Users className="w-3.5 h-3.5 text-purple-700 shrink-0" />
-                      <span className="truncate">Demandeur : {currentUser?.name}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client</label>
-                    <select
-                      value={newClient}
-                      onChange={(e) => setNewClient(e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value === "__NEW_CLIENT__") {
+                          setShowAddClientInline(true);
+                        } else {
+                          setNewClient(e.target.value);
+                        }
+                      }}
                       className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
                     >
-                      {clientsList.map((client) => (
-                        <option key={client} value={client}>
-                          {client}
-                        </option>
-                      ))}
+                      <option value="__NEW_CLIENT__" className="text-sky-700 font-bold bg-sky-50">
+                        ➕ [Ajouter une nouvelle entreprise / client...]
+                      </option>
+                      <optgroup label="Entreprises enregistrées">
+                        {clientsList.map((client) => (
+                          <option key={client} value={client}>
+                            {client}
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
                 </div>

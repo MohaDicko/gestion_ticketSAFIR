@@ -888,4 +888,48 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByTestId("admins-grid")).toContainText("Jean-Marc Yao");
 
   });
+
+  test("22. Panneau Admin : Main totale sur toutes les listes déroulantes (Ajout et Suppression dynamique d'une Entreprise/Client, Demandeur, Type, Priorité)", async ({ page }) => {
+    // 1. Connexion en tant qu'Administrateur (Getheme Aliko)
+    await loginAsAliko(page);
+
+    // 2. Ouvrir la modale Nouveau Ticket
+    await page.getByRole("button", { name: /Nouveau Ticket/i }).click();
+    await expect(page.getByTestId("create-modal-client-select")).toBeVisible();
+
+    // 3. Tester l'ajout d'une nouvelle entreprise/client via le bouton inline
+    await page.getByTestId("add-client-inline-btn").first().click();
+    await expect(page.getByTestId("custom-client-input")).toBeVisible();
+    await page.getByTestId("custom-client-input").fill("Cacao & Café Export SA");
+    await page.getByTestId("confirm-add-client-btn").click();
+
+    // Vérifier que la nouvelle entreprise est sélectionnée dans la liste déroulante
+    await expect(page.getByTestId("create-modal-client-select")).toHaveValue("Cacao & Café Export SA");
+
+    // 4. Tester la suppression d'une entreprise de la liste déroulante
+    const clientSelect = page.getByTestId("create-modal-client-select");
+    await clientSelect.selectOption("Client Alpha");
+    await page.getByTestId("delete-client-inline-btn").first().click();
+
+    // Vérifier que "Client Alpha" n'est plus présent dans la liste
+    const optionsAfterDelete = await page.getByTestId("create-modal-client-select").locator("option").allInnerTexts();
+    expect(optionsAfterDelete.some((opt) => opt.includes("Client Alpha"))).toBeFalsy();
+
+    // 5. Tester l'ajout d'un nouveau demandeur via la liste déroulante
+    await page.getByTestId("add-applicant-inline-btn").click();
+    await expect(page.getByTestId("custom-applicant-input")).toBeVisible();
+    await page.getByTestId("custom-applicant-input").fill("Drissa Coulibaly");
+    await page.getByTestId("confirm-add-applicant-btn").click();
+    await expect(page.getByTestId("create-modal-applicant-select")).toHaveValue("Drissa Coulibaly");
+
+    // 6. Remplir les informations obligatoires et créer le ticket
+    await page.getByPlaceholder("ex : Addon validation commandes fournisseurs SAP B1").fill("Interfaçage Balance Électronique & SAP B1");
+    await page.getByPlaceholder(/Décrivez précisément les exigences fonctionnelles/i).fill("Transmission automatique du pesage des camions de cacao dans SAP B1 via Service Layer.");
+    await page.getByRole("button", { name: /Enregistrer le ticket/i }).click();
+
+    // 7. Vérifier que le ticket est bien créé avec la nouvelle entreprise et le nouveau demandeur
+    await page.getByRole("button", { name: /Tous les Tickets SAP/i }).click();
+    await expect(page.locator("body")).toContainText("Interfaçage Balance Électronique & SAP B1");
+    await expect(page.locator("body")).toContainText("Drissa Coulibaly");
+  });
 });
