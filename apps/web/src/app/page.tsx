@@ -2388,6 +2388,7 @@ export default function TicketManagerPage() {
   // Soumission et Validation de la Feuille de Temps (Développeur -> Admin -> Transmission Compta pour Paiement)
   const handleDevSubmitTimesheet = (devId: string, devName: string) => {
     const periodLabel = reportPeriod === "CUSTOM" ? `${reportDateFrom}_${reportDateTo}` : reportPeriod;
+    const formattedPeriod = reportPeriod === "CUSTOM" ? `du ${reportDateFrom} au ${reportDateTo}` : reportPeriod;
     const key = `${devId}_${periodLabel}`;
     setTimesheetStatuses((prev) => ({
       ...prev,
@@ -2398,12 +2399,12 @@ export default function TicketManagerPage() {
     }));
     pushInAppNotification({
       title: `📄 Feuille de temps validée par ${devName}`,
-      message: `${devName} a validé et signé sa feuille de temps (${reportPeriod === "CUSTOM" ? `du ${reportDateFrom} au ${reportDateTo}` : reportPeriod}). En attente de visa Administrateur avant transmission comptabilité.`,
+      message: `${devName} a défini manuellement et validé son intervalle (${formattedPeriod}). En attente de visa Administrateur avant transmission comptabilité.`,
       category: "DELIVERY",
       targetRoles: ["HEAD"],
       actorName: devName
     });
-    showToast("✅ Feuille de temps validée et transmise à l'Administrateur ! L'Admin la visera avant transmission à la comptabilité pour ordonnancement et paiement.");
+    showToast(`✅ Feuille de temps (${formattedPeriod}) validée et transmise à l'Administrateur ! L'Admin la visera avant transmission à la comptabilité pour ordonnancement et paiement.`);
   };
 
   const handleAdminApproveTimesheetPayroll = (devId: string, devName: string) => {
@@ -4251,9 +4252,10 @@ export default function TicketManagerPage() {
                   </div>
                 </div>
 
-                {/* Bouton Impression Rapport d'Activité & Feuilles de Temps */}
+                {/* Bouton Impression Rapport d'Activité & Feuilles de Temps (Sélection Manuelle d'Intervalle) */}
                 <button
-                  onClick={() =>
+                  onClick={() => {
+                    setReportPeriod("CUSTOM");
                     setPrintingReport({
                       targetType: "DEVELOPER",
                       targetId: currentUser.developerId || currentUser.id,
@@ -4261,10 +4263,10 @@ export default function TicketManagerPage() {
                       targetEmail: currentUser.email,
                       role: "DEVELOPER",
                       jobTitle: currentUser.roleLabel
-                    })
-                  }
+                    });
+                  }}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
-                  title="Imprimer votre relevé d'heures (journalier, hebdo, mensuel, trimestriel, semestriel, annuel)"
+                  title="Définir manuellement votre intervalle de dates et soumettre votre feuille de temps à l'Administrateur"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Imprimer mon rapport d'heures</span>
@@ -8901,79 +8903,88 @@ export default function TicketManagerPage() {
                 </div>
               )}
 
-              {/* BARRE D'ACTIONS COMPACTE & FILTRES DE PÉRIODE (POUR LE DEV ET L'ADMIN - NON IMPRIMÉE) */}
-              <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden text-xs">
-                {/* Filtre par Intervalle Libre de Dates (ex : du 14 du mois précédent au 14 du mois en cours) */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="font-semibold text-slate-700 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Intervalle :</span>
-                  </div>
-                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200">
-                    <span className="text-[11px] text-slate-500 font-medium">Du</span>
-                    <input
-                      type="date"
-                      data-testid="report-date-from-input"
-                      value={reportDateFrom}
-                      onChange={(e) => {
-                        setReportDateFrom(e.target.value);
-                        setReportPeriod("CUSTOM");
-                      }}
-                      className="text-xs text-slate-800 font-mono font-medium focus:outline-none bg-transparent"
-                    />
-                    <span className="text-[11px] text-slate-500 font-medium">Au</span>
-                    <input
-                      type="date"
-                      data-testid="report-date-to-input"
-                      value={reportDateTo}
-                      onChange={(e) => {
-                        setReportDateTo(e.target.value);
-                        setReportPeriod("CUSTOM");
-                      }}
-                      className="text-xs text-slate-800 font-mono font-medium focus:outline-none bg-transparent"
-                    />
+              {/* BARRE D'ACTIONS COMPACTE & SÉLECTION MANUELLE D'INTERVALLE DE TEMPS (NON IMPRIMÉE) */}
+              <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden text-xs">
+                {/* Filtre d'Intervalle Manuel de Dates (Libre choix par le Développeur avant envoi à l'Admin) */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <Calendar className="w-4 h-4 text-sky-700" />
+                    <span>Intervalle manuel :</span>
                   </div>
 
-                  {/* Bouton Preset 14 au 14 */}
-                  <button
-                    type="button"
-                    data-testid="report-preset-14-btn"
-                    onClick={() => {
-                      setReportDateFrom("2026-09-14");
-                      setReportDateTo("2026-10-14");
-                      setReportPeriod("CUSTOM");
-                    }}
-                    className={`px-2.5 py-1 text-[11px] rounded-lg font-bold border transition-all cursor-pointer ${
-                      reportPeriod === "CUSTOM" && reportDateFrom === "2026-09-14" && reportDateTo === "2026-10-14"
-                        ? "bg-sky-700 text-white border-sky-800 shadow-xs"
-                        : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                    }`}
-                    title="Exemple : Du 14 du mois passé au 14 du mois actuel"
-                  >
-                    14 M-1 au 14 M
-                  </button>
+                  {/* Sélecteurs de Dates Manuelles (Du ... Au ...) */}
+                  <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border-2 border-sky-600/30 shadow-2xs">
+                    <div className="flex items-center gap-1 pl-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Du</span>
+                      <input
+                        type="date"
+                        data-testid="report-date-from-input"
+                        value={reportDateFrom}
+                        onChange={(e) => {
+                          setReportDateFrom(e.target.value);
+                          setReportPeriod("CUSTOM");
+                        }}
+                        className="text-xs text-slate-900 font-mono font-bold focus:outline-none bg-sky-50/60 px-2 py-0.5 rounded cursor-pointer border border-slate-200 hover:border-sky-500"
+                        title="Choisissez manuellement votre date de début"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1 pr-1 border-l border-slate-200 pl-1.5">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Au</span>
+                      <input
+                        type="date"
+                        data-testid="report-date-to-input"
+                        value={reportDateTo}
+                        onChange={(e) => {
+                          setReportDateTo(e.target.value);
+                          setReportPeriod("CUSTOM");
+                        }}
+                        className="text-xs text-slate-900 font-mono font-bold focus:outline-none bg-sky-50/60 px-2 py-0.5 rounded cursor-pointer border border-slate-200 hover:border-sky-500"
+                        title="Choisissez manuellement votre date de fin"
+                      />
+                    </div>
+                  </div>
 
-                  {/* Boutons Rapides Standards */}
-                  <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200">
-                    {[
-                      { key: "DAILY", label: "Journalier" },
-                      { key: "WEEKLY", label: "Hebdomadaire" },
-                      { key: "MONTHLY", label: "Mensuel" },
-                      { key: "YEARLY", label: "Annuel" }
-                    ].map((p) => (
-                      <button
-                        key={p.key}
-                        type="button"
-                        onClick={() => setReportPeriod(p.key as any)}
-                        className={`px-2 py-0.5 text-[11px] rounded font-medium transition-all cursor-pointer ${
-                          reportPeriod === p.key
-                            ? "bg-sky-700 text-white font-bold"
-                            : "text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                  {/* Bouton Preset Rapide (14 du mois passé au 14 du mois actuel) & Raccourcis */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                      type="button"
+                      data-testid="report-preset-14-btn"
+                      onClick={() => {
+                        setReportDateFrom("2026-09-14");
+                        setReportDateTo("2026-10-14");
+                        setReportPeriod("CUSTOM");
+                      }}
+                      className={`px-2.5 py-1 text-[11px] rounded-lg font-bold border transition-all cursor-pointer ${
+                        reportPeriod === "CUSTOM" && reportDateFrom === "2026-09-14" && reportDateTo === "2026-10-14"
+                          ? "bg-sky-700 text-white border-sky-800 shadow-xs"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                      }`}
+                      title="Régler manuellement l'intervalle type : Du 14 du mois passé au 14 du mois en cours"
+                    >
+                      14 M-1 au 14 M
+                    </button>
+
+                    <div className="flex items-center gap-0.5 bg-white p-0.5 rounded-lg border border-slate-200">
+                      {[
+                        { key: "DAILY", label: "Journalier" },
+                        { key: "WEEKLY", label: "Hebdomadaire" },
+                        { key: "MONTHLY", label: "Mensuel" },
+                        { key: "YEARLY", label: "Annuel" }
+                      ].map((p) => (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => setReportPeriod(p.key as any)}
+                          className={`px-2 py-0.5 text-[11px] rounded font-medium transition-all cursor-pointer ${
+                            reportPeriod === p.key
+                              ? "bg-sky-700 text-white font-bold"
+                              : "text-slate-600 hover:bg-slate-100"
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -8986,18 +8997,18 @@ export default function TicketManagerPage() {
                         className="px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Feuille de temps validée (En attente visa Admin pour paiement)</span>
+                        <span>Feuille de temps validée ({reportPeriod === "CUSTOM" ? `${reportDateFrom} → ${reportDateTo}` : reportPeriod})</span>
                       </div>
                     ) : (
                       <button
                         type="button"
                         data-testid="validate-timesheet-btn"
                         onClick={() => handleDevSubmitTimesheet(printingReport.targetId, printingReport.targetName)}
-                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer transition-all"
-                        title="Valider votre relevé d'heures et le soumettre à l'Administrateur pour transmission à la comptabilité"
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-md flex items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.01]"
+                        title={`Valider l'intervalle choisi manuellement (du ${reportDateFrom} au ${reportDateTo}) et l'envoyer à l'Administrateur`}
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Valider la feuille de temps</span>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                        <span>Valider la feuille de temps ({reportPeriod === "CUSTOM" ? `${reportDateFrom} au ${reportDateTo}` : "période choisie"}) & Envoyer à l'Admin</span>
                       </button>
                     )}
 
