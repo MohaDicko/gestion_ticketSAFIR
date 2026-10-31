@@ -352,7 +352,7 @@ const SYSTEM_USERS: AuthUser[] = [
     email: "superadmin@safirconsulting.net",
     role: "HEAD",
     adminLevel: "SUPER_ADMIN",
-    roleLabel: "Super Administrateur BU SME — Pleins Pouvoirs Système",
+    roleLabel: "Super Administrateur CoE DEV — Pleins Pouvoirs Système",
     initials: "SA",
     isFirstLogin: false
   },
@@ -362,7 +362,7 @@ const SYSTEM_USERS: AuthUser[] = [
     email: "admin@safirconsulting.net",
     role: "HEAD",
     adminLevel: "SUPER_ADMIN",
-    roleLabel: "Super Administrateur & Direction BU SME",
+    roleLabel: "Super Administrateur & Responsable CoE DEV",
     initials: "GA",
     isFirstLogin: true
   },
@@ -3784,8 +3784,30 @@ export default function TicketManagerPage() {
   // =========================================================================
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex flex-col lg:flex-row bg-[#021124] text-white font-sans overflow-x-hidden selection:bg-[#0062E6] selection:text-white">
+      <div className="relative min-h-screen w-full flex flex-col justify-between overflow-x-hidden bg-[#020B1C] text-white font-sans selection:bg-[#0062E6] selection:text-white">
         
+        {/* ================================================================= */}
+        {/* ARRIÈRE-PLAN UNIFIÉ : PHOTO HAUTE DÉFINITION & DÉGRADÉ CINÉMATIQUE */}
+        {/* Plus aucune coupure visuelle ni démarcation nette entre volets    */}
+        {/* ================================================================= */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <img
+            src="/login-bg.jpg"
+            alt="Espace Développement Tandem SAP"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = "/dev-workspace-bg.jpg";
+            }}
+            className="w-full h-full object-cover object-center scale-105 filter contrast-105 brightness-75 transition-transform duration-1000 ease-out"
+          />
+          {/* Dégradé fluide unifié Safir Tandem (Marine #020B1C -> Nuit #031535 -> Cobalt #051E48) */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#020B1C]/96 via-[#031535]/88 to-[#051E48]/92" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(0,184,156,0.18),transparent_55%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(0,98,230,0.22),transparent_60%)]" />
+        </div>
+
+        {/* Liseré supérieur corporate Tandem 4 couleurs */}
+        <div className="relative z-20 h-1.5 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] via-[#00B89C] to-[#F58220]" />
+
         {/* Toast Notification Flottant */}
         {toastMessage && (
           <div className="fixed bottom-4 right-4 z-50 bg-[#051638] text-white px-4 py-2.5 rounded-xl shadow-2xl text-sm flex items-center gap-2 border border-[#00B89C]/50 animate-in fade-in slide-in-from-bottom-2">
@@ -3795,49 +3817,78 @@ export default function TicketManagerPage() {
         )}
 
         {/* ================================================================= */}
-        {/* VOLET GAUCHE (50%) : SCÈNE IMMERSIVE IMAGE & IDENTITÉ TANDEM     */}
+        {/* BARRE SUPÉRIEURE : GRAND LOGO TANDEM, BADGE COE DEV & SÉLECTEURS  */}
         {/* ================================================================= */}
-        <div className="relative w-full lg:w-1/2 min-h-[520px] lg:min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-16 overflow-hidden bg-[#030F27] border-b lg:border-b-0 lg:border-r border-slate-800">
-          
-          {/* Arrière-plan photographique haute définition de l'espace de développement */}
-          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-            <img
-              src="/login-bg.jpg"
-              alt="Espace Développement Tandem SAP"
-              onError={(e) => {
-                // Fallback gracieux si login-bg.jpg n'est pas trouvé
-                (e.currentTarget as HTMLImageElement).src = "/dev-workspace-bg.jpg";
-              }}
-              className="w-full h-full object-cover object-center scale-105 filter contrast-105 brightness-90 transition-transform duration-1000 ease-out"
-            />
-            {/* Dégradé multicouche cinématographique assurant une parfaite lisibilité */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#020F24]/95 via-[#031535]/85 to-[#0062E6]/40" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#020F24] via-transparent to-[#020F24]/70" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(0,184,156,0.15),transparent_50%)]" />
-          </div>
-
-          {/* En-tête gauche : Logo officiel Tandem et badge gouvernance */}
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl border border-white/20">
+        <header className="relative z-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-5 pb-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            {/* Logo officiel Tandem agrandi et sublimé */}
+            <div className="bg-white/95 dark:bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-xl border border-white/30 flex items-center">
               <img
                 src="/tandem-logo.jpg"
                 alt="Tandem — Du besoin à la solution."
-                className="h-8 sm:h-9 w-auto object-contain"
+                className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto object-contain"
               />
             </div>
-            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-slate-200 shadow-sm">
-              <Shield className="w-3.5 h-3.5 text-[#00B89C]" />
-              <span>Gouvernance & Sécurité BU SME</span>
+
+            {/* Badge impersonnel Centre de Compétences DEV (mention "BU SME" retirée) */}
+            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-slate-100 shadow-sm">
+              <Shield className="w-4 h-4 text-[#00B89C]" />
+              <span>Centre de Compétences DEV — CoE DEV</span>
             </div>
           </div>
 
-          {/* Centre gauche : Grand Titre Percutant & Message Fondateur Tandem */}
-          <div className="relative z-10 my-auto py-10 sm:py-14 space-y-5 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0062E6]/25 border border-sky-400/30 text-sky-300 text-xs font-semibold tracking-wide backdrop-blur-xs">
+          {/* Outils de session : Sélecteur Langue FR/EN et Mode Clair/Sombre */}
+          <div className="flex items-center gap-2">
+            {/* Sélecteur Bilingue FR / EN */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = appLang === "fr" ? "en" : "fr";
+                setAppLang(next);
+                showToast(next === "en" ? "Language switched to English (EN)" : "Langue basculée en Français (FR)");
+              }}
+              aria-label="Sélecteur de langue FR / EN"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-xs font-mono font-bold text-white backdrop-blur-md transition-colors cursor-pointer shadow-sm"
+              title={tr("Passer en Anglais (EN)", "Switch to French (FR)")}
+            >
+              <Globe className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+              <span>{appLang === "fr" ? "FR" : "EN"}</span>
+            </button>
+
+            {/* Bascule Mode Clair / Sombre */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = themeMode === "light" ? "dark" : "light";
+                setThemeMode(next);
+                showToast(next === "dark" ? tr("Mode sombre activé", "Dark mode enabled") : tr("Mode clair activé", "Light mode enabled"));
+              }}
+              aria-label="Basculer le mode Clair / Sombre"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-xs font-semibold text-white backdrop-blur-md transition-colors cursor-pointer shadow-sm"
+              title={themeMode === "light" ? tr("Activer le mode sombre", "Enable Dark Mode") : tr("Activer le mode clair", "Enable Light Mode")}
+            >
+              {themeMode === "light" ? (
+                <Moon className="w-3.5 h-3.5 text-slate-200 shrink-0" />
+              ) : (
+                <Sun className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+              )}
+              <span>{themeMode === "light" ? tr("Sombre", "Dark") : tr("Clair", "Light")}</span>
+            </button>
+          </div>
+        </header>
+
+        {/* ================================================================= */}
+        {/* CORPS PRINCIPAL UNIFIÉ : COMPOSITION FLUIDE ET INTÉGRÉE           */}
+        {/* ================================================================= */}
+        <main className="relative z-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          
+          {/* Côté Gauche (7 colonnes) : Message Fondateur, Vision & Piliers Opérationnels */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0062E6]/30 border border-sky-400/40 text-sky-200 text-xs font-semibold tracking-wide backdrop-blur-md shadow-xs">
               <span className="w-2 h-2 rounded-full bg-[#00B89C] animate-pulse" />
               <span>Plateforme Collaborative SAP Tandem</span>
             </div>
-            
+
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.12]">
               Des besoins <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F58220] via-amber-300 to-[#F58220]">
@@ -3845,126 +3896,73 @@ export default function TicketManagerPage() {
               </span>
             </h1>
 
-            <p className="text-sm sm:text-base text-slate-200 font-normal leading-relaxed max-w-lg">
+            <p className="text-sm sm:text-base text-slate-200 font-normal leading-relaxed max-w-xl">
               {tr(
                 "L'environnement unifié qui synchronise développeurs, consultants et direction pour orchestrer la livraison de valeur SAP en temps réel.",
                 "The unified workspace connecting developers, consultants and leadership to orchestrate SAP delivery in real time."
               )}
             </p>
 
-            <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-slate-300">
-              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/15">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#00B89C]" />
+            {/* Badges de confiance */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-200">
+              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15 shadow-sm">
+                <CheckCircle2 className="w-4 h-4 text-[#00B89C]" />
                 <span>100% Traçabilité</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/15">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#0062E6]" />
+              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15 shadow-sm">
+                <CheckCircle2 className="w-4 h-4 text-[#0062E6]" />
                 <span>Validation Heures Certifiées</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/15">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#F58220]" />
+              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15 shadow-sm">
+                <CheckCircle2 className="w-4 h-4 text-[#F58220]" />
                 <span>Collaboration Fluide</span>
               </div>
             </div>
-          </div>
 
-          {/* Bas gauche : 3 Cartes Piliers en Glassmorphism Sombre */}
-          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 max-w-xl">
-            <div className="bg-[#051638]/75 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shadow-xl flex flex-col justify-between transition-all hover:bg-[#051638]/95 hover:border-white/30">
-              <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-400/30 flex items-center justify-center mb-2.5 shadow-sm">
-                <Code2 className="w-5 h-5 text-sky-300" />
+            {/* 3 Cartes Piliers en Glassmorphism Doux */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div className="bg-[#051638]/60 backdrop-blur-md p-4 rounded-2xl border border-white/15 shadow-lg flex flex-col justify-between transition-all hover:bg-[#051638]/85 hover:border-white/30">
+                <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-400/30 flex items-center justify-center mb-3 shadow-sm">
+                  <Code2 className="w-5 h-5 text-sky-300" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-white">Centralisez</div>
+                  <div className="text-[11px] text-slate-300 mt-0.5">toutes vos demandes SAP</div>
+                </div>
               </div>
-              <div>
-                <div className="font-bold text-sm text-white">Centralisez</div>
-                <div className="text-[11px] text-slate-300 mt-0.5">toutes vos demandes SAP</div>
+
+              <div className="bg-[#051638]/60 backdrop-blur-md p-4 rounded-2xl border border-white/15 shadow-lg flex flex-col justify-between transition-all hover:bg-[#051638]/85 hover:border-white/30">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center mb-3 shadow-sm">
+                  <Users className="w-5 h-5 text-blue-300" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-white">Collaborez</div>
+                  <div className="text-[11px] text-slate-300 mt-0.5">avec les bons experts</div>
+                </div>
               </div>
-            </div>
 
-            <div className="bg-[#051638]/75 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shadow-xl flex flex-col justify-between transition-all hover:bg-[#051638]/95 hover:border-white/30">
-              <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center mb-2.5 shadow-sm">
-                <Users className="w-5 h-5 text-blue-300" />
+              <div className="bg-[#051638]/60 backdrop-blur-md p-4 rounded-2xl border border-white/15 shadow-lg flex flex-col justify-between transition-all hover:bg-[#051638]/85 hover:border-white/30">
+                <div className="w-9 h-9 rounded-xl bg-[#F58220]/20 text-[#F58220] border border-[#F58220]/40 flex items-center justify-center mb-3 shadow-sm">
+                  <BarChart3 className="w-5 h-5 text-[#F58220]" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-white">Pilotez</div>
+                  <div className="text-[11px] text-slate-300 mt-0.5">la charge & le temps réel</div>
+                </div>
               </div>
-              <div>
-                <div className="font-bold text-sm text-white">Collaborez</div>
-                <div className="text-[11px] text-slate-300 mt-0.5">avec les bons experts</div>
-              </div>
-            </div>
-
-            <div className="bg-[#051638]/75 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shadow-xl flex flex-col justify-between transition-all hover:bg-[#051638]/95 hover:border-white/30">
-              <div className="w-9 h-9 rounded-xl bg-[#F58220]/20 text-[#F58220] border border-[#F58220]/40 flex items-center justify-center mb-2.5 shadow-sm">
-                <BarChart3 className="w-5 h-5 text-[#F58220]" />
-              </div>
-              <div>
-                <div className="font-bold text-sm text-white">Pilotez</div>
-                <div className="text-[11px] text-slate-300 mt-0.5">la charge & le temps réel</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ================================================================= */}
-        {/* VOLET DROIT (50%) : LE LOGIN SIDE — DESIGN ÉPURÉ & PRESTIGE       */}
-        {/* ================================================================= */}
-        <div className="relative w-full lg:w-1/2 min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-14 bg-gradient-to-b from-[#F8FAFC] via-[#F1F5F9] to-[#E2E8F0] dark:from-[#061226] dark:via-[#07152D] dark:to-[#040C1A] text-[#051638] dark:text-slate-100 overflow-y-auto">
-          
-          {/* Liseré supérieur corporate Tandem 4 couleurs */}
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#051638] via-[#0062E6] via-[#00B89C] to-[#F58220]" />
-
-          {/* Barre supérieure : Sélecteur Langue & Bascule Mode Sombre */}
-          <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-2">
-            <div className="sm:hidden flex items-center gap-2">
-              <span className="text-xs font-bold text-[#051638] dark:text-white">Tandem SAP</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Sélecteur Bilingue FR / EN */}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = appLang === "fr" ? "en" : "fr";
-                  setAppLang(next);
-                  showToast(next === "en" ? "Language switched to English (EN)" : "Langue basculée en Français (FR)");
-                }}
-                aria-label="Sélecteur de langue FR / EN"
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-mono font-bold text-[#051638] dark:text-slate-200 transition-colors cursor-pointer shadow-2xs"
-                title={tr("Passer en Anglais (EN)", "Switch to French (FR)")}
-              >
-                <Globe className="w-3.5 h-3.5 text-[#0062E6] shrink-0" />
-                <span>{appLang === "fr" ? "FR" : "EN"}</span>
-              </button>
-
-              {/* Bascule Mode Clair / Sombre */}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = themeMode === "light" ? "dark" : "light";
-                  setThemeMode(next);
-                  showToast(next === "dark" ? tr("Mode sombre activé", "Dark mode enabled") : tr("Mode clair activé", "Light mode enabled"));
-                }}
-                aria-label="Basculer le mode Clair / Sombre"
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold text-[#051638] dark:text-slate-200 transition-colors cursor-pointer shadow-2xs"
-                title={themeMode === "light" ? tr("Activer le mode sombre", "Enable Dark Mode") : tr("Activer le mode clair", "Enable Light Mode")}
-              >
-                {themeMode === "light" ? (
-                  <Moon className="w-3.5 h-3.5 text-[#051638] shrink-0" />
-                ) : (
-                  <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                )}
-                <span>{themeMode === "light" ? tr("Sombre", "Dark") : tr("Clair", "Light")}</span>
-              </button>
             </div>
           </div>
 
-          {/* Boîte Blanche de Connexion Flottante (Design System Tandem) */}
-          <div className="w-full max-w-md mx-auto my-auto py-6">
-            <div className="bg-white/95 dark:bg-[#0A1A38]/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(5,22,56,0.12)] border border-slate-200/90 dark:border-slate-800 p-6 sm:p-8">
+          {/* Côté Droit (5 colonnes) : Carte de Connexion Flottante Épurée & Unifiée */}
+          <div className="lg:col-span-5 w-full max-w-md mx-auto">
+            <div className="bg-white/95 dark:bg-[#081832]/95 backdrop-blur-2xl rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] border border-white/30 dark:border-slate-700/80 p-6 sm:p-8 text-[#051638] dark:text-slate-100">
               
               {/* Logo Tandem centré sur la carte */}
               <div className="text-center pb-4 border-b border-slate-100 dark:border-slate-800/80">
                 <img
                   src="/tandem-logo.jpg"
                   alt="Tandem — Du besoin à la solution."
-                  className="h-11 w-auto object-contain mx-auto mb-2"
+                  className="h-12 w-auto object-contain mx-auto mb-2.5"
                 />
                 <h2 className="text-base font-bold text-[#051638] dark:text-white">
                   {tr("Connexion à votre Espace Tandem", "Sign in to your Tandem Workspace")}
@@ -4040,8 +4038,8 @@ export default function TicketManagerPage() {
                       <button
                         type="button"
                         onClick={() => setShowLoginPassword(!showLoginPassword)}
-                        aria-label={showLoginPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+                        title={showLoginPassword ? tr("Masquer le mot de passe", "Hide password") : tr("Afficher le mot de passe", "Show password")}
                       >
                         {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -4073,8 +4071,9 @@ export default function TicketManagerPage() {
                 {/* SECTION ACCÈS RAPIDE : SUPER ADMINISTRATEUR, DEV & DEMANDEUR     */}
                 {/* ================================================================= */}
                 <div>
-                  <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2.5 text-center flex items-center justify-center gap-1.5">
-                    <span>{tr("ACCÈS RAPIDE AUX PORTAILS", "QUICK PORTAL ACCESS")}</span>
+                  <div className="text-[11px] font-semibold text-[#5A7088] dark:text-slate-400 mb-2.5 flex items-center justify-between">
+                    <span>{tr("Connexion instantanée (Démonstration)", "Instant sign-in (Demo accounts)")}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">1-CLIC</span>
                   </div>
 
                   <div className="space-y-2">
@@ -4089,7 +4088,7 @@ export default function TicketManagerPage() {
                           systemUsers.find((u) => u.adminLevel === "SUPER_ADMIN") ||
                           systemUsers[0];
                         setCurrentUser(superAdmin);
-                        showToast(`👑 Bienvenue, ${superAdmin.name} (Session Super Administrateur activée)`);
+                        showToast(`Bienvenue, ${superAdmin.name} (Session Super Administrateur activée)`);
                       }}
                       className="w-full p-2.5 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-gradient-to-r from-amber-50/90 via-white to-sky-50/60 dark:from-amber-950/30 dark:via-slate-800 dark:to-slate-800 hover:border-amber-500 dark:hover:border-amber-400 transition-all flex items-center justify-between text-left group cursor-pointer shadow-xs"
                     >
@@ -4107,7 +4106,7 @@ export default function TicketManagerPage() {
                             </span>
                           </div>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                            Super Administrateur • Pleins pouvoirs BU SME & Gouvernance
+                            Super Administrateur • Centre de Compétences DEV & Gouvernance
                           </div>
                         </div>
                       </div>
@@ -4178,12 +4177,12 @@ export default function TicketManagerPage() {
               </div>
             </div>
           </div>
+        </main>
 
-          {/* Footer officiel discret */}
-          <footer className="py-2 text-center text-xs text-[#5A7088] dark:text-slate-500">
-            Tandem — Du besoin à la solution. | Safir Consulting BU SME © 2026
-          </footer>
-        </div>
+        {/* Footer officiel discret et unifié */}
+        <footer className="relative z-20 py-3 text-center text-xs text-slate-300/80">
+          Tandem — Du besoin à la solution. | Safir Consulting © 2026 • Centre de Compétences DEV (CoE DEV)
+        </footer>
       </div>
     );
   }
