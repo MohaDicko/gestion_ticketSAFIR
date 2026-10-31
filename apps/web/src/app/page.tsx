@@ -6528,22 +6528,23 @@ export default function TicketManagerPage() {
       {/* MODALE 3 : CRÉATION DE TICKET SAP (RÉSERVÉE HEAD & DEMANDEUR)    */}
       {/* ================================================================= */}
       {showCreateModal && currentUser?.role !== "DEVELOPER" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden">
-            <div className="h-1 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] to-[#00B89C]" />
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden">
+            <div className="h-1 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] to-[#00B89C] shrink-0" />
+            <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 shrink-0">
               <div>
                 <h3 className="font-bold text-[#051638] text-sm">Nouveau Ticket de Développement SAP</h3>
                 <p className="text-[11px] text-[#5A7088]">
                   Formulaire guidé • Les champs marqués d'un astérisque (<span className="text-rose-600 font-bold">*</span>) sont obligatoires
                 </p>
               </div>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-md hover:bg-slate-100">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateTicket} className="p-4 space-y-3.5">
+            <form onSubmit={handleCreateTicket} className="flex flex-col flex-1 overflow-hidden min-h-0">
+              <div className="p-4 space-y-3 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Titre de la demande *</label>
                 <input
@@ -6861,119 +6862,118 @@ export default function TicketManagerPage() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Description détaillée * <span className="text-rose-600 font-semibold">(Obligatoire)</span>
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Décrivez précisément les exigences fonctionnelles, le flux SAP concerné et les critères d'acceptation..."
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                />
-              </div>
-
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                    <Paperclip className="w-3.5 h-3.5 text-sky-700" />
-                    <span>Pièce jointe fonctionnelle ou technique SAP (Optionnel)</span>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Description détaillée * <span className="text-rose-600 font-semibold">(Obligatoire)</span>
                   </label>
-
-                  <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-[11px] font-semibold cursor-pointer shadow-2xs transition-colors">
-                    <Paperclip className="w-3 h-3" />
-                    <span>Choisir un fichier</span>
-                    <input
-                      type="file"
-                      data-testid="ticket-file-upload-input"
-                      onChange={handleFileSelectForTicket}
-                      className="sr-only"
-                    />
-                  </label>
-                </div>
-
-                {uploadedTicketFile && (
-                  <div
-                    data-testid="uploaded-ticket-file-preview"
-                    className="p-2 bg-sky-50 border border-sky-200 rounded-lg flex items-center justify-between gap-2 text-xs text-sky-950"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileText className="w-4 h-4 text-sky-700 shrink-0" />
-                      <div className="min-w-0">
-                        <div className="font-bold truncate">{uploadedTicketFile.fileName}</div>
-                        <div className="text-[10px] text-sky-800">
-                          {uploadedTicketFile.fileType} • {uploadedTicketFile.fileSize} • Prêt à l'envoi
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUploadedTicketFile(null);
-                        setNewTicketAttachmentName("");
-                      }}
-                      className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 px-2 py-0.5 rounded bg-white border border-rose-200 cursor-pointer shrink-0"
-                    >
-                      Retirer
-                    </button>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <select
-                    value={newTicketAttachmentName}
-                    onChange={(e) => {
-                      setNewTicketAttachmentName(e.target.value);
-                      if (e.target.value) setUploadedTicketFile(null);
-                    }}
-                    className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
-                  >
-                    <option value="">-- Joindre un modèle type SAP --</option>
-                    {SAP_ATTACHMENT_TEMPLATES.map((tpl) => (
-                      <option key={tpl.fileName} value={tpl.fileName}>
-                        📎 {tpl.fileName} ({tpl.fileSize})
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Ou nom du fichier (ex: Cahier_Recette_SAP.pdf)"
-                    value={newTicketAttachmentName}
-                    onChange={(e) => setNewTicketAttachmentName(e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
+                  <textarea
+                    rows={2}
+                    required
+                    placeholder="Décrivez précisément les exigences fonctionnelles, le flux SAP concerné et les critères d'acceptation..."
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                    className="w-full text-xs px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 min-h-[48px]"
                   />
                 </div>
-                <div className="text-[10px] text-emerald-700 flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                  <span>Contrôle d'intégrité MIME & Scan Antivirus In-App actif (.pdf, .xlsx, .sql, .png)</span>
+
+                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                      <Paperclip className="w-3.5 h-3.5 text-sky-700" />
+                      <span>Pièce jointe SAP (Optionnel)</span>
+                    </label>
+
+                    <label className="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-[11px] font-semibold cursor-pointer shadow-2xs transition-colors">
+                      <Paperclip className="w-3 h-3" />
+                      <span>Choisir un fichier</span>
+                      <input
+                        type="file"
+                        data-testid="ticket-file-upload-input"
+                        onChange={handleFileSelectForTicket}
+                        className="sr-only"
+                      />
+                    </label>
+                  </div>
+
+                  {uploadedTicketFile && (
+                    <div
+                      data-testid="uploaded-ticket-file-preview"
+                      className="p-1.5 bg-sky-50 border border-sky-200 rounded-lg flex items-center justify-between gap-2 text-xs text-sky-950"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-sky-700 shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-bold truncate text-[11px]">{uploadedTicketFile.fileName}</div>
+                          <div className="text-[10px] text-sky-800">
+                            {uploadedTicketFile.fileType} • {uploadedTicketFile.fileSize}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadedTicketFile(null);
+                          setNewTicketAttachmentName("");
+                        }}
+                        className="text-[10px] font-semibold text-rose-600 hover:text-rose-800 px-2 py-0.5 rounded bg-white border border-rose-200 cursor-pointer shrink-0"
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <select
+                      value={newTicketAttachmentName}
+                      onChange={(e) => {
+                        setNewTicketAttachmentName(e.target.value);
+                        if (e.target.value) setUploadedTicketFile(null);
+                      }}
+                      className="w-full text-[11px] px-2 py-1 border border-slate-300 rounded-lg bg-white"
+                    >
+                      <option value="">-- Modèle type SAP --</option>
+                      {SAP_ATTACHMENT_TEMPLATES.map((tpl) => (
+                        <option key={tpl.fileName} value={tpl.fileName}>
+                          📎 {tpl.fileName} ({tpl.fileSize})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Ou nom du fichier (ex: Recette.pdf)"
+                      value={newTicketAttachmentName}
+                      onChange={(e) => setNewTicketAttachmentName(e.target.value)}
+                      className="w-full text-[11px] px-2 py-1 border border-slate-300 rounded-lg bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  data-testid="create-modal-auto-email-notice"
+                  className="p-2 bg-emerald-50/80 border border-emerald-200 rounded-lg text-[10.5px] text-emerald-950 flex items-center gap-1.5"
+                >
+                  <Mail className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <span>
+                    <strong>Notification E-mail Automatique :</strong> Envoyée aux Développeur(s), Administrateur et Demandeur dès validation.
+                  </span>
                 </div>
               </div>
 
-              <div
-                data-testid="create-modal-auto-email-notice"
-                className="p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-lg text-[11px] text-emerald-950 flex items-center gap-2"
-              >
-                <Mail className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                <span>
-                  <strong>Notification E-mail Automatique :</strong> À la validation, un e-mail de notification est automatiquement envoyé au(x) Développeur(s), à l'Administrateur et au Demandeur/Consultant.
-                </span>
-              </div>
-
-              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+              {/* PIED DE PAGE FIXE (STICKY BOTTOM) : BOUTONS TOUJOURS 100% VISIBLES EN BAS SANS AVOIR À DÉFILER */}
+              <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 shadow-xs">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-800 bg-slate-100 rounded-lg cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-300 rounded-lg cursor-pointer transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-medium text-white bg-sky-700 hover:bg-sky-800 rounded-lg shadow-sm cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-white bg-sky-700 hover:bg-sky-800 rounded-lg shadow-md cursor-pointer flex items-center gap-1.5 transition-all hover:scale-[1.01]"
                 >
-                  Enregistrer le ticket
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Enregistrer le ticket</span>
                 </button>
               </div>
             </form>
