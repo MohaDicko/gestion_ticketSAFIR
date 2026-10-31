@@ -838,7 +838,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await page.getByTestId("admin-generate-individual-report-btn").click();
     await expect(page.getByTestId("individual-dev-report-badge")).toContainText("Rapport Individuel (Dev par Dev)");
     await expect(page.locator("#printable-report")).toContainText("Hassane Bocoum");
-    await page.getByLabel("Fermer le rapport").click();
+    await page.getByLabel("Fermer le rapport").first().click();
 
     // 2. Vérifier dans la fenêtre de création de ticket Admin :
     //    - Fenêtre épurée : Analytique financier complètement retiré
