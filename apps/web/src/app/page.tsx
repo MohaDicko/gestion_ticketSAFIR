@@ -3795,97 +3795,125 @@ export default function TicketManagerPage() {
         )}
 
         {/* ================================================================= */}
-        {/* VOLET GAUCHE : SCÈNE IMMERSIVE DÉVELOPPEUR & PITCH CORPORATE TANDEM */}
+        {/* VOLET GAUCHE (50%) : SCÈNE IMMERSIVE IMAGE & IDENTITÉ TANDEM     */}
         {/* ================================================================= */}
-        <div className="relative w-full lg:w-[56%] min-h-[500px] lg:min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-14 overflow-hidden bg-[#030F27]">
-          {/* Image de fond authentique de l'espace de développement en haute résolution */}
-          <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="relative w-full lg:w-1/2 min-h-[520px] lg:min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-16 overflow-hidden bg-[#030F27] border-b lg:border-b-0 lg:border-r border-slate-800">
+          
+          {/* Arrière-plan photographique haute définition de l'espace de développement */}
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
             <img
-              src="/dev-workspace-bg.jpg"
+              src="/login-bg.jpg"
               alt="Espace Développement Tandem SAP"
-              className="w-full h-full object-cover object-center filter contrast-110 brightness-95"
+              onError={(e) => {
+                // Fallback gracieux si login-bg.jpg n'est pas trouvé
+                (e.currentTarget as HTMLImageElement).src = "/dev-workspace-bg.jpg";
+              }}
+              className="w-full h-full object-cover object-center scale-105 filter contrast-105 brightness-90 transition-transform duration-1000 ease-out"
             />
-            {/* Dégradé technique assurant un contraste typographique irréprochable */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#020F24] via-[#02132F]/85 to-[#051638]/70" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#020F24] via-transparent to-[#020F24]/80" />
+            {/* Dégradé multicouche cinématographique assurant une parfaite lisibilité */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#020F24]/95 via-[#031535]/85 to-[#0062E6]/40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#020F24] via-transparent to-[#020F24]/70" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(0,184,156,0.15),transparent_50%)]" />
           </div>
 
-          {/* En-tête gauche : Logo Tandem Corporate officiel */}
+          {/* En-tête gauche : Logo officiel Tandem et badge gouvernance */}
           <div className="relative z-10 flex items-center justify-between">
-            <div className="flex items-center gap-3 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-lg border border-white/20">
+            <div className="flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl border border-white/20">
               <img
                 src="/tandem-logo.jpg"
                 alt="Tandem — Du besoin à la solution."
                 className="h-8 sm:h-9 w-auto object-contain"
               />
             </div>
-            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-slate-200">
+            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-slate-200 shadow-sm">
               <Shield className="w-3.5 h-3.5 text-[#00B89C]" />
               <span>Gouvernance & Sécurité BU SME</span>
             </div>
           </div>
 
-          {/* Centre gauche : Grand Titre Percutant & Message Fondateur */}
-          <div className="relative z-10 my-auto py-8 sm:py-12 space-y-4 max-w-xl">
-            <div className="inline-block w-14 h-1.5 bg-[#F58220] rounded-full shadow-sm" />
+          {/* Centre gauche : Grand Titre Percutant & Message Fondateur Tandem */}
+          <div className="relative z-10 my-auto py-10 sm:py-14 space-y-5 max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0062E6]/25 border border-sky-400/30 text-sky-300 text-xs font-semibold tracking-wide backdrop-blur-xs">
+              <span className="w-2 h-2 rounded-full bg-[#00B89C] animate-pulse" />
+              <span>Plateforme Collaborative SAP Tandem</span>
+            </div>
+            
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.12]">
               Des besoins <br />
-              <span className="text-[#F58220]">aux solutions.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F58220] via-amber-300 to-[#F58220]">
+                aux solutions.
+              </span>
             </h1>
-            <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed pt-1">
+
+            <p className="text-sm sm:text-base text-slate-200 font-normal leading-relaxed max-w-lg">
               {tr(
-                "La plateforme interne qui connecte les développeurs et les équipes métier pour transformer les besoins en solutions.",
-                "The internal platform connecting developers and business teams to transform needs into solutions."
+                "L'environnement unifié qui synchronise développeurs, consultants et direction pour orchestrer la livraison de valeur SAP en temps réel.",
+                "The unified workspace connecting developers, consultants and leadership to orchestrate SAP delivery in real time."
               )}
             </p>
+
+            <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-slate-300">
+              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/15">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#00B89C]" />
+                <span>100% Traçabilité</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/15">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#0062E6]" />
+                <span>Validation Heures Certifiées</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/15">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#F58220]" />
+                <span>Collaboration Fluide</span>
+              </div>
+            </div>
           </div>
 
           {/* Bas gauche : 3 Cartes Piliers en Glassmorphism Sombre */}
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 max-w-xl">
-            <div className="bg-[#051638]/70 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shadow-xl flex flex-col justify-between transition-all hover:bg-[#051638]/90 hover:border-white/30">
+            <div className="bg-[#051638]/75 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shadow-xl flex flex-col justify-between transition-all hover:bg-[#051638]/95 hover:border-white/30">
               <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-400/30 flex items-center justify-center mb-2.5 shadow-sm">
                 <Code2 className="w-5 h-5 text-sky-300" />
               </div>
               <div>
                 <div className="font-bold text-sm text-white">Centralisez</div>
-                <div className="text-[11px] text-slate-300 mt-0.5">toutes vos demandes</div>
+                <div className="text-[11px] text-slate-300 mt-0.5">toutes vos demandes SAP</div>
               </div>
             </div>
 
-            <div className="bg-[#051638]/70 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shadow-xl flex flex-col justify-between transition-all hover:bg-[#051638]/90 hover:border-white/30">
+            <div className="bg-[#051638]/75 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shadow-xl flex flex-col justify-between transition-all hover:bg-[#051638]/95 hover:border-white/30">
               <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center mb-2.5 shadow-sm">
                 <Users className="w-5 h-5 text-blue-300" />
               </div>
               <div>
                 <div className="font-bold text-sm text-white">Collaborez</div>
-                <div className="text-[11px] text-slate-300 mt-0.5">avec les bonnes personnes</div>
+                <div className="text-[11px] text-slate-300 mt-0.5">avec les bons experts</div>
               </div>
             </div>
 
-            <div className="bg-[#051638]/70 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shadow-xl flex flex-col justify-between transition-all hover:bg-[#051638]/90 hover:border-white/30">
+            <div className="bg-[#051638]/75 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shadow-xl flex flex-col justify-between transition-all hover:bg-[#051638]/95 hover:border-white/30">
               <div className="w-9 h-9 rounded-xl bg-[#F58220]/20 text-[#F58220] border border-[#F58220]/40 flex items-center justify-center mb-2.5 shadow-sm">
                 <BarChart3 className="w-5 h-5 text-[#F58220]" />
               </div>
               <div>
-                <div className="font-bold text-sm text-white">Suivez</div>
-                <div className="text-[11px] text-slate-300 mt-0.5">l'avancement en temps réel</div>
+                <div className="font-bold text-sm text-white">Pilotez</div>
+                <div className="text-[11px] text-slate-300 mt-0.5">la charge & le temps réel</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* ================================================================= */}
-        {/* VOLET DROIT : FOND ÉPURÉ, COMMANDES & CARTE DE CONNEXION PREMIUM  */}
+        {/* VOLET DROIT (50%) : LE LOGIN SIDE — DESIGN ÉPURÉ & PRESTIGE       */}
         {/* ================================================================= */}
-        <div className="relative w-full lg:w-[44%] min-h-screen flex flex-col justify-between p-4 sm:p-8 lg:p-12 bg-[#F4F7FB] dark:bg-[#071224] text-[#051638] dark:text-slate-100 overflow-y-auto">
+        <div className="relative w-full lg:w-1/2 min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-14 bg-gradient-to-b from-[#F8FAFC] via-[#F1F5F9] to-[#E2E8F0] dark:from-[#061226] dark:via-[#07152D] dark:to-[#040C1A] text-[#051638] dark:text-slate-100 overflow-y-auto">
           
-          {/* Liseré supérieur corporate Tandem */}
+          {/* Liseré supérieur corporate Tandem 4 couleurs */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#051638] via-[#0062E6] via-[#00B89C] to-[#F58220]" />
 
-          {/* Bandeau supérieur droit : Sélecteur Langue & Dark Mode */}
+          {/* Barre supérieure : Sélecteur Langue & Bascule Mode Sombre */}
           <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-2">
             <div className="sm:hidden flex items-center gap-2">
-              <span className="text-xs font-bold text-[#051638] dark:text-white">Tandem</span>
+              <span className="text-xs font-bold text-[#051638] dark:text-white">Tandem SAP</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -3929,14 +3957,14 @@ export default function TicketManagerPage() {
 
           {/* Boîte Blanche de Connexion Flottante (Design System Tandem) */}
           <div className="w-full max-w-md mx-auto my-auto py-6">
-            <div className="bg-white/95 dark:bg-[#0A1A38]/95 backdrop-blur-xl rounded-3xl shadow-[0_25px_60px_-15px_rgba(5,22,56,0.18)] border border-slate-200/90 dark:border-slate-800 p-6 sm:p-8">
+            <div className="bg-white/95 dark:bg-[#0A1A38]/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(5,22,56,0.12)] border border-slate-200/90 dark:border-slate-800 p-6 sm:p-8">
               
               {/* Logo Tandem centré sur la carte */}
               <div className="text-center pb-4 border-b border-slate-100 dark:border-slate-800/80">
                 <img
                   src="/tandem-logo.jpg"
                   alt="Tandem — Du besoin à la solution."
-                  className="h-12 w-auto object-contain mx-auto mb-2"
+                  className="h-11 w-auto object-contain mx-auto mb-2"
                 />
                 <h2 className="text-base font-bold text-[#051638] dark:text-white">
                   {tr("Connexion à votre Espace Tandem", "Sign in to your Tandem Workspace")}
@@ -4022,7 +4050,7 @@ export default function TicketManagerPage() {
 
                   <button
                     type="submit"
-                    className="w-full py-2.5 px-4 bg-[#0062E6] hover:bg-[#0052CC] active:bg-[#051638] text-white font-semibold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                    className="w-full py-2.5 px-4 bg-gradient-to-r from-[#0062E6] to-[#0052CC] hover:from-[#0052CC] hover:to-[#051638] active:scale-[0.99] text-white font-semibold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group cursor-pointer"
                   >
                     <span>{tr("Se connecter à mon portail", "Sign in to my portal")}</span>
                     <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -4050,10 +4078,11 @@ export default function TicketManagerPage() {
                   </div>
 
                   <div className="space-y-2">
-                    {/* 1. SUPER ADMINISTRATEUR — Getheme Aliko (Or & Marine Prestige) */}
+                    {/* 1. SUPER ADMINISTRATEUR */}
                     <button
                       type="button"
-                      data-testid="quick-login-superadmin-btn" aria-label="Portail Super Administrateur & Direction (Getheme Aliko)"
+                      data-testid="quick-login-superadmin-btn"
+                      aria-label="Portail Super Administrateur & Direction (Getheme Aliko)"
                       onClick={() => {
                         const superAdmin =
                           systemUsers.find((u) => u.id === "user-aliko") ||
@@ -4085,7 +4114,7 @@ export default function TicketManagerPage() {
                       <ChevronRight className="w-4 h-4 text-amber-500 group-hover:translate-x-0.5 transition-transform" />
                     </button>
 
-                    {/* 2. DÉVELOPPEUR SAP — Anoop Pandimukkula (Orange Ambré Tandem #F58220) */}
+                    {/* 2. DÉVELOPPEUR SAP */}
                     <button
                       type="button"
                       onClick={() => {
@@ -4098,21 +4127,21 @@ export default function TicketManagerPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-[#F58220] text-white font-bold text-xs flex items-center justify-center shadow-2xs shrink-0">
-                          AP
+                          DEV
                         </div>
                         <div>
                           <div className="text-xs font-semibold text-[#051638] dark:text-white group-hover:text-[#F58220]">
                             {tr("Portail Développeur", "Developer Portal")}
                           </div>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                            Développeur • Réalisation technique & Suivi de temps
+                            Développeur SAP • Réalisation technique & Suivi de temps
                           </div>
                         </div>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#F58220] group-hover:translate-x-0.5 transition-transform" />
                     </button>
 
-                    {/* 3. DEMANDEUR / CONSULTANT — Mélissa Diakité (Bleu Tandem #0062E6) */}
+                    {/* 3. DEMANDEUR / CONSULTANT */}
                     <button
                       type="button"
                       onClick={() => {
@@ -4125,7 +4154,7 @@ export default function TicketManagerPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-[#0062E6] text-white font-bold text-xs flex items-center justify-center shadow-2xs shrink-0">
-                          MD
+                          REQ
                         </div>
                         <div>
                           <div className="text-xs font-semibold text-[#051638] dark:text-white group-hover:text-[#0062E6]">
@@ -4152,7 +4181,7 @@ export default function TicketManagerPage() {
 
           {/* Footer officiel discret */}
           <footer className="py-2 text-center text-xs text-[#5A7088] dark:text-slate-500">
-            Tandem — Du besoin à la solution. | Safir Consulting © 2026
+            Tandem — Du besoin à la solution. | Safir Consulting BU SME © 2026
           </footer>
         </div>
       </div>

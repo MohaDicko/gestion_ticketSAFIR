@@ -378,7 +378,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
 
     // Sélectionner un développeur qui n'a pas la compétence spécifique du ticket (ex: Moha Dicko)
     const modal = page.locator(".fixed.inset-0.z-50");
-    const devSelect = modal.locator("select").nth(1); // Le select des devs dans la modale
+    const devSelect = modal.locator("select").first(); // Le select des devs dans la modale
     await devSelect.selectOption("dev-moha");
 
     // Vérifier l'apparition du panneau managérial d'autorisation et dérogation Aliko
