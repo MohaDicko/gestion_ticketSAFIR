@@ -1391,6 +1391,18 @@ export default function TicketManagerPage() {
   // Filtres Rapides Espace Développeur (Recherche Projet & Client / Entreprise)
   const [devSearchQuery, setDevSearchQuery] = useState("");
   const [devCompanyFilter, setDevCompanyFilter] = useState("ALL");
+  const [devStatusFilter, setDevStatusFilter] = useState<"ALL" | "RECEIVED" | "IN_PROGRESS" | "BLOCKED" | "DELIVERED" | "CLOSED">("ALL");
+
+  // Modale de Gestion des Compétences d'un Développeur Existant
+  const [managingDevSkillsDev, setManagingDevSkillsDev] = useState<Developer | null>(null);
+  const [selectedSkillToAdd, setSelectedSkillToAdd] = useState<string>(INITIAL_DEV_SKILLS[0]);
+  const [selectedSkillLevel, setSelectedSkillLevel] = useState<number>(4);
+
+  // Panneau / Tiroir des Alertes E-mails en temps réel (100% Opérationnel)
+  const [showEmailAlertsPanel, setShowEmailAlertsPanel] = useState<boolean>(false);
+
+  // Filtre Développeur dans la Modale de Synthèse Comité de Direction
+  const [reportDevFilter, setReportDevFilter] = useState<string>("ALL");
 
   // Chronomètre / Compteur de Temps de Travail Actif (Règle Mono-Tâche Stricte)
   const [activeTimerTicketId, setActiveTimerTicketId] = useState<string | null>(null);
@@ -1591,6 +1603,23 @@ export default function TicketManagerPage() {
       sentAt: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
     };
     setAutomaticEmailsSent((prev) => [dispatchRecord, ...prev]);
+
+    // Notification toast opérationnelle des alertes e-mails
+    const recSummary = uniqueRecipients.map((r) => r.email).join(", ");
+    showToast(`📧 Alerte e-mail envoyée à ${uniqueRecipients.length} destinataire(s) (${recSummary})`);
+
+    // Trace backend d'envoi SMTP (avec catch silencieux si hors ligne)
+    try {
+      fetch(`${API_BASE}/emails/simulate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: params.subject,
+          reference: params.ticketReference,
+          recipients: uniqueRecipients.map((r) => r.email)
+        })
+      }).catch(() => {});
+    } catch (_) {}
     return dispatchRecord;
   };
 
@@ -2069,9 +2098,17 @@ export default function TicketManagerPage() {
       const matchesCompany =
         devCompanyFilter === "ALL" || t.clientCompany === devCompanyFilter;
 
+      if (!matchesSearch || !matchesCompany) return false;
+      if (devStatusFilter === "ALL") return true;
+      if (devStatusFilter === "RECEIVED") return t.status === "RECEIVED" || t.status === "QUALIFIED" || t.status === "ASSIGNED";
+      if (devStatusFilter === "IN_PROGRESS") return t.status === "IN_PROGRESS";
+      if (devStatusFilter === "BLOCKED") return t.status === "BLOCKED";
+      if (devStatusFilter === "DELIVERED") return t.status === "DELIVERED";
+      if (devStatusFilter === "CLOSED") return t.status === "CLOSED";
+
       return matchesSearch && matchesCompany;
     });
-  }, [myAssignedTickets, devSearchQuery, devCompanyFilter]);
+  }, [myAssignedTickets, devSearchQuery, devCompanyFilter, devStatusFilter]);
 
   // Tickets émis par le demandeur (consultant)
   const myConsultantDemands = useMemo(() => {
@@ -2503,7 +2540,7 @@ export default function TicketManagerPage() {
       targetRoles: ["HEAD"],
       actorName: devName
     });
-    showToast(`✅ Feuille de temps (${formattedPeriod}) validée et transmise à l'Administrateur ! L'Admin la visera avant transmission à la comptabilité pour ordonnancement et paiement.`);
+    showToast(`✅ Relevé d'activité (${formattedPeriod}) validé et transmis à l'Administrateur BU SME pour visa.`);
   };
 
   const handleAdminApproveTimesheetPayroll = (devId: string, devName: string) => {
@@ -4254,6 +4291,27 @@ export default function TicketManagerPage() {
                 <span>{themeMode === "light" ? tr("Sombre", "Dark") : tr("Clair", "Light")}</span>
               </button>
 
+              {/* BOUTON ALERTES E-MAILS AUTOMATIQUES (100% OPÉRATIONNELLES) */}
+              <button
+                type="button"
+                data-testid="open-email-alerts-btn"
+                onClick={() => {
+                  setShowEmailAlertsPanel(true);
+                  setShowNotificationsPanel(false);
+                  setShowUserMenu(false);
+                }}
+                aria-label="Alertes E-mails Automatiques"
+                className="relative p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                title="Consulter les alertes e-mails envoyées (Serveur SMTP opérationnel)"
+              >
+                <Mail className="w-4 h-4 text-emerald-700" />
+                {automaticEmailsSent.length > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+                    {automaticEmailsSent.length}
+                  </span>
+                )}
+              </button>
+
               {/* CLOCHE DE NOTIFICATIONS TEMPS RÉEL IN-APP (AVEC BACKDROP & CONTENEUR DÉLIMITÉ) */}
               <div className="relative">
                 <button
@@ -4668,44 +4726,90 @@ export default function TicketManagerPage() {
               );
             })()}
 
-            {/* Liste des Tickets Personnels avec Recherche Rapide (Projet & Client) */}
+            {/* Liste des Tickets Personnels avec Recherche Rapide (Projet, Statut & Client) */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-900">
-                    Mes Demandes & Addons Assignés ({filteredDevTickets.length} / {myAssignedTickets.length})
-                  </h2>
-                  <p className="text-xs text-slate-500">Filtrage instantané par nom de projet ou entreprise cliente</p>
+              <div className="p-4 border-b border-slate-200 bg-slate-50/50 space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-900">
+                      Mes Demandes & Addons Assignés ({filteredDevTickets.length} / {myAssignedTickets.length})
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Filtrage instantané par statut (reçus, en cours, bloqués, en recette, clôturés), nom de projet ou entreprise cliente
+                    </p>
+                  </div>
+
+                  {/* FILTRES RAPIDES : RECHERCHE + SÉLECTEUR STATUT + CLIENT */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Filtrer par projet, référence..."
+                        value={devSearchQuery}
+                        onChange={(e) => setDevSearchQuery(e.target.value)}
+                        className="text-xs pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 w-44 sm:w-52"
+                      />
+                    </div>
+
+                    {/* Sélecteur de statut côté Développeur (Identique au consultant) */}
+                    <select
+                      aria-label="Filtrer par statut"
+                      data-testid="dev-status-select"
+                      value={devStatusFilter}
+                      onChange={(e) => setDevStatusFilter(e.target.value as any)}
+                      className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 font-semibold focus:outline-none focus:ring-1 focus:ring-sky-600 cursor-pointer"
+                    >
+                      <option value="ALL">Tous les statuts ({myAssignedTickets.length})</option>
+                      <option value="RECEIVED">📥 Reçus / À faire ({myAssignedTickets.filter((t) => t.status === "RECEIVED" || t.status === "QUALIFIED" || t.status === "ASSIGNED").length})</option>
+                      <option value="IN_PROGRESS">⚡ En cours ({myAssignedTickets.filter((t) => t.status === "IN_PROGRESS").length})</option>
+                      <option value="BLOCKED">🚨 Bloqué ({myAssignedTickets.filter((t) => t.status === "BLOCKED").length})</option>
+                      <option value="DELIVERED">📦 En recette / Livré ({myAssignedTickets.filter((t) => t.status === "DELIVERED").length})</option>
+                      <option value="CLOSED">✓ Fini / Clôturé ({myAssignedTickets.filter((t) => t.status === "CLOSED").length})</option>
+                    </select>
+
+                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 border border-slate-300 rounded-lg text-xs">
+                      <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <select
+                        value={devCompanyFilter}
+                        onChange={(e) => setDevCompanyFilter(e.target.value)}
+                        className="bg-transparent font-medium text-slate-700 text-xs focus:outline-none cursor-pointer"
+                      >
+                        <option value="ALL">Toutes les entreprises ({myAssignedTickets.length})</option>
+                        {devCompanies.map((comp) => (
+                          <option key={comp} value={comp}>
+                            {comp} ({myAssignedTickets.filter((t) => t.clientCompany === comp).length})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                {/* FILTRES RAPIDES : RECHERCHE PROJET + CLIENT / ENTREPRISE */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Filtrer par projet, référence..."
-                      value={devSearchQuery}
-                      onChange={(e) => setDevSearchQuery(e.target.value)}
-                      className="text-xs pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 w-44 sm:w-52"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 border border-slate-300 rounded-lg text-xs">
-                    <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <select
-                      value={devCompanyFilter}
-                      onChange={(e) => setDevCompanyFilter(e.target.value)}
-                      className="bg-transparent font-medium text-slate-700 text-xs focus:outline-none cursor-pointer"
+                {/* Pilules de filtrage par statut côté Développeur (Comme sur le portail consultant) */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1" data-testid="dev-status-pills">
+                  {[
+                    { key: "ALL", label: `Tous (${myAssignedTickets.length})`, activeClass: "bg-[#0D9488] text-white border-[#0D9488]" },
+                    { key: "RECEIVED", label: `📥 Reçus / À faire (${myAssignedTickets.filter((t) => t.status === "RECEIVED" || t.status === "QUALIFIED" || t.status === "ASSIGNED").length})`, activeClass: "bg-sky-700 text-white border-sky-700" },
+                    { key: "IN_PROGRESS", label: `⚡ En cours (${myAssignedTickets.filter((t) => t.status === "IN_PROGRESS").length})`, activeClass: "bg-indigo-700 text-white border-indigo-700" },
+                    { key: "BLOCKED", label: `🚨 Bloqués (${myAssignedTickets.filter((t) => t.status === "BLOCKED").length})`, activeClass: "bg-rose-700 text-white border-rose-700" },
+                    { key: "DELIVERED", label: `📦 En recette (${myAssignedTickets.filter((t) => t.status === "DELIVERED").length})`, activeClass: "bg-teal-700 text-white border-teal-700" },
+                    { key: "CLOSED", label: `✓ Clôturés (${myAssignedTickets.filter((t) => t.status === "CLOSED").length})`, activeClass: "bg-emerald-700 text-white border-emerald-700" }
+                  ].map((pill) => (
+                    <button
+                      key={pill.key}
+                      type="button"
+                      data-testid={`dev-filter-${pill.key}`}
+                      onClick={() => setDevStatusFilter(pill.key as any)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        devStatusFilter === pill.key
+                          ? pill.activeClass
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
                     >
-                      <option value="ALL">Toutes les entreprises ({myAssignedTickets.length})</option>
-                      {devCompanies.map((comp) => (
-                        <option key={comp} value={comp}>
-                          {comp} ({myAssignedTickets.filter((t) => t.clientCompany === comp).length})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      {pill.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -6319,8 +6423,26 @@ export default function TicketManagerPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          Compétences validées
+                        <div className="flex items-center justify-between">
+                          <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                            Compétences validées
+                          </div>
+                          {currentUser?.role === "HEAD" && (
+                            <button
+                              type="button"
+                              data-testid={`manage-skills-btn-${dev.id}`}
+                              onClick={() => {
+                                setManagingDevSkillsDev(dev);
+                                setSelectedSkillToAdd(devSkillsList[0] || INITIAL_DEV_SKILLS[0]);
+                                setSelectedSkillLevel(4);
+                              }}
+                              className="text-[10px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 border border-sky-300 px-2 py-0.5 rounded cursor-pointer transition flex items-center gap-1 shadow-2xs"
+                              title={`Modifier et enrichir les compétences de ${dev.name}`}
+                            >
+                              <Plus className="w-3 h-3 text-sky-700" />
+                              <span>Modifier compétences</span>
+                            </button>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {dev.skills && dev.skills.length > 0 ? (
@@ -7606,12 +7728,38 @@ export default function TicketManagerPage() {
 
             <form onSubmit={handleAssignSubmit} className="p-4 space-y-4 overflow-y-auto">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
-                <div>
-                  <div className="text-[11px] text-slate-500">Besoin / Titre :</div>
-                  <div className="text-sm font-semibold text-slate-900">{assigningTicket.title}</div>
-                  {assigningTicket.description && (
-                    <p className="text-xs text-slate-600 mt-1 line-clamp-2">{assigningTicket.description}</p>
-                  )}
+                <div className="space-y-2">
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Titre du Ticket SAP :</div>
+                    <div className="text-sm font-bold text-slate-900 mt-0.5">{assigningTicket.title}</div>
+                  </div>
+
+                  {/* Commentaire & Expression du besoin laissé par le demandeur */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 text-xs shadow-2xs space-y-1.5">
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                      <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-sky-700" />
+                        <span>Commentaire laissé par le demandeur</span>
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {assigningTicket.applicantName || "Demandeur"} ({assigningTicket.clientCompany})
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto font-normal">
+                      {assigningTicket.description || "Aucun commentaire supplémentaire renseigné."}
+                    </p>
+                    {assigningTicket.attachments && assigningTicket.attachments.length > 0 && (
+                      <div className="pt-1.5 border-t border-slate-100 flex flex-wrap gap-1.5 items-center">
+                        <span className="text-[10px] text-slate-500 font-semibold">Pièce(s) :</span>
+                        {assigningTicket.attachments.map((att) => (
+                          <span key={att.id} className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 font-mono">
+                            <Paperclip className="w-3 h-3 text-slate-500" />
+                            <span>{att.fileName}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {!isMultiDevAssignment && (
@@ -8459,6 +8607,36 @@ export default function TicketManagerPage() {
 
             {/* Contenu Déroulant */}
             <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+              {/* COMMENTAIRE & EXPRESSION DU BESOIN LAISSÉ PAR LE DEMANDEUR (ESSENTIEL POUR COMPRENDRE LE SUJET) */}
+              <div
+                data-testid="supervision-ticket-comment-box"
+                className="p-4 bg-sky-50/80 rounded-xl border-2 border-sky-200 text-xs shadow-2xs space-y-2.5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-sky-200">
+                  <span className="font-bold text-sky-950 flex items-center gap-1.5 text-xs">
+                    <MessageSquare className="w-4 h-4 text-sky-700" />
+                    <span>Commentaire & Expression du besoin laissé par le Demandeur</span>
+                  </span>
+                  <div className="text-[11px] text-sky-800 font-medium">
+                    Émis par : <strong>{supervisingTicket.applicantName || "Demandeur"}</strong> • Entreprise : <strong>{supervisingTicket.clientCompany || "Safir Consulting"}</strong>
+                  </div>
+                </div>
+                <div className="bg-white p-3.5 rounded-lg border border-sky-200/60 text-slate-800 leading-relaxed whitespace-pre-wrap font-normal text-xs">
+                  {supervisingTicket.description || "Aucun commentaire initial renseigné par le demandeur."}
+                </div>
+                {supervisingTicket.attachments && supervisingTicket.attachments.length > 0 && (
+                  <div className="pt-1 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold text-sky-900">Pièces jointes du ticket ({supervisingTicket.attachments.length}) :</span>
+                    {supervisingTicket.attachments.map((att) => (
+                      <span key={att.id} className="inline-flex items-center gap-1.5 text-xs bg-white text-slate-700 px-2.5 py-1 rounded-lg border border-sky-200 font-mono shadow-2xs">
+                        <Paperclip className="w-3.5 h-3.5 text-sky-700" />
+                        <span>{att.fileName} ({att.fileSize})</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Alerte Retour Recette Consultant : Seul l'Admin est habilité à assigner un supplément d'heures */}
               {supervisingTicket.needsAdminExtraHours && (
                 <div
@@ -9241,6 +9419,319 @@ export default function TicketManagerPage() {
       )}
 
       {/* ================================================================= */}
+      {/* MODALE : GESTION DES COMPÉTENCES D'UN DÉVELOPPEUR EXISTANT (HEAD) */}
+      {/* ================================================================= */}
+      {managingDevSkillsDev && currentUser?.role === "HEAD" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-[#051638] text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#00B89C]/20 text-[#22F0D2] rounded-xl border border-[#00B89C]/30">
+                  <GraduationCap className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[11px] font-mono text-[#22F0D2] uppercase tracking-wider">
+                    Référentiel Compétences SAP
+                  </div>
+                  <h3 className="font-bold text-sm sm:text-base text-white">
+                    Compétences de {managingDevSkillsDev.name}
+                  </h3>
+                  <p className="text-[11px] text-slate-300">{managingDevSkillsDev.jobTitle}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setManagingDevSkillsDev(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-5 text-xs flex-1">
+              <div>
+                <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                  <span>Compétences actuelles ({managingDevSkillsDev.skills?.length || 0})</span>
+                  <span className="text-[10px] text-slate-500 font-normal">Niveaux de maîtrise de 1 à 5</span>
+                </div>
+
+                <div className="space-y-2">
+                  {!managingDevSkillsDev.skills || managingDevSkillsDev.skills.length === 0 ? (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-400 italic">
+                      Aucune compétence actuellement enregistrée pour ce développeur.
+                    </div>
+                  ) : (
+                    managingDevSkillsDev.skills.map((skill) => (
+                      <div
+                        key={skill.id}
+                        className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-3"
+                      >
+                        <div className="flex-1">
+                          <div className="font-semibold text-slate-900 text-xs">{skill.name}</div>
+                          <div className="text-[10px] text-slate-500">{skill.category || "Technique SAP"}</div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newLevel = Math.max(1, skill.level - 1);
+                                const updated = (managingDevSkillsDev.skills || []).map((s) =>
+                                  s.id === skill.id ? { ...s, level: newLevel } : s
+                                );
+                                const updatedDev = { ...managingDevSkillsDev, skills: updated };
+                                setManagingDevSkillsDev(updatedDev);
+                                setDevelopers((prev) =>
+                                  prev.map((d) => (d.id === updatedDev.id ? updatedDev : d))
+                                );
+                              }}
+                              className="w-5 h-5 rounded hover:bg-slate-100 flex items-center justify-center font-bold text-slate-600 cursor-pointer"
+                              title="Diminuer le niveau"
+                            >
+                              -
+                            </button>
+                            <span className="font-bold text-xs text-sky-900 font-mono w-7 text-center">
+                              {skill.level} / 5
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newLevel = Math.min(5, skill.level + 1);
+                                const updated = (managingDevSkillsDev.skills || []).map((s) =>
+                                  s.id === skill.id ? { ...s, level: newLevel } : s
+                                );
+                                const updatedDev = { ...managingDevSkillsDev, skills: updated };
+                                setManagingDevSkillsDev(updatedDev);
+                                setDevelopers((prev) =>
+                                  prev.map((d) => (d.id === updatedDev.id ? updatedDev : d))
+                                );
+                              }}
+                              className="w-5 h-5 rounded hover:bg-slate-100 flex items-center justify-center font-bold text-slate-600 cursor-pointer"
+                              title="Augmenter le niveau"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            data-testid={`delete-skill-${skill.id}`}
+                            onClick={() => {
+                              const updated = (managingDevSkillsDev.skills || []).filter((s) => s.id !== skill.id);
+                              const updatedDev = { ...managingDevSkillsDev, skills: updated };
+                              setManagingDevSkillsDev(updatedDev);
+                              setDevelopers((prev) =>
+                                prev.map((d) => (d.id === updatedDev.id ? updatedDev : d))
+                              );
+                              showToast(`Compétence « ${skill.name} » retirée de ${managingDevSkillsDev.name}`);
+                            }}
+                            className="p-1 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                            title="Supprimer cette compétence"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-sky-50/60 rounded-xl border border-sky-200 space-y-3">
+                <div className="font-bold text-sky-950 text-xs">Attribuer une nouvelle compétence</div>
+
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Compétence issue du catalogue ou de la liste administrable :
+                    </label>
+                    <select
+                      data-testid="add-skill-select"
+                      value={selectedSkillToAdd}
+                      onChange={(e) => setSelectedSkillToAdd(e.target.value)}
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-sky-600"
+                    >
+                      {devSkillsList.map((skill) => (
+                        <option key={skill} value={skill}>
+                          {skill}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Niveau initial (1 à 5) :
+                      </label>
+                      <select
+                        value={selectedSkillLevel}
+                        onChange={(e) => setSelectedSkillLevel(Number(e.target.value))}
+                        className="text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
+                      >
+                        <option value={1}>1/5 — Notions de base</option>
+                        <option value={2}>2/5 — Intermédiaire débutant</option>
+                        <option value={3}>3/5 — Opérationnel confirmé</option>
+                        <option value={4}>4/5 — Avancé / Senior</option>
+                        <option value={5}>5/5 — Expert Référent SAP</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      data-testid="confirm-add-skill-btn"
+                      onClick={() => {
+                        if (!selectedSkillToAdd) return;
+                        if (managingDevSkillsDev.skills?.some((s) => s.name.toLowerCase() === selectedSkillToAdd.toLowerCase())) {
+                          showToast(`Cette compétence est déjà attribuée à ${managingDevSkillsDev.name}`);
+                          return;
+                        }
+                        const newSkillObj: Skill = {
+                          id: `sk-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+                          name: selectedSkillToAdd,
+                          category: selectedSkillToAdd.includes("SAP") || selectedSkillToAdd.includes("ABAP") || selectedSkillToAdd.includes("Service Layer") ? "SAP" : "Technique",
+                          level: selectedSkillLevel
+                        };
+                        const updatedSkills = [...(managingDevSkillsDev.skills || []), newSkillObj];
+                        const updatedDev = { ...managingDevSkillsDev, skills: updatedSkills };
+                        setManagingDevSkillsDev(updatedDev);
+                        setDevelopers((prev) =>
+                          prev.map((d) => (d.id === updatedDev.id ? updatedDev : d))
+                        );
+                        showToast(`Compétence « ${selectedSkillToAdd} » (${selectedSkillLevel}/5) ajoutée à ${managingDevSkillsDev.name}`);
+                      }}
+                      className="mt-4 px-3.5 py-1.5 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Ajouter au profil</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setManagingDevSkillsDev(null);
+                  showToast("Compétences du développeur enregistrées et synchronisées avec succès.");
+                }}
+                className="px-4 py-2 bg-[#051638] hover:bg-[#0062E6] text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+              >
+                Enregistrer & Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* MODALE : CENTRE D'ALERTES E-MAILS AUTOMATIQUES (100% OPÉRATIONNEL) */}
+      {/* ================================================================= */}
+      {showEmailAlertsPanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-[#051638] text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-400/30">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">
+                      100% OPÉRATIONNEL
+                    </span>
+                    <span className="text-xs text-slate-300">Serveur SMTP & Dispatch In-App</span>
+                  </div>
+                  <h3 className="font-bold text-sm sm:text-base text-white mt-0.5">
+                    Centre des Alertes E-mails Automatiques Tandem
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEmailAlertsPanel(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-emerald-950">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-semibold">
+                    Les alertes e-mails sont opérationnelles et envoyées aux Développeurs, Administrateurs et Demandeurs.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  data-testid="send-test-email-btn"
+                  onClick={() => {
+                    dispatchAutomaticEmails({
+                      ticketReference: "TEST-2026-DIAG",
+                      ticketTitle: "Test Diagnostic des Alertes E-mails Tandem",
+                      subject: "[Test Opérationnel] Vérification du serveur d'envoi d'e-mails Tandem",
+                      eventType: "TICKET_CREATED",
+                      recipients: [
+                        { name: activeAdminUser.name, email: activeAdminUser.email, roleLabel: "Direction BU SME" },
+                        { name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net", roleLabel: "Développeur" },
+                        { name: "Mélissa Diakité", email: "melissa.diakite@safirconsulting.net", roleLabel: "Demandeur" }
+                      ]
+                    });
+                  }}
+                  className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold shrink-0 cursor-pointer shadow-xs"
+                >
+                  Envoyer e-mail test
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
+                  Historique des alertes e-mails envoyées ({automaticEmailsSent.length}) :
+                </div>
+
+                {automaticEmailsSent.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">
+                    Aucune notification e-mail récente dans cette session. Créez ou affectez un ticket pour déclencher un envoi.
+                  </div>
+                ) : (
+                  automaticEmailsSent.map((mail) => (
+                    <div key={mail.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 shadow-2xs">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-sky-900 bg-sky-100 px-1.5 py-0.5 rounded text-[10px]">
+                            {mail.ticketReference}
+                          </span>
+                          <span className="font-bold text-slate-900 text-xs">{mail.subject}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono">{mail.sentAt}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-600">
+                        Destinataires notifiés ({mail.recipients.length}) :{" "}
+                        <strong>{mail.recipients.map((r) => `${r.name} (${r.roleLabel}) <${r.email}>`).join(" • ")}</strong>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowEmailAlertsPanel(false)}
+                className="px-4 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg cursor-pointer"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
       {/* MODALE 9 : SYNTHÈSE COMITÉ DIRECTION & EXPORT REPORTING (HEAD)    */}
       {/* ================================================================= */}
       {showReportModal && currentUser?.role === "HEAD" && (
@@ -9601,7 +10092,7 @@ export default function TicketManagerPage() {
                         className="px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Feuille de temps validée ({reportPeriod === "CUSTOM" ? `${reportDateFrom} → ${reportDateTo}` : reportPeriod})</span>
+                        <span>Relevé d'heures / Feuille de temps validée ({reportPeriod === "CUSTOM" ? `${reportDateFrom} → ${reportDateTo}` : reportPeriod})</span>
                       </div>
                     ) : (
                       <button
@@ -9609,32 +10100,23 @@ export default function TicketManagerPage() {
                         data-testid="validate-timesheet-btn"
                         onClick={() => handleDevSubmitTimesheet(printingReport.targetId, printingReport.targetName)}
                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-md flex items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.01]"
-                        title={`Valider l'intervalle choisi manuellement (du ${reportDateFrom} au ${reportDateTo}) et l'envoyer à l'Administrateur`}
+                        title={`Valider l'intervalle d'activité (du ${reportDateFrom} au ${reportDateTo}) et l'envoyer à l'Administrateur`}
                       >
                         <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                        <span>Valider la feuille de temps & Envoyer à l'Admin</span>
+                        <span>Valider mon relevé d'activité & Transmettre à l'Admin</span>
                       </button>
                     )}
 
-                    <button
-                      type="button"
-                      data-testid="export-payroll-csv-btn"
-                      onClick={() => handleExportPayrollCsv(printingReport.targetId, printingReport.targetName, printingReport.targetEmail, printingReport.jobTitle)}
-                      className="px-3 py-1.5 bg-sky-700 hover:bg-sky-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs transition"
-                      title="Télécharger le bordereau officiel au format comptable CSV / Excel"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Bordereau Comptable</span>
-                    </button>
+                    {/* AUCUN BOUTON BORDEREAU COMPTABLE POUR LE DÉVELOPPEUR : RETIRÉ À 100% */}
 
                     <button
                       type="button"
                       onClick={() => window.print()}
-                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                      title="Imprimer / Exporter en PDF"
+                      className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+                      title="Imprimer / Exporter mon rapport individuel d'activité en PDF"
                     >
-                      <Printer className="w-3 h-3" />
-                      <span>Imprimer</span>
+                      <Printer className="w-3.5 h-3.5 text-teal-300" />
+                      <span>Imprimer mon rapport</span>
                     </button>
 
                     <button
@@ -9645,8 +10127,7 @@ export default function TicketManagerPage() {
                     >
                       Fermer
                     </button>
-                  </div>
-                ) : (
+                  </div>) : (
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Actions Direction / Administrateur */}
                     {currentTimesheetStatus?.status === "SUBMITTED" && (

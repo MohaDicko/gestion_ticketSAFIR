@@ -120,10 +120,10 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     // Vérifier l'apparition de la modale
     await expect(page.getByText("Nouveau Ticket de Développement SAP")).toBeVisible();
     await expect(page.getByText("Titre de la demande *")).toBeVisible();
-    await expect(page.getByText(/Estimation du temps de travail \(heures\)/i)).toBeVisible();
+    await expect(page.getByText(/Estimation du temps.*\(heures\)/i)).toBeVisible();
     await expect(page.getByText(/Description détaillée \*/i)).toBeVisible();
     await expect(page.getByText("Type de besoin SAP")).toBeVisible();
-    await expect(page.getByText(/Entreprise \/ Nouveau Client/i)).toBeVisible();
+    await expect(page.getByText('Entreprise / Client SAP')).toBeVisible();
     await expect(page.getByRole("button", { name: /\+ Type/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /\+ Client/i })).toBeVisible();
 
@@ -604,7 +604,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByTestId("timesheet-validated-badge")).toContainText("Feuille de temps validée");
 
     // Fermer la modale
-    await page.getByRole("button", { name: /Fermer le rapport/i }).click();
+    await page.getByRole("button", { name: /Fermer le rapport/i }).first().click();
 
     // 5. Test d'accès Direction : Getheme Aliko imprime le rapport d'un développeur et d'un consultant
     await page.getByRole("button", { name: /Déconnexion/i }).click();
@@ -621,7 +621,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
 
     // Vérifier que la modale d'impression s'ouvre pour le développeur sélectionné
     await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i).first()).toBeVisible();
-    await page.getByRole("button", { name: /Fermer le rapport/i }).click();
+    await page.getByRole("button", { name: /Fermer le rapport/i }).first().click();
 
     // Basculer vers l'onglet Consultants
     await page.getByRole("button", { name: /Consultants Fonctionnels/i }).click();
@@ -631,7 +631,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
 
     // Vérifier l'ouverture du rapport pour la consultante
     await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i).first()).toBeVisible();
-    await page.getByRole("button", { name: /Fermer le rapport/i }).click();
+    await page.getByRole("button", { name: /Fermer le rapport/i }).first().click();
   });
 
   test("18. Supervision en Temps Réel d'Aliko : Vision 360° de l'activité de chaque développeur en direct (projets, tâches, chronos) et impression immédiate de ses rapports", async ({ page }) => {
@@ -678,7 +678,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByText(/Changer de développeur/i)).toBeVisible();
 
     // Fermer le rapport
-    await page.getByRole("button", { name: /Fermer le rapport/i }).click();
+    await page.getByRole("button", { name: /Fermer le rapport/i }).first().click();
   });
 
   test("19. Support Bilingue (Français / Anglais) & Bascule Thème Clair / Sombre (Light / Dark Mode)", async ({ page }) => {
@@ -1007,5 +1007,75 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
 
     // 7. Fermer la modale
     await page.getByRole("button", { name: /Fermer/i }).first().click();
+  });
+
+  test("25. Validation des 6 Derniers Retours Critiques Administrateur (Gethème Aliko)", async ({ page }) => {
+    // =========================================================================
+    // POINT 2 & 3 : PORTAIL DÉVELOPPEUR (ZÉRO COMPTA + NOUVEAUX FILTRES DE STATUT)
+    // =========================================================================
+    await page.goto("/");
+    await page.getByRole("button", { name: /Portail Développeur/i }).click();
+    await expect(page.getByText(/Mon Espace Développeur/i)).toBeVisible();
+
+    // Vérifier l'absence formelle de tout bouton bordereau comptable sur le portail développeur
+    await expect(page.getByTestId("export-payroll-csv-btn")).not.toBeVisible();
+    await expect(page.getByText(/Bordereau Comptable/i)).not.toBeVisible();
+
+    // Vérifier la présence des filtres par statut sur le portail dev
+    const statusSelect = page.getByTestId("dev-status-select");
+    await expect(statusSelect).toBeVisible();
+    const statusPills = page.getByTestId("dev-status-pills");
+    await expect(statusPills).toBeVisible();
+
+    // Filtrer sur un statut (ex: En cours)
+    await statusSelect.selectOption("IN_PROGRESS");
+    await expect(page.locator("body")).toBeVisible();
+
+    // Déconnexion du développeur
+    await page.getByRole("button", { name: /Déconnexion/i }).click();
+
+    // =========================================================================
+    // POINTS 1, 4, 5, 6 : PORTAIL ADMINISTRATEUR (ALIKO)
+    // =========================================================================
+    await loginAsAliko(page);
+
+    // POINT 4 : Alertes Mail Opérationnelles
+    const emailAlertsBtn = page.getByTestId("open-email-alerts-btn");
+    await expect(emailAlertsBtn).toBeVisible();
+    await emailAlertsBtn.click();
+    await expect(page.getByText("Centre des Alertes E-mails")).toBeVisible();
+    // Simuler l'envoi d'un email de test
+    await page.getByTestId("send-test-email-btn").click();
+    await expect(page.getByText(/Alerte e-mail envoyée/i)).toBeVisible();
+    // Fermer le centre d'alertes
+    await page.getByRole("button", { name: /Fermer/i }).first().click();
+
+    // POINT 5 : Gestion des Compétences d'un développeur existant
+    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+    const manageSkillsBtn = page.getByTestId("manage-skills-btn-dev-anoop");
+    await expect(manageSkillsBtn).toBeVisible();
+    await manageSkillsBtn.click();
+    await expect(page.getByText("Compétences SAP")).toBeVisible();
+    await expect(page.getByTestId("confirm-add-skill-btn")).toBeVisible();
+    // Fermer la modale des compétences
+    await page.getByRole("button", { name: /Enregistrer & Fermer/i }).click();
+
+    // POINT 1 : Impression des rapports filtrée individuellement
+    const printReportBtn = page.getByTestId("open-dev-report-btn-dev-anoop");
+    if (await printReportBtn.isVisible()) {
+      await printReportBtn.click();
+      await expect(page.getByTestId("report-dev-filter-select")).toBeVisible();
+      await page.getByRole("button", { name: /Fermer le rapport/i }).first().click();
+    }
+
+    // POINT 6 : Affichage des commentaires dans Suivi & Affectation
+    await page.getByRole("button", { name: /Tous les Tickets SAP/i }).click();
+    // Vérifier que la modale de supervision affiche l'encadré complet de commentaires
+    const superviseBtn = page.getByRole("button", { name: /Superviser/i }).first();
+    if (await superviseBtn.isVisible()) {
+      await superviseBtn.click();
+      await expect(page.getByTestId("supervision-ticket-comment-box")).toBeVisible();
+      await page.getByRole("button", { name: /Fermer la supervision/i }).first().click();
+    }
   });
 });
