@@ -52,7 +52,10 @@ import {
   Activity,
   Sun,
   Moon,
-  Globe
+  Globe,
+  Code2,
+  BarChart3,
+  EyeOff
 } from "lucide-react";
 import { ChangePasswordModal } from "@/components/modals/ChangePasswordModal";
 
@@ -1240,6 +1243,7 @@ export default function TicketManagerPage() {
   // Formulaire de login
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Navigation
@@ -3720,9 +3724,20 @@ export default function TicketManagerPage() {
   // =========================================================================
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-[#F4F7FB] flex flex-col justify-between text-[#051638] font-sans">
-        {/* Bandeau chromatique supérieur Tandem (Marine -> Bleu Royal -> Turquoise) */}
-        <div className="h-1 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] to-[#00B89C]" />
+      <div className="relative min-h-screen bg-[#F4F7FB] dark:bg-[#071224] flex flex-col justify-between text-[#051638] dark:text-slate-100 font-sans overflow-x-hidden selection:bg-[#0062E6] selection:text-white">
+        {/* Image de fond officielle Tandem en transparence avec overlay soigné */}
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
+          <img
+            src="/login-bg.jpg"
+            alt=""
+            className="w-full h-full object-cover object-center opacity-30 dark:opacity-20 filter contrast-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#051638]/40 via-[#F4F7FB]/75 to-transparent dark:from-[#051638]/90 dark:via-[#071224]/85 dark:to-[#051638]/90" />
+          <div className="absolute inset-0 backdrop-blur-[1.5px]" />
+        </div>
+
+        {/* Liseré supérieur corporate Tandem (Marine -> Bleu Royal -> Turquoise -> Orange) */}
+        <div className="relative z-10 h-1.5 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] via-[#00B89C] to-[#F58220]" />
 
         {/* Toast Notification sur l'écran de Login */}
         {toastMessage && (
@@ -3732,24 +3747,24 @@ export default function TicketManagerPage() {
           </div>
         )}
 
-        {/* En-tête Corporate Blanc Pur (intégration native du logo Tandem) */}
-        <header className="border-b border-slate-200/90 bg-white px-6 py-3.5 shadow-[0_1px_3px_0_rgba(5,22,56,0.03)]">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
+        {/* En-tête Épuré & Semi-transparent */}
+        <header className="relative z-10 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md px-4 sm:px-8 py-3 shadow-[0_1px_3px_0_rgba(5,22,56,0.03)]">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img
                 src="/tandem-logo.jpg"
                 alt="Tandem — Du besoin à la solution."
-                className="h-10 w-auto object-contain"
+                className="h-9 sm:h-10 w-auto object-contain rounded-sm"
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="hidden md:flex items-center justify-center gap-2 text-xs text-[#051638] bg-[#F4F7FB] w-[328px] py-1.5 rounded-full border border-slate-200/90 font-medium shrink-0">
+              <div className="hidden lg:flex items-center justify-center gap-2 text-xs text-[#051638] dark:text-slate-200 bg-white/80 dark:bg-slate-800/80 px-3.5 py-1.5 rounded-full border border-slate-200/80 dark:border-slate-700 font-medium shrink-0 shadow-2xs">
                 <Shield className="w-3.5 h-3.5 text-[#0062E6] shrink-0" />
                 <span className="truncate">{tr("Authentification Sécurisée (Argon2id & RBAC)", "Secure Authentication (Argon2id & RBAC)")}</span>
               </div>
 
-              {/* Sélecteur Bilingue FR / EN (Largeur fixe anti-décalage) */}
+              {/* Sélecteur Bilingue FR / EN */}
               <button
                 type="button"
                 onClick={() => {
@@ -3758,14 +3773,14 @@ export default function TicketManagerPage() {
                   showToast(next === "en" ? "Language switched to English (EN)" : "Langue basculée en Français (FR)");
                 }}
                 aria-label="Sélecteur de langue FR / EN"
-                className="inline-flex items-center justify-center gap-1.5 w-[58px] py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-mono font-bold text-[#051638] transition-colors cursor-pointer shadow-2xs shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 w-[62px] py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-mono font-bold text-[#051638] dark:text-slate-200 transition-colors cursor-pointer shadow-2xs shrink-0"
                 title={tr("Passer en Anglais (EN)", "Switch to French (FR)")}
               >
                 <Globe className="w-3.5 h-3.5 text-[#0062E6] shrink-0" />
                 <span>{appLang === "fr" ? "FR" : "EN"}</span>
               </button>
 
-              {/* Bascule Mode Clair / Sombre (Largeur fixe anti-décalage) */}
+              {/* Bascule Mode Clair / Sombre */}
               <button
                 type="button"
                 onClick={() => {
@@ -3774,7 +3789,7 @@ export default function TicketManagerPage() {
                   showToast(next === "dark" ? tr("Mode sombre activé", "Dark mode enabled") : tr("Mode clair activé", "Light mode enabled"));
                 }}
                 aria-label="Basculer le mode Clair / Sombre"
-                className="inline-flex items-center justify-center gap-1.5 w-[86px] py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-[#051638] transition-colors cursor-pointer shadow-2xs shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 w-[86px] py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold text-[#051638] dark:text-slate-200 transition-colors cursor-pointer shadow-2xs shrink-0"
                 title={themeMode === "light" ? tr("Activer le mode sombre", "Enable Dark Mode") : tr("Activer le mode clair", "Enable Light Mode")}
               >
                 {themeMode === "light" ? (
@@ -3788,178 +3803,267 @@ export default function TicketManagerPage() {
           </div>
         </header>
 
-        {/* Corps central : Formulaire de Connexion & Accès Démo Rapide */}
-        <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-4">
-          <div className="w-full max-w-lg space-y-5">
-            <div className="bg-white text-[#051638] rounded-2xl shadow-[0_12px_32px_-8px_rgba(5,22,56,0.08)] border border-slate-200/90 overflow-hidden">
-              <div className="h-1 w-full bg-gradient-to-r from-[#0062E6] to-[#00B89C]" />
-              <div className="bg-white pt-7 pb-5 px-6 text-center border-b border-slate-100">
-                <img
-                  src="/tandem-logo.jpg"
-                  alt="Tandem — Du besoin à la solution."
-                  className="h-14 w-auto object-contain mx-auto mb-3"
-                />
-                <h1 className="text-lg font-bold tracking-tight text-[#051638]">
-                  {tr("Connexion à votre Espace Tandem", "Sign in to your Tandem Workspace")}
+        {/* Corps central : Deux Colonnes Inspirées de la Maquette Tandem */}
+        <main className="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            {/* Colonne Gauche : Pitch Corporate & 3 Cartes Piliers */}
+            <div className="lg:col-span-7 space-y-6 lg:pr-6">
+              <div className="space-y-3">
+                <div className="inline-block w-12 h-1.5 bg-[#F58220] rounded-full" />
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#051638] dark:text-white tracking-tight leading-[1.15]">
+                  Des besoins <br />
+                  <span className="text-[#F58220]">aux solutions.</span>
                 </h1>
-                <p className="text-xs text-[#5A7088] mt-1 max-w-sm mx-auto">
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-xl leading-relaxed pt-1">
                   {tr(
-                    "Identifiez-vous avec votre adresse e-mail professionnelle pour accéder à votre portail dédié.",
-                    "Sign in with your corporate email address to access your dedicated portal."
+                    "La plateforme interne qui connecte les développeurs et les équipes métier pour transformer les besoins en solutions.",
+                    "The internal platform connecting developers and business teams to transform needs into solutions."
                   )}
                 </p>
               </div>
 
-              <div className="p-6 sm:p-8 space-y-6">
-                {loginError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2.5 animate-in fade-in">
-                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-semibold">{tr("Erreur d'authentification : ", "Authentication error: ")}</span>
-                      {loginError}
-                    </div>
+              {/* 3 Cartes Piliers Visuelles (Centralisez, Collaborez, Suivez) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 max-w-xl">
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                  <div className="w-9 h-9 rounded-xl bg-[#051638] text-white flex items-center justify-center mb-2.5 shadow-2xs">
+                    <Code2 className="w-5 h-5 text-sky-400" />
                   </div>
-                )}
-
-                <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[#051638] mb-1.5">
-                      {tr("Adresse e-mail professionnelle (Login)", "Corporate Email Address (Login)")}
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-[#5A7088] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="email"
-                        required
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                        placeholder="ex : aliko.getheme@safirconsulting.net"
-                        className="w-full text-sm pl-10 pr-3 py-2.5 bg-[#F8FAFC] border border-slate-300 rounded-xl text-[#051638] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062E6] focus:border-transparent transition-all"
-                      />
-                    </div>
+                    <div className="font-bold text-sm text-[#051638] dark:text-white">Centralisez</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">toutes vos demandes</div>
                   </div>
+                </div>
 
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                  <div className="w-9 h-9 rounded-xl bg-[#0062E6] text-white flex items-center justify-center mb-2.5 shadow-2xs">
+                    <Users className="w-5 h-5 text-white" />
+                  </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-semibold text-[#051638]">
-                        {tr("Mot de passe", "Password")}
-                      </label>
-                      <span className="text-[11px] text-[#5A7088]">{tr("Chiffré via Argon2id", "Encrypted via Argon2id")}</span>
-                    </div>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-[#5A7088] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="password"
-                        required
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full text-sm pl-10 pr-3 py-2.5 bg-[#F8FAFC] border border-slate-300 rounded-xl text-[#051638] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062E6] focus:border-transparent transition-all"
-                      />
-                    </div>
+                    <div className="font-bold text-sm text-[#051638] dark:text-white">Collaborez</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">avec les bonnes personnes</div>
                   </div>
+                </div>
 
-                  <button
-                    type="submit"
-                    className="w-full py-2.5 px-4 bg-[#0062E6] hover:bg-[#0052CC] active:bg-[#051638] text-white font-semibold text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 group cursor-pointer"
-                  >
-                    <span>{tr("Se connecter à mon portail", "Sign in to my portal")}</span>
-                    <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </button>
-                </form>
-
-                {/* Section Accès Rapide Démo 1-Clic */}
-                <div className="pt-5 border-t border-slate-100">
-                  <div className="text-[11px] font-semibold text-[#5A7088] uppercase tracking-wider mb-3 text-center">
-                    {tr("Accès direct corporate & démo (1-clic)", "Direct Corporate & Demo Access (1-click)")}
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                  <div className="w-9 h-9 rounded-xl bg-[#F58220] text-white flex items-center justify-center mb-2.5 shadow-2xs">
+                    <BarChart3 className="w-5 h-5 text-white" />
                   </div>
-
-                  <div className="space-y-2">
-                    {/* Administrateur - HEAD (Marine Tandem #051638) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const aliko = systemUsers.find((u) => u.role === "HEAD") || systemUsers[0];
-                        setCurrentUser(aliko);
-                        showToast(`Bienvenue, ${aliko.name} (Portail Administrateur)`);
-                      }}
-                      className="w-full p-2.5 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-blue-50/60 hover:border-[#0062E6]/40 transition-all flex items-center justify-between text-left group cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#051638] text-white font-bold text-xs flex items-center justify-center shadow-2xs">
-                          GA
-                        </div>
-                        <div>
-                          <div className="text-xs font-semibold text-[#051638] group-hover:text-[#0062E6]">Getheme Aliko</div>
-                          <div className="text-[10px] text-[#5A7088]">Administrateur BU SME — Arbitrage & Capacité</div>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-[#051638]/10 text-[#051638]">
-                        Portail Direction (HEAD)
-                      </span>
-                    </button>
-
-                    {/* Anoop - DEVELOPER (Teal Tandem #0D9488) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const anoop = systemUsers.find((u) => u.email.includes("anoop")) || systemUsers[1];
-                        setCurrentUser(anoop);
-                        showToast(`Bienvenue, ${anoop.name} (Espace Développeur)`);
-                      }}
-                      className="w-full p-2.5 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-teal-50/60 hover:border-teal-500/40 transition-all flex items-center justify-between text-left group cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#0D9488] text-white font-bold text-xs flex items-center justify-center shadow-2xs">
-                          AP
-                        </div>
-                        <div>
-                          <div className="text-xs font-semibold text-[#051638] group-hover:text-teal-800">Anoop Pandimukkula</div>
-                          <div className="text-[10px] text-[#5A7088]">Développeur SAP Business One Senior</div>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-teal-100/80 text-teal-900">
-                        Portail Développeur
-                      </span>
-                    </button>
-
-                    {/* Mélissa - DEMANDEUR / CONSULTANT (Bleu Tandem #0062E6) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const melissa = systemUsers.find((u) => u.role === "CONSULTANT") || systemUsers[4];
-                        setCurrentUser(melissa);
-                        showToast(`Bienvenue, ${melissa.name} (Espace Demandeur)`);
-                      }}
-                      className="w-full p-2.5 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-blue-50/60 hover:border-[#0062E6]/40 transition-all flex items-center justify-between text-left group cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#0062E6] text-white font-bold text-xs flex items-center justify-center shadow-2xs">
-                          MD
-                        </div>
-                        <div>
-                          <div className="text-xs font-semibold text-[#051638] group-hover:text-[#0062E6]">Mélissa Diakité</div>
-                          <div className="text-[10px] text-[#5A7088]">Demandeur — Mélissa Diakité</div>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-100/80 text-[#0052CC]">
-                        Portail Demandeur
-                      </span>
-                    </button>
+                  <div>
+                    <div className="font-bold text-sm text-[#051638] dark:text-white">Suivez</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">l'avancement en temps réel</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Note de sécurité */}
-            <div className="text-center text-[11px] text-[#5A7088] space-y-1">
-              <p>Application Tandem (Safir Consulting) — Du besoin à la solution. • Tous droits réservés 2026</p>
-              <p className="text-slate-400">Cloisonnement strict RBAC • Chiffrement Argon2id • Conforme OWASP Top 10</p>
+            {/* Colonne Droite : Boîte de Connexion Blanche / Glassmorphism */}
+            <div className="lg:col-span-5 w-full max-w-md mx-auto">
+              <div className="bg-white/95 dark:bg-[#071739]/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_-10px_rgba(5,22,56,0.18)] border border-slate-200/90 dark:border-slate-800 p-6 sm:p-8">
+                
+                {/* Logo Tandem centré sur la carte */}
+                <div className="text-center pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                  <img
+                    src="/tandem-logo.jpg"
+                    alt="Tandem — Du besoin à la solution."
+                    className="h-12 w-auto object-contain mx-auto mb-2"
+                  />
+                  <h2 className="text-base font-bold text-[#051638] dark:text-white">
+                    {tr("Connexion à votre Espace Tandem", "Sign in to your Tandem Workspace")}
+                  </h2>
+                  <p className="text-xs text-[#5A7088] dark:text-slate-400 mt-1 max-w-xs mx-auto">
+                    {tr(
+                      "Identifiez-vous avec votre adresse e-mail professionnelle pour accéder à votre portail dédié.",
+                      "Sign in with your corporate email address to access your dedicated portal."
+                    )}
+                  </p>
+                </div>
+
+                {/* Formulaire de Connexion */}
+                <div className="pt-5 space-y-5">
+                  {loginError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2.5 animate-in fade-in">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-semibold">{tr("Erreur d'authentification : ", "Authentication error: ")}</span>
+                        {loginError}
+                      </div>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#051638] dark:text-slate-200 mb-1.5">
+                        {tr("Adresse e-mail professionnelle (Login)", "Corporate Email Address (Login)")}
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-[#5A7088] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="email"
+                          required
+                          value={loginEmail}
+                          onChange={(e) => setLoginEmail(e.target.value)}
+                          placeholder="aliko.getheme@safirconsulting.net"
+                          className="w-full text-sm pl-10 pr-3 py-2.5 bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl text-[#051638] dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0062E6] focus:border-transparent transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-semibold text-[#051638] dark:text-slate-200">
+                          {tr("Mot de passe", "Password")}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            showToast(
+                              tr(
+                                "Pour réinitialiser votre mot de passe, contactez l'administrateur système (Getheme Aliko).",
+                                "To reset your password, please contact the system administrator (Getheme Aliko)."
+                              )
+                            )
+                          }
+                          className="text-xs text-[#0062E6] dark:text-sky-400 hover:underline font-medium cursor-pointer"
+                        >
+                          {tr("Mot de passe oublié ?", "Forgot password?")}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-[#5A7088] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type={showLoginPassword ? "text" : "password"}
+                          required
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full text-sm pl-10 pr-10 py-2.5 bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl text-[#051638] dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0062E6] focus:border-transparent transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowLoginPassword(!showLoginPassword)}
+                          aria-label={showLoginPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        >
+                          {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 px-4 bg-[#0062E6] hover:bg-[#0052CC] active:bg-[#051638] text-white font-semibold text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                    >
+                      <span>{tr("Se connecter à mon portail", "Sign in to my portal")}</span>
+                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    </button>
+                  </form>
+
+                  {/* Séparateur Élégant */}
+                  <div className="relative my-3">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white dark:bg-[#071739] px-3 text-slate-400 font-semibold tracking-wider">
+                        {tr("OU", "OR")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Section Accès Rapide Démo 1-Clic */}
+                  <div>
+                    <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2.5 text-center">
+                      {tr("ACCÈS RAPIDE", "QUICK ACCESS")}
+                    </div>
+
+                    <div className="space-y-2">
+                      {/* Administrateur - HEAD (Marine Tandem #051638) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const aliko = systemUsers.find((u) => u.role === "HEAD") || systemUsers[0];
+                          setCurrentUser(aliko);
+                          showToast(`Bienvenue, ${aliko.name} (Portail Administrateur)`);
+                        }}
+                        className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800/80 hover:bg-blue-50/70 dark:hover:bg-slate-700/80 hover:border-[#0062E6]/40 transition-all flex items-center justify-between text-left group cursor-pointer shadow-2xs"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#051638] text-white font-bold text-xs flex items-center justify-center shadow-2xs shrink-0">
+                            AG
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-[#051638] dark:text-white group-hover:text-[#0062E6]">
+                              {tr("Portail Direction", "Executive Portal")}
+                            </div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">Getheme Aliko</div>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0062E6] group-hover:translate-x-0.5 transition-transform" />
+                      </button>
+
+                      {/* Anoop - DEVELOPER (Orange Ambré Tandem #F58220) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const anoop = systemUsers.find((u) => u.email.includes("anoop")) || systemUsers[1];
+                          setCurrentUser(anoop);
+                          showToast(`Bienvenue, ${anoop.name} (Espace Développeur)`);
+                        }}
+                        className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800/80 hover:bg-orange-50/70 dark:hover:bg-slate-700/80 hover:border-[#F58220]/40 transition-all flex items-center justify-between text-left group cursor-pointer shadow-2xs"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#F58220] text-white font-bold text-xs flex items-center justify-center shadow-2xs shrink-0">
+                            AP
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-[#051638] dark:text-white group-hover:text-[#F58220]">
+                              {tr("Portail Développeur", "Developer Portal")}
+                            </div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">Anoop Pandimukkula</div>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#F58220] group-hover:translate-x-0.5 transition-transform" />
+                      </button>
+
+                      {/* Mélissa - DEMANDEUR / CONSULTANT (Bleu Tandem #0062E6) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const melissa = systemUsers.find((u) => u.role === "CONSULTANT") || systemUsers[4];
+                          setCurrentUser(melissa);
+                          showToast(`Bienvenue, ${melissa.name} (Espace Demandeur)`);
+                        }}
+                        className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800/80 hover:bg-blue-50/70 dark:hover:bg-slate-700/80 hover:border-[#0062E6]/40 transition-all flex items-center justify-between text-left group cursor-pointer shadow-2xs"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#0062E6] text-white font-bold text-xs flex items-center justify-center shadow-2xs shrink-0">
+                            MD
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-[#051638] dark:text-white group-hover:text-[#0062E6]">
+                              {tr("Portail Demandeur", "Requester Portal")}
+                            </div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">Mélissa Diakité</div>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0062E6] group-hover:translate-x-0.5 transition-transform" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Note de sécurité dans la carte */}
+                <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 text-center text-[10px] text-slate-400 dark:text-slate-500">
+                  Safir Consulting • Cloisonnement RBAC & Chiffrement Argon2id
+                </div>
+              </div>
             </div>
           </div>
         </main>
 
-        <footer className="py-4 bg-white border-t border-slate-200/80 text-center text-xs text-[#5A7088]">
+        {/* Footer officiel */}
+        <footer className="relative z-10 py-3.5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xs border-t border-slate-200/60 dark:border-slate-800/60 text-center text-xs text-[#5A7088] dark:text-slate-400">
           Tandem — Du besoin à la solution. | Safir Consulting © 2026
         </footer>
       </div>
