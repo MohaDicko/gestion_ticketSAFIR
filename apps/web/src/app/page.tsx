@@ -6968,351 +6968,127 @@ export default function TicketManagerPage() {
       )}
 
       {/* ================================================================= */}
-      {/* MODALE 3 : CRÉATION DE TICKET SAP (RÉSERVÉE HEAD & DEMANDEUR)    */}
+      {/* MODALE 3 : CRÉATION DE TICKET SAP (ORGANISATION & DESIGN PREMIUM) */}
       {/* ================================================================= */}
       {showCreateModal && currentUser?.role !== "DEVELOPER" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden">
-            <div className="h-1 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] to-[#00B89C] shrink-0" />
-            <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 shrink-0">
-              <div>
-                <h3 className="font-bold text-[#051638] text-sm">Nouveau Ticket de Développement SAP</h3>
-                <p className="text-[11px] text-[#5A7088]">
-                  Formulaire guidé • Les champs marqués d'un astérisque (<span className="text-rose-600 font-bold">*</span>) sont obligatoires
-                </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Liseré corporate Tandem en tête */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] via-[#00B89C] to-[#F58220] shrink-0" />
+            
+            {/* En-tête prestige */}
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-b from-slate-50 to-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#051638] text-white flex items-center justify-center shadow-sm shrink-0">
+                  <FileText className="w-5 h-5 text-[#22F0D2]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-[#051638] text-base">Nouveau Ticket de Développement SAP</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[10px] font-mono font-bold uppercase">
+                      {currentUser?.role === "HEAD" ? "Administration BU SME" : "Portail Demandeur"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#5A7088] mt-0.5">
+                    Structurez votre besoin SAP • Les champs marqués d'un astérisque (<span className="text-rose-600 font-bold">*</span>) sont obligatoires
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-md hover:bg-slate-100">
-                <X className="w-4 h-4" />
+              <button 
+                type="button"
+                onClick={() => setShowCreateModal(false)} 
+                className="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label="Fermer la modale"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateTicket} className="flex flex-col flex-1 overflow-hidden min-h-0">
-              <div className="p-4 space-y-3 overflow-y-auto flex-1">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Titre de la demande *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="ex : Addon validation commandes fournisseurs SAP B1"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
-                />
-              </div>
-
-              {/* Type de besoin SAP & Priorité (Gestion dynamique Aliko) */}
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-6 space-y-5 overflow-y-auto flex-1 bg-slate-50/40">
+                
+                {/* SECTION 1 : CADRAGE DU BESOIN & TITRE */}
+                <div className="p-4 bg-white rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                    <span className="w-5 h-5 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-bold">1</span>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">Objet de la Demande SAP</h4>
+                  </div>
+                  
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-slate-700">Type de besoin SAP</label>
-                      {currentUser?.role === "HEAD" && (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            data-testid="add-type-inline-btn"
-                            onClick={() => setShowAddTypeInline(!showAddTypeInline)}
-                            className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>+ Type</span>
-                          </button>
-                          {ticketTypes.length > 1 && (
-                            <button
-                              type="button"
-                              data-testid="delete-type-inline-btn"
-                              onClick={() => handleDeleteTicketType(newType)}
-                              title="Supprimer ce type de besoin"
-                              className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Suppr.</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {showAddTypeInline && currentUser?.role === "HEAD" && (
-                      <div className="mb-2 p-2 bg-sky-50 rounded-lg border border-sky-200 flex gap-1.5 animate-in fade-in">
-                        <input
-                          type="text"
-                          data-testid="custom-type-input"
-                          placeholder="Nom du type (ex: Migration B1 v10)"
-                          value={customTypeLabel}
-                          onChange={(e) => setCustomTypeLabel(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleAddTicketType();
-                            }
-                          }}
-                          autoFocus
-                          className="w-full text-xs px-2.5 py-1 border border-sky-300 rounded bg-white focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          data-testid="confirm-add-type-btn"
-                          onClick={() => handleAddTicketType()}
-                          className="px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
-                        >
-                          Ajouter
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddTypeInline(false)}
-                          className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-1.5">
-                      <select
-                        data-testid="create-modal-type-select"
-                        value={newType}
-                        onChange={(e) => {
-                          if (e.target.value === "__NEW_TYPE__") {
-                            setShowAddTypeInline(true);
-                          } else {
-                            setNewType(e.target.value);
-                          }
-                        }}
-                        className="flex-1 text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
-                      >
-                        {currentUser?.role === "HEAD" && (
-                          <option value="__NEW_TYPE__" className="text-sky-700 font-bold bg-sky-50">
-                            ➕ [Ajouter un nouveau type...]
-                          </option>
-                        )}
-                        <optgroup label="Types de besoin SAP">
-                          {ticketTypes.map((t) => (
-                            <option key={t.value} value={t.value}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      </select>
-                      {currentUser?.role === "HEAD" && (
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setShowAddTypeInline(true)}
-                            title="Ajouter un type de besoin"
-                            className="p-2 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
-                          >
-                            <Plus className="w-3.5 h-3.5 text-sky-700" />
-                          </button>
-                          {ticketTypes.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteTicketType(newType)}
-                              title={`Supprimer « ${newType} »`}
-                              className="p-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Titre de la demande *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="ex : Addon validation commandes fournisseurs SAP B1"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      className="w-full text-xs sm:text-sm px-3.5 py-2.5 bg-slate-50/60 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062E6] focus:border-transparent transition-all font-medium text-slate-900"
+                    />
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-slate-700">Priorité</label>
-                      {currentUser?.role === "HEAD" && (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            data-testid="add-priority-inline-btn"
-                            onClick={() => setShowAddPriorityInline(!showAddPriorityInline)}
-                            className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>+ Priorité</span>
-                          </button>
-                          {priorityOptions.length > 1 && (
-                            <button
-                              type="button"
-                              data-testid="delete-priority-inline-btn"
-                              onClick={() => handleDeletePriorityOption(newPriority)}
-                              title="Supprimer ce niveau de priorité"
-                              className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Suppr.</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {showAddPriorityInline && currentUser?.role === "HEAD" && (
-                      <div className="mb-2 p-2 bg-sky-50 rounded-lg border border-sky-200 flex gap-1.5 animate-in fade-in">
-                        <input
-                          type="text"
-                          data-testid="custom-priority-input"
-                          placeholder="Nouvelle priorité (ex: Urgence Absolue)"
-                          value={customPriorityLabel}
-                          onChange={(e) => setCustomPriorityLabel(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleAddPriorityOption();
-                            }
-                          }}
-                          autoFocus
-                          className="w-full text-xs px-2.5 py-1 border border-sky-300 rounded bg-white focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          data-testid="confirm-add-priority-btn"
-                          onClick={() => handleAddPriorityOption()}
-                          className="px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
-                        >
-                          Ajouter
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddPriorityInline(false)}
-                          className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-1.5">
-                      <select
-                        data-testid="create-modal-priority-select"
-                        value={newPriority}
-                        onChange={(e) => {
-                          if (e.target.value === "__NEW_PRIORITY__") {
-                            setShowAddPriorityInline(true);
-                          } else {
-                            setNewPriority(e.target.value);
-                          }
-                        }}
-                        className="flex-1 text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
-                      >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                    {/* Type de besoin SAP */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-semibold text-slate-700">Type de besoin SAP</label>
                         {currentUser?.role === "HEAD" && (
-                          <option value="__NEW_PRIORITY__" className="text-sky-700 font-bold bg-sky-50">
-                            ➕ [Ajouter une nouvelle priorité...]
-                          </option>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              data-testid="add-type-inline-btn"
+                              onClick={() => setShowAddTypeInline(!showAddTypeInline)}
+                              className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>+ Type</span>
+                            </button>
+                            {ticketTypes.length > 1 && (
+                              <button
+                                type="button"
+                                data-testid="delete-type-inline-btn"
+                                onClick={() => handleDeleteTicketType(newType)}
+                                title="Supprimer ce type de besoin"
+                                className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Suppr.</span>
+                              </button>
+                            )}
+                          </div>
                         )}
-                        <optgroup label="Niveaux de priorité">
-                          {priorityOptions.map((p) => (
-                            <option key={p.value} value={p.value}>
-                              {p.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      </select>
-                      {currentUser?.role === "HEAD" && (
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setShowAddPriorityInline(true)}
-                            title="Ajouter une priorité"
-                            className="p-2 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
-                          >
-                            <Plus className="w-3.5 h-3.5 text-sky-700" />
-                          </button>
-                          {priorityOptions.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePriorityOption(newPriority)}
-                              title={`Supprimer « ${newPriority} »`}
-                              className="p-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Estimation de la charge, Entreprise & Développeur concerné : Réservés à l'Administrateur (HEAD) */}
-              {currentUser?.role === "HEAD" ? (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Estimation du temps (heures) *
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="200"
-                        required
-                        value={newHours}
-                        onChange={(e) => setNewHours(Number(e.target.value))}
-                        className="w-full text-xs px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-semibold text-slate-700">Demandeur / Consultant</label>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            data-testid="add-applicant-inline-btn"
-                            onClick={() => setShowAddApplicantInline(!showAddApplicantInline)}
-                            className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>+ Demandeur</span>
-                          </button>
-                          {applicantsList.length > 1 && (
-                            <button
-                              type="button"
-                              data-testid="delete-applicant-inline-btn"
-                              onClick={() => handleDeleteApplicant(newApplicant)}
-                              title="Supprimer ce demandeur de la liste"
-                              className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Suppr.</span>
-                            </button>
-                          )}
-                        </div>
                       </div>
 
-                      {showAddApplicantInline && (
-                        <div className="mb-2 p-2 bg-sky-50 rounded-lg border border-sky-200 flex gap-1.5 animate-in fade-in">
+                      {showAddTypeInline && currentUser?.role === "HEAD" && (
+                        <div className="mb-2 p-2 bg-sky-50 rounded-xl border border-sky-200 flex gap-1.5 animate-in fade-in">
                           <input
                             type="text"
-                            data-testid="custom-applicant-input"
-                            placeholder="Nom du demandeur (ex: Koffi N'Guessan)"
-                            value={customApplicantName}
-                            onChange={(e) => setCustomApplicantName(e.target.value)}
+                            data-testid="custom-type-input"
+                            placeholder="Nom du type (ex: Migration B1 v10)"
+                            value={customTypeLabel}
+                            onChange={(e) => setCustomTypeLabel(e.target.value)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 e.preventDefault();
-                                handleAddApplicant();
+                                handleAddTicketType();
                               }
                             }}
                             autoFocus
-                            className="w-full text-xs px-2.5 py-1 border border-sky-300 rounded bg-white focus:outline-none"
+                            className="w-full text-xs px-2.5 py-1.5 border border-sky-300 rounded-lg bg-white focus:outline-none"
                           />
                           <button
                             type="button"
-                            data-testid="confirm-add-applicant-btn"
-                            onClick={() => handleAddApplicant()}
-                            className="px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
+                            data-testid="confirm-add-type-btn"
+                            onClick={() => handleAddTicketType()}
+                            className="px-3 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-semibold shrink-0 cursor-pointer"
                           >
                             Ajouter
                           </button>
                           <button
                             type="button"
-                            onClick={() => setShowAddApplicantInline(false)}
-                            className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
+                            onClick={() => setShowAddTypeInline(false)}
+                            className="px-2 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs cursor-pointer"
                           >
                             ✕
                           </button>
@@ -7321,382 +7097,567 @@ export default function TicketManagerPage() {
 
                       <div className="flex items-center gap-1.5">
                         <select
-                          data-testid="create-modal-applicant-select"
-                          value={newApplicant}
+                          data-testid="create-modal-type-select"
+                          value={newType}
                           onChange={(e) => {
-                            if (e.target.value === "__NEW_APPLICANT__") {
-                              setShowAddApplicantInline(true);
+                            if (e.target.value === "__NEW_TYPE__") {
+                              setShowAddTypeInline(true);
                             } else {
-                              setNewApplicant(e.target.value);
+                              setNewType(e.target.value);
                             }
                           }}
-                          className="flex-1 text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
+                          className="flex-1 text-xs px-3 py-2 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0062E6] font-medium"
                         >
-                          <option value="__NEW_APPLICANT__" className="text-sky-700 font-bold bg-sky-50">
-                            ➕ [Nouveau Demandeur...]
-                          </option>
-                          <optgroup label="Demandeurs enregistrés">
-                            {applicantsList.map((app) => (
-                              <option key={app} value={app}>
-                                {app}
+                          {currentUser?.role === "HEAD" && (
+                            <option value="__NEW_TYPE__" className="text-sky-700 font-bold bg-sky-50">
+                              ➕ [Ajouter un nouveau type...]
+                            </option>
+                          )}
+                          <optgroup label="Types de besoin SAP">
+                            {ticketTypes.map((t) => (
+                              <option key={t.value} value={t.value}>
+                                {t.label}
                               </option>
                             ))}
                           </optgroup>
                         </select>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setShowAddApplicantInline(true)}
-                            title="Ajouter un demandeur"
-                            className="p-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
-                          >
-                            <Plus className="w-3.5 h-3.5 text-sky-700" />
-                          </button>
-                          {applicantsList.length > 1 && (
+                      </div>
+                    </div>
+
+                    {/* Priorité */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-semibold text-slate-700">Priorité</label>
+                        {currentUser?.role === "HEAD" && (
+                          <div className="flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => handleDeleteApplicant(newApplicant)}
-                              title={`Supprimer « ${newApplicant} »`}
-                              className="p-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition"
+                              data-testid="add-priority-inline-btn"
+                              onClick={() => setShowAddPriorityInline(!showAddPriorityInline)}
+                              className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
                             >
-                              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                              <Plus className="w-3 h-3" />
+                              <span>+ Priorité</span>
                             </button>
-                          )}
+                            {priorityOptions.length > 1 && (
+                              <button
+                                type="button"
+                                data-testid="delete-priority-inline-btn"
+                                onClick={() => handleDeletePriorityOption(newPriority)}
+                                title="Supprimer ce niveau de priorité"
+                                className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Suppr.</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {showAddPriorityInline && currentUser?.role === "HEAD" && (
+                        <div className="mb-2 p-2 bg-sky-50 rounded-xl border border-sky-200 flex gap-1.5 animate-in fade-in">
+                          <input
+                            type="text"
+                            data-testid="custom-priority-input"
+                            placeholder="Nouvelle priorité (ex: Urgence Absolue)"
+                            value={customPriorityLabel}
+                            onChange={(e) => setCustomPriorityLabel(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddPriorityOption();
+                              }
+                            }}
+                            autoFocus
+                            className="w-full text-xs px-2.5 py-1.5 border border-sky-300 rounded-lg bg-white focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            data-testid="confirm-add-priority-btn"
+                            onClick={() => handleAddPriorityOption()}
+                            className="px-3 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-semibold shrink-0 cursor-pointer"
+                          >
+                            Ajouter
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddPriorityInline(false)}
+                            className="px-2 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs cursor-pointer"
+                          >
+                            ✕
+                          </button>
                         </div>
-                      </div>
-                    </div>
+                      )}
 
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Développeur concerné</label>
-                      <select
-                        data-testid="create-modal-dev-select"
-                        value={newTicketAssignedDevId}
-                        onChange={(e) => setNewTicketAssignedDevId(e.target.value)}
-                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
-                      >
-                        <option value="">-- En attente / Tous notifiés --</option>
-                        {developers.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name} ({d.freeHours}h libres)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Entreprise ou Client */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-slate-700">
-                        Entreprise / Client SAP
-                      </label>
                       <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          data-testid="add-client-inline-btn"
-                          onClick={() => setShowAddClientInline(!showAddClientInline)}
-                          className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>+ Client</span>
-                        </button>
-                        {clientsList.length > 1 && (
-                          <button
-                            type="button"
-                            data-testid="delete-client-inline-btn"
-                            onClick={() => handleDeleteClient(newClient)}
-                            title="Supprimer cette entreprise de la liste"
-                            className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Suppr.</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {showAddClientInline && (
-                      <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex gap-1.5 animate-in fade-in">
-                        <input
-                          type="text"
-                          data-testid="custom-client-input"
-                          placeholder="Nom de l'entreprise (ex: AgroTech CI)"
-                          value={customClientName}
-                          onChange={(e) => setCustomClientName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleAddClient();
+                        <select
+                          data-testid="create-modal-priority-select"
+                          value={newPriority}
+                          onChange={(e) => {
+                            if (e.target.value === "__NEW_PRIORITY__") {
+                              setShowAddPriorityInline(true);
+                            } else {
+                              setNewPriority(e.target.value);
                             }
                           }}
-                          autoFocus
-                          className="w-full text-xs px-2.5 py-1 border border-emerald-300 rounded bg-white focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          data-testid="confirm-add-client-btn"
-                          onClick={() => handleAddClient()}
-                          className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
+                          className="flex-1 text-xs px-3 py-2 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0062E6] font-medium"
                         >
-                          Ajouter
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddClientInline(false)}
-                          className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-1.5">
-                      <select
-                        data-testid="create-modal-client-select"
-                        value={newClient}
-                        onChange={(e) => {
-                          if (e.target.value === "__NEW_CLIENT__") {
-                            setShowAddClientInline(true);
-                          } else {
-                            setNewClient(e.target.value);
-                          }
-                        }}
-                        className="flex-1 text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
-                      >
-                        <option value="__NEW_CLIENT__" className="text-sky-700 font-bold bg-sky-50">
-                          ➕ [Ajouter une nouvelle entreprise / client...]
-                        </option>
-                        <optgroup label="Entreprises / Clients SAP enregistrés">
-                          {clientsList.map((client) => (
-                            <option key={client} value={client}>
-                              {client}
+                          {currentUser?.role === "HEAD" && (
+                            <option value="__NEW_PRIORITY__" className="text-sky-700 font-bold bg-sky-50">
+                              ➕ [Ajouter une nouvelle priorité...]
                             </option>
-                          ))}
-                        </optgroup>
-                      </select>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          data-testid="add-client-action-btn"
-                          onClick={() => setShowAddClientInline(true)}
-                          title="Ajouter un nouveau client"
-                          className="px-2 py-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
-                        >
-                          <Plus className="w-3.5 h-3.5 text-sky-700" />
-                          <span className="hidden sm:inline">Ajouter</span>
-                        </button>
-                        {clientsList.length > 1 && (
-                          <button
-                            type="button"
-                            data-testid="delete-client-action-btn"
-                            onClick={() => handleDeleteClient(newClient)}
-                            title={`Supprimer « ${newClient} » de la liste déroulante`}
-                            className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                            <span className="hidden sm:inline">Supprimer</span>
-                          </button>
-                        )}
+                          )}
+                          <optgroup label="Niveaux de priorité">
+                            {priorityOptions.map((p) => (
+                              <option key={p.value} value={p.value}>
+                                {p.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
                       </div>
                     </div>
                   </div>
-                </>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Demandeur connecté</label>
-                    <div
-                      data-testid="create-modal-demandeur-badge"
-                      className="w-full text-xs px-3 py-2 border border-purple-200 rounded-lg bg-purple-50/70 text-purple-950 font-semibold flex items-center gap-1.5"
-                    >
-                      <Users className="w-3.5 h-3.5 text-purple-700 shrink-0" />
-                      <span className="truncate">Demandeur : {currentUser?.name}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-slate-700">Entreprise / Client</label>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddClientInline(!showAddClientInline)}
-                        className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>+ Client</span>
-                      </button>
-                    </div>
-
-                    {showAddClientInline && (
-                      <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex gap-1.5 animate-in fade-in">
-                        <input
-                          type="text"
-                          placeholder="Nom de l'entreprise (ex: AgroTech CI)"
-                          value={customClientName}
-                          onChange={(e) => setCustomClientName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleAddClient();
-                            }
-                          }}
-                          autoFocus
-                          className="w-full text-xs px-2.5 py-1 border border-emerald-300 rounded bg-white focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddClient()}
-                          className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
-                        >
-                          Ajouter
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddClientInline(false)}
-                          className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-
-                    <select
-                      value={newClient}
-                      onChange={(e) => {
-                        if (e.target.value === "__NEW_CLIENT__") {
-                          setShowAddClientInline(true);
-                        } else {
-                          setNewClient(e.target.value);
-                        }
-                      }}
-                      className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
-                    >
-                      <option value="__NEW_CLIENT__" className="text-sky-700 font-bold bg-sky-50">
-                        ➕ [Ajouter une nouvelle entreprise / client...]
-                      </option>
-                      <optgroup label="Entreprises enregistrées">
-                        {clientsList.map((client) => (
-                          <option key={client} value={client}>
-                            {client}
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Description détaillée * <span className="text-rose-600 font-semibold">(Obligatoire)</span>
-                  </label>
-                  <textarea
-                    rows={2}
-                    required
-                    placeholder="Décrivez précisément les exigences fonctionnelles, le flux SAP concerné et les critères d'acceptation..."
-                    value={newDesc}
-                    onChange={(e) => setNewDesc(e.target.value)}
-                    className="w-full text-xs px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 min-h-[48px]"
-                  />
                 </div>
 
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                      <Paperclip className="w-3.5 h-3.5 text-sky-700" />
-                      <span>Pièce jointe SAP (Optionnel)</span>
-                    </label>
-
-                    <label className="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-[11px] font-semibold cursor-pointer shadow-2xs transition-colors">
-                      <Paperclip className="w-3 h-3" />
-                      <span>Choisir un fichier</span>
-                      <input
-                        type="file"
-                        data-testid="ticket-file-upload-input"
-                        onChange={handleFileSelectForTicket}
-                        className="sr-only"
-                      />
-                    </label>
+                {/* SECTION 2 : ACTEURS, CLIENT & CHARGE */}
+                <div className="p-4 bg-white rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold">2</span>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">Parties Prenantes & Cible Client</h4>
                   </div>
 
-                  {uploadedTicketFile && (
-                    <div
-                      data-testid="uploaded-ticket-file-preview"
-                      className="p-1.5 bg-sky-50 border border-sky-200 rounded-lg flex items-center justify-between gap-2 text-xs text-sky-950"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="w-4 h-4 text-sky-700 shrink-0" />
-                        <div className="min-w-0">
-                          <div className="font-bold truncate text-[11px]">{uploadedTicketFile.fileName}</div>
-                          <div className="text-[10px] text-sky-800">
-                            {uploadedTicketFile.fileType} • {uploadedTicketFile.fileSize}
+                  {currentUser?.role === "HEAD" ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {/* Entreprise / Client SAP */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-semibold text-slate-700">
+                            Entreprise / Client SAP
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              data-testid="add-client-inline-btn"
+                              onClick={() => setShowAddClientInline(!showAddClientInline)}
+                              className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>+ Client</span>
+                            </button>
+                            {clientsList.length > 1 && (
+                              <button
+                                type="button"
+                                data-testid="delete-client-inline-btn"
+                                onClick={() => handleDeleteClient(newClient)}
+                                title="Supprimer cette entreprise de la liste"
+                                className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Suppr.</span>
+                              </button>
+                            )}
                           </div>
                         </div>
+
+                        {showAddClientInline && (
+                          <div className="mb-2 p-2 bg-emerald-50 rounded-xl border border-emerald-200 flex gap-1.5 animate-in fade-in">
+                            <input
+                              type="text"
+                              data-testid="custom-client-input"
+                              placeholder="Nom de l'entreprise (ex: AgroTech CI)"
+                              value={customClientName}
+                              onChange={(e) => setCustomClientName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddClient();
+                                }
+                              }}
+                              autoFocus
+                              className="w-full text-xs px-2.5 py-1.5 border border-emerald-300 rounded-lg bg-white focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              data-testid="confirm-add-client-btn"
+                              onClick={() => handleAddClient()}
+                              className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shrink-0 cursor-pointer"
+                            >
+                              Ajouter
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddClientInline(false)}
+                              className="px-2 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            data-testid="create-modal-client-select"
+                            value={newClient}
+                            onChange={(e) => {
+                              if (e.target.value === "__NEW_CLIENT__") {
+                                setShowAddClientInline(true);
+                              } else {
+                                setNewClient(e.target.value);
+                              }
+                            }}
+                            className="flex-1 text-xs px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0062E6] bg-white font-medium"
+                          >
+                            <option value="__NEW_CLIENT__" className="text-sky-700 font-bold bg-sky-50">
+                              ➕ [Ajouter une nouvelle entreprise / client...]
+                            </option>
+                            <optgroup label="Entreprises / Clients SAP enregistrés">
+                              {clientsList.map((client) => (
+                                <option key={client} value={client}>
+                                  {client}
+                                </option>
+                              ))}
+                            </optgroup>
+                          </select>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUploadedTicketFile(null);
-                          setNewTicketAttachmentName("");
-                        }}
-                        className="text-[10px] font-semibold text-rose-600 hover:text-rose-800 px-2 py-0.5 rounded bg-white border border-rose-200 cursor-pointer shrink-0"
-                      >
-                        Retirer
-                      </button>
+
+                      {/* Demandeur / Consultant */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-semibold text-slate-700">Demandeur / Consultant</label>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              data-testid="add-applicant-inline-btn"
+                              onClick={() => setShowAddApplicantInline(!showAddApplicantInline)}
+                              className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>+ Demandeur</span>
+                            </button>
+                            {applicantsList.length > 1 && (
+                              <button
+                                type="button"
+                                data-testid="delete-applicant-inline-btn"
+                                onClick={() => handleDeleteApplicant(newApplicant)}
+                                title="Supprimer ce demandeur de la liste"
+                                className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Suppr.</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {showAddApplicantInline && (
+                          <div className="mb-2 p-2 bg-sky-50 rounded-xl border border-sky-200 flex gap-1.5 animate-in fade-in">
+                            <input
+                              type="text"
+                              data-testid="custom-applicant-input"
+                              placeholder="Nom du demandeur (ex: Koffi N'Guessan)"
+                              value={customApplicantName}
+                              onChange={(e) => setCustomApplicantName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddApplicant();
+                                }
+                              }}
+                              autoFocus
+                              className="w-full text-xs px-2.5 py-1.5 border border-sky-300 rounded-lg bg-white focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              data-testid="confirm-add-applicant-btn"
+                              onClick={() => handleAddApplicant()}
+                              className="px-3 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-semibold shrink-0 cursor-pointer"
+                            >
+                              Ajouter
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddApplicantInline(false)}
+                              className="px-2 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            data-testid="create-modal-applicant-select"
+                            value={newApplicant}
+                            onChange={(e) => {
+                              if (e.target.value === "__NEW_APPLICANT__") {
+                                setShowAddApplicantInline(true);
+                              } else {
+                                setNewApplicant(e.target.value);
+                              }
+                            }}
+                            className="flex-1 text-xs px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0062E6] bg-white font-medium"
+                          >
+                            <option value="__NEW_APPLICANT__" className="text-sky-700 font-bold bg-sky-50">
+                              ➕ [Nouveau Demandeur...]
+                            </option>
+                            <optgroup label="Demandeurs enregistrés">
+                              {applicantsList.map((app) => (
+                                <option key={app} value={app}>
+                                  {app}
+                                </option>
+                              ))}
+                            </optgroup>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Estimation du temps (heures) */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                          Estimation du temps (heures) *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="1"
+                            max="200"
+                            required
+                            value={newHours}
+                            onChange={(e) => setNewHours(Number(e.target.value))}
+                            className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0062E6] font-mono font-bold bg-white"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">heures</span>
+                        </div>
+                      </div>
+
+                      {/* Développeur concerné (Optionnel / Dispatch Aliko) */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Développeur concerné</label>
+                        <select
+                          data-testid="create-modal-dev-select"
+                          value={newTicketAssignedDevId}
+                          onChange={(e) => setNewTicketAssignedDevId(e.target.value)}
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0062E6] bg-white"
+                        >
+                          <option value="">-- En attente / Tous notifiés --</option>
+                          {developers.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name} ({d.freeHours}h libres)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Demandeur connecté</label>
+                        <div
+                          data-testid="create-modal-demandeur-badge"
+                          className="w-full text-xs px-3 py-2.5 border border-purple-200 rounded-xl bg-purple-50/70 text-purple-950 font-semibold flex items-center gap-2 shadow-2xs"
+                        >
+                          <Users className="w-4 h-4 text-purple-700 shrink-0" />
+                          <span className="truncate">Demandeur : {currentUser?.name}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-semibold text-slate-700">Entreprise / Client SAP</label>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddClientInline(!showAddClientInline)}
+                            className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>+ Client</span>
+                          </button>
+                        </div>
+
+                        {showAddClientInline && (
+                          <div className="mb-2 p-2 bg-emerald-50 rounded-xl border border-emerald-200 flex gap-1.5 animate-in fade-in">
+                            <input
+                              type="text"
+                              placeholder="Nom de l'entreprise (ex: AgroTech CI)"
+                              value={customClientName}
+                              onChange={(e) => setCustomClientName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddClient();
+                                }
+                              }}
+                              autoFocus
+                              className="w-full text-xs px-2.5 py-1.5 border border-emerald-300 rounded-lg bg-white focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAddClient()}
+                              className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shrink-0 cursor-pointer"
+                            >
+                              Ajouter
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddClientInline(false)}
+                              className="px-2 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+
+                        <select
+                          data-testid="create-modal-client-select"
+                          value={newClient}
+                          onChange={(e) => {
+                            if (e.target.value === "__NEW_CLIENT__") {
+                              setShowAddClientInline(true);
+                            } else {
+                              setNewClient(e.target.value);
+                            }
+                          }}
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0062E6] bg-white font-medium"
+                        >
+                          <option value="__NEW_CLIENT__" className="text-sky-700 font-bold bg-sky-50">
+                            ➕ [Ajouter une nouvelle entreprise / client...]
+                          </option>
+                          <optgroup label="Entreprises enregistrées">
+                            {clientsList.map((client) => (
+                              <option key={client} value={client}>
+                                {client}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </div>
                     </div>
                   )}
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <select
-                      value={newTicketAttachmentName}
-                      onChange={(e) => {
-                        setNewTicketAttachmentName(e.target.value);
-                        if (e.target.value) setUploadedTicketFile(null);
-                      }}
-                      className="w-full text-[11px] px-2 py-1 border border-slate-300 rounded-lg bg-white"
-                    >
-                      <option value="">-- Modèle type SAP --</option>
-                      {SAP_ATTACHMENT_TEMPLATES.map((tpl) => (
-                        <option key={tpl.fileName} value={tpl.fileName}>
-                          📎 {tpl.fileName} ({tpl.fileSize})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Ou nom du fichier (ex: Recette.pdf)"
-                      value={newTicketAttachmentName}
-                      onChange={(e) => setNewTicketAttachmentName(e.target.value)}
-                      className="w-full text-[11px] px-2 py-1 border border-slate-300 rounded-lg bg-white"
+                {/* SECTION 3 : SPÉCIFICATIONS & PIÈCES JOINTES */}
+                <div className="p-4 bg-white rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                    <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-bold">3</span>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">Spécifications Fonctionnelles & Documents</h4>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Description détaillée * <span className="text-rose-600 font-semibold">(Obligatoire)</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Décrivez précisément les exigences fonctionnelles, le flux SAP concerné et les critères d'acceptation..."
+                      value={newDesc}
+                      onChange={(e) => setNewDesc(e.target.value)}
+                      className="w-full text-xs sm:text-sm px-3.5 py-2.5 bg-slate-50/60 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062E6] min-h-[72px] transition-all"
                     />
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                        <Paperclip className="w-3.5 h-3.5 text-sky-700" />
+                        <span>Pièce jointe SAP (Optionnel)</span>
+                      </label>
+
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-2xs transition-colors">
+                        <Paperclip className="w-3.5 h-3.5" />
+                        <span>Choisir un fichier</span>
+                        <input
+                          type="file"
+                          data-testid="ticket-file-upload-input"
+                          onChange={handleFileSelectForTicket}
+                          className="sr-only"
+                        />
+                      </label>
+                    </div>
+
+                    {uploadedTicketFile && (
+                      <div
+                        data-testid="uploaded-ticket-file-preview"
+                        className="p-2 bg-sky-50 border border-sky-200 rounded-xl flex items-center justify-between gap-2 text-xs text-sky-950"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-4 h-4 text-sky-700 shrink-0" />
+                          <div className="min-w-0">
+                            <div className="font-bold truncate text-xs">{uploadedTicketFile.fileName}</div>
+                            <div className="text-[10px] text-sky-800">
+                              {uploadedTicketFile.fileType} • {uploadedTicketFile.fileSize}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUploadedTicketFile(null);
+                            setNewTicketAttachmentName("");
+                          }}
+                          className="text-[10px] font-semibold text-rose-600 hover:text-rose-800 px-2 py-0.5 rounded-lg bg-white border border-rose-200 cursor-pointer shrink-0"
+                        >
+                          Retirer
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <select
+                        value={newTicketAttachmentName}
+                        onChange={(e) => {
+                          setNewTicketAttachmentName(e.target.value);
+                          if (e.target.value) setUploadedTicketFile(null);
+                        }}
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-xl bg-white font-medium"
+                      >
+                        <option value="">-- Modèle type SAP --</option>
+                        {SAP_ATTACHMENT_TEMPLATES.map((tpl) => (
+                          <option key={tpl.fileName} value={tpl.fileName}>
+                            📎 {tpl.fileName} ({tpl.fileSize})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Ou nom du fichier (ex: Recette.pdf)"
+                        value={newTicketAttachmentName}
+                        onChange={(e) => setNewTicketAttachmentName(e.target.value)}
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-xl bg-white"
+                      />
+                    </div>
                   </div>
                 </div>
 
+                {/* NOTIFICATION INFO */}
                 <div
                   data-testid="create-modal-auto-email-notice"
-                  className="p-2 bg-emerald-50/80 border border-emerald-200 rounded-lg text-[10.5px] text-emerald-950 flex items-center gap-1.5"
+                  className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 flex items-center gap-2.5 shadow-2xs"
                 >
-                  <Mail className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <Mail className="w-4 h-4 text-emerald-700 shrink-0" />
                   <span>
                     <strong>Notification E-mail Automatique :</strong> Envoyée aux Développeur(s), Administrateur et Demandeur dès validation.
                   </span>
                 </div>
               </div>
 
-              {/* PIED DE PAGE FIXE (STICKY BOTTOM) : BOUTONS TOUJOURS 100% VISIBLES EN BAS SANS AVOIR À DÉFILER */}
-              <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 shadow-xs">
+              {/* PIED DE PAGE FIXE */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-300 rounded-lg cursor-pointer transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-300 rounded-xl cursor-pointer transition-colors shadow-2xs"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold text-white bg-sky-700 hover:bg-sky-800 rounded-lg shadow-md cursor-pointer flex items-center gap-1.5 transition-all hover:scale-[1.01]"
+                  className="px-5 py-2.5 text-xs font-bold text-white bg-[#0062E6] hover:bg-[#0052CC] rounded-xl shadow-md cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.01]"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
                   <span>Enregistrer le ticket</span>
                 </button>
               </div>
