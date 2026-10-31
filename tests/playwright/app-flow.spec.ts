@@ -334,13 +334,15 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     const reportModalBtn = page.getByRole("button", { name: /Synthèse Comité Direction/i });
     await expect(reportModalBtn).toBeVisible();
     await reportModalBtn.click();
-    await expect(page.getByText("Synthèse Hebdomadaire d'Activité & Valorisation Financière BU SME")).toBeVisible();
-    await expect(page.locator("body")).toContainText("Valeur Produite (Heures Réalisées)");
+    await expect(page.getByText("Synthèse Hebdomadaire d'Activité BU SME")).toBeVisible();
+    await expect(page.locator("body")).toContainText("Heures Réalisées");
+    // Aucune donnée financière (devise, montant, taux) ne doit apparaître dans le système
+    await expect(page.locator("body")).not.toContainText(/FCFA|XOF|Valorisation|Taux horaire/);
 
     // Déclencher le téléchargement CSV/Excel depuis la modale
     await page.getByRole("button", { name: /Télécharger Export Excel \/ CSV/i }).click();
     await expect(page.locator("body")).toContainText("Export Excel/CSV généré avec succès");
-    await page.getByTestId("close-email-alerts-btn").click();
+    await page.getByRole("button", { name: /^Fermer$/ }).first().click();
 
     // 3. Tester les Pièces Jointes SAP sécurisées dans la Supervision 360° et le Fil d'Échange
     const followBtn = page.getByRole("button", { name: /Suivre/i }).first();
@@ -672,7 +674,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i).first()).toBeVisible();
     await expect(page.getByText(/Total Heures Travaillées/i)).toBeVisible();
     await expect(page.getByText(/Visa & Émargement du Développeur|Visa & Émargement du Collaborateur/i)).toBeVisible();
-    await expect(page.getByText(/Getheme Aliko — Administrateur BU SME/i)).toBeVisible();
+    await expect(page.getByText(/Getheme Aliko — Administrateur BU SME/i).first()).toBeVisible();
 
     // Vérifier le sélecteur de changement de développeur pour Aliko
     await expect(page.getByText(/Changer de développeur/i)).toBeVisible();
@@ -1001,12 +1003,13 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await exportPayrollBtn.click();
     const download = await downloadPromise;
 
-    // 6. Vérifier que le fichier est bien un CSV de comptabilité
-    expect(download.suggestedFilename()).toContain("Bordereau_Comptabilite");
+    // 6. Vérifier que le fichier est un relevé d'heures CSV, sans aucune notion de paiement
+    expect(download.suggestedFilename()).toContain("Releve_Heures");
     expect(download.suggestedFilename()).toContain(".csv");
+    expect(download.suggestedFilename()).not.toMatch(/Bordereau|Comptabilite|XOF|EUR|USD/);
 
     // 7. Fermer la modale
-    await page.getByTestId("close-email-alerts-btn").click();
+    await page.getByRole("button", { name: /Fermer le rapport/i }).first().click();
   });
 
   test("25. Validation des 6 Derniers Retours Critiques Administrateur (Gethème Aliko)", async ({ page }) => {

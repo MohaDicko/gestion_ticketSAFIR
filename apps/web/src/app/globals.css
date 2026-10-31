@@ -98,53 +98,136 @@ html.dark-theme img[src="/tandem-logo.jpg"] {
   border-radius: 0.5rem;
 }
 
+/* Animations soignées pour les transitions d'onglets et de modales */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-in {
+  animation: fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Personnalisation de la barre de défilement pour les longs tableaux */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Utilitaires typographiques et ombrages subtils */
+.font-mono-numbers {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Masquer tout badge flottant dev-tools susceptible de se superposer aux notifications */
 nextjs-portal,
 [data-nextjs-toast],
-[data-nextjs-dialog-overlay] {
+div[data-nextjs-dialog-overlay] {
   display: none !important;
 }
 
 /* =========================================================================
    RÈGLES D'IMPRESSION STRICTE — RAPPORT INDIVIDUEL PAR DÉVELOPPEUR
-   Empêche formellement l'impression du reste de l'application (dashboard,
-   header, liste de tous les développeurs). Seul le document ciblé est imprimé.
+   Suppression formelle de toute page vierge en amont (hauteur précédente = 0).
+   Le document imprimé commence strictement en haut de la page 1 par le logo Tandem.
    ========================================================================= */
 @media print {
-  /* Masquer tout le corps du document par défaut */
-  body {
+  html, body {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
-  body * {
-    visibility: hidden;
+  /* 1. Élimination complète de tous les éléments hors rapport (aucun espace réservé) */
+  header,
+  main,
+  nav,
+  footer:not(#printable-report footer),
+  .print\:hidden,
+  [data-testid="print-hidden"],
+  [aria-hidden="true"] {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
-  /* Rendre visible uniquement la zone officielle imprimable */
-  #printable-report,
-  #printable-report * {
-    visibility: visible;
+  /* 2. Neutraliser le positionnement d'overlay de la modale */
+  .fixed,
+  .print-modal-container {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+    transform: none !important;
   }
 
+  /* 3. Démarrage strict du rapport en haut de la toute première page A4 */
   #printable-report {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
     overflow: visible !important;
     box-shadow: none !important;
     border: none !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
-  /* Forcer le respect des sauts de page et désactiver les fonds sombres */
+  #printable-report * {
+    visibility: visible !important;
+  }
+
+  /* Préservation de l'intégrité des lignes et blocs de signature */
+  tr,
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
   @page {
-    margin: 1.5cm;
+    margin: 1.2cm 1.4cm;
     size: A4 portrait;
   }
 }

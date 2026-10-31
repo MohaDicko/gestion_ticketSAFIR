@@ -179,7 +179,6 @@ interface Ticket {
   createdAt?: string;
   messages?: TicketMessage[];
   contributors?: TicketLotContributor[];
-  currency?: "XOF" | "EUR" | "USD";
   attachments?: TicketAttachment[];
   isSkillOverride?: boolean;
   overrideReason?: string;
@@ -579,7 +578,7 @@ const INITIAL_TIME_LOGS: TimeLog[] = [
     durationMinutes: 270,
     durationHours: 4.5,
     date: "2026-10-28",
-    note: "Intégration du DI API et mise en place des triggers de seuil à 10 000 000 FCFA."
+    note: "Intégration du DI API et mise en place des triggers de seuil d'approbation paramétré."
   },
   {
     id: "log-4",
@@ -956,8 +955,7 @@ const INITIAL_TICKETS: Ticket[] = [
     id: "tix-1",
     reference: "ADD-2026-0001",
     title: "Addon Validation Commandes Fournisseurs SAP B1",
-    description: "Implémentation d'un workflow de validation à double niveau pour les commandes d'achats excédant 10 000 000 FCFA (compatible multi-devises EUR / USD).",
-    currency: "XOF",
+    description: "Implémentation d'un workflow de validation à double niveau pour les commandes d'achats dépassant le seuil d'approbation défini par le client.",
     status: "IN_PROGRESS",
     typeCode: "ADDON",
     priorityCode: "HIGH",
@@ -996,7 +994,7 @@ const INITIAL_TICKETS: Ticket[] = [
         authorName: "Mélissa Diakité",
         authorRole: "CONSULTANT",
         authorEmail: "melissa.diakite@safirconsulting.net",
-        message: "Spécification validée : le workflow d'approbation d'achats doit s'enclencher au-delà de 10 000 000 FCFA HT sur la base de la devise société (compatible multi-devises EUR / USD).",
+        message: "Spécification validée : le workflow d'approbation d'achats doit s'enclencher au-delà du seuil d'approbation défini par le client.",
         timestamp: "2026-10-25 à 14:30",
         attachment: {
           id: "att-1-1",
@@ -1063,7 +1061,6 @@ const INITIAL_TICKETS: Ticket[] = [
     priorityCode: "CRITICAL",
     estimatedHours: 32,
     remainingHours: 32,
-    currency: "XOF",
     clientCompany: "Omega Distribution",
     applicantName: "Christian Durand",
     applicantEmail: "c.durand@client-omega.com",
@@ -1075,7 +1072,6 @@ const INITIAL_TICKETS: Ticket[] = [
     reference: "REP-2026-0003",
     title: "Rapports d'inventaire valorisé en temps réel (SAP HANA)",
     description: "Création de vues de calcul optimisées sur HANA SQLScript pour le reporting de stock en clôture mensuelle.",
-    currency: "EUR",
     status: "RECEIVED",
     typeCode: "REPORT",
     priorityCode: "MEDIUM",
@@ -1098,7 +1094,6 @@ const INITIAL_TICKETS: Ticket[] = [
     priorityCode: "HIGH",
     estimatedHours: 12,
     remainingHours: 8,
-    currency: "XOF",
     clientCompany: "Client Alpha",
     applicantName: "Mélissa Diakité",
     applicantEmail: "melissa.diakite@safirconsulting.net",
@@ -1339,12 +1334,9 @@ export default function TicketManagerPage() {
   const [newHours, setNewHours] = useState(16);
   const [newClient, setNewClient] = useState("Safir Consulting");
   const [newApplicant, setNewApplicant] = useState("");
-  const [newCurrency, setNewCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
-  const [activeCurrency, setActiveCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
 
   const [assigningTicket, setAssigningTicket] = useState<Ticket | null>(null);
   const [assigningHours, setAssigningHours] = useState<number>(16);
-  const [assigningCurrency, setAssigningCurrency] = useState<"XOF" | "EUR" | "USD">("XOF");
   const [selectedDevId, setSelectedDevId] = useState("");
   const [isSkillOverrideChecked, setIsSkillOverrideChecked] = useState(true);
   // Affectation Multi-Développeurs par lot technique
@@ -1697,7 +1689,6 @@ export default function TicketManagerPage() {
     }
     setAssigningTicket(ticket);
     setAssigningHours(ticket.estimatedHours > 0 ? ticket.estimatedHours : 16);
-    setAssigningCurrency(ticket.currency || "XOF");
     setSelectedDevId(ticket.assignedDeveloper?.id || "");
     setIsSkillOverrideChecked(true);
   };
@@ -2170,9 +2161,6 @@ export default function TicketManagerPage() {
 
   // Export CSV / Excel en 1-Clic pour le Reporting Administrateur / Direction
   const handleExportCsvReport = () => {
-    const ratePerHour = activeCurrency === "XOF" ? 45000 : activeCurrency === "EUR" ? 70 : 75;
-    const currencyLabel = activeCurrency === "XOF" ? "FCFA (XOF)" : activeCurrency;
-
     const headers = [
       "Reference",
       "Titre",
@@ -2184,8 +2172,7 @@ export default function TicketManagerPage() {
       "Developpeur / Equipe",
       "Heures Estimees",
       "Heures Realisees",
-      "RAF (h)",
-      `Budget Valorise (${currencyLabel})`
+      "RAF (h)"
     ];
 
     const rows = tickets.map((t) => {
@@ -2196,7 +2183,6 @@ export default function TicketManagerPage() {
         t.contributors && t.contributors.length > 1
           ? t.contributors.map((c) => `${c.developerName} (${c.lotRole})`).join(" + ")
           : t.assignedDeveloper?.name || "Non affecte";
-      const budget = est * ratePerHour;
       return [
         t.reference,
         `"${t.title.replace(/"/g, '""')}"`,
@@ -2208,8 +2194,7 @@ export default function TicketManagerPage() {
         `"${devLabel.replace(/"/g, '""')}"`,
         est,
         done,
-        rem,
-        budget
+        rem
       ].join(";");
     });
 
@@ -2219,7 +2204,7 @@ export default function TicketManagerPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Rapport_Direction_Safir_BU_SME_${activeCurrency}_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `Rapport_Direction_Safir_BU_SME_${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -2227,7 +2212,7 @@ export default function TicketManagerPage() {
     } catch {
       // Fallback en environnement de test sans DOM Blob complet
     }
-    showToast(`📊 Export Excel/CSV généré avec succès (${tickets.length} tickets valorisés en ${currencyLabel})`);
+    showToast(`📊 Export Excel/CSV généré avec succès (${tickets.length} tickets)`);
   };
 
   // Filtrage global des tickets (inclut le filtre par statut et le filtre Démarré / Non démarré)
@@ -2574,7 +2559,7 @@ export default function TicketManagerPage() {
     showToast(`✅ Feuille de temps de ${devName} validée par la Direction et transmise au service Comptabilité pour signature finale et ordonnancement de paiement.`);
   };
 
-  // Export officiel du Bordereau de Virement / Mandat Comptable (Séparation Direction -> Comptabilité pour paiement)
+  // Export du relevé d'heures certifiées (aucune donnée financière)
   const handleExportPayrollCsv = (targetId: string, targetName: string, targetEmail: string, jobTitle?: string) => {
     const targetEmailLower = targetEmail.toLowerCase();
     const devLogs = timeLogs.filter(
@@ -2600,18 +2585,16 @@ export default function TicketManagerPage() {
     });
 
     const totalHours = filteredLogs.reduce((sum, l) => sum + (l.durationHours || 0), 0);
-    const hourlyRate = activeCurrency === "EUR" ? 65 : activeCurrency === "USD" ? 70 : 42500;
-    const grossAmount = Math.round(totalHours * hourlyRate);
-    const mandateRef = `PAY-SAFIR-${Date.now().toString().slice(-6)}`;
+    const releveRef = `REL-SAFIR-${Date.now().toString().slice(-6)}`;
     const todayStr = new Date().toISOString().split("T")[0];
     const periodStr = reportPeriod === "CUSTOM" ? `du_${reportDateFrom}_au_${reportDateTo}` : reportPeriod;
 
     const csvRows = [
-      "BORDEREAU OFFICIEL D'ORDONNANCEMENT ET TRANSMISSION COMPTABILITÉ - SAFIR CONSULTING",
-      `Mandat de Règlement N°;${mandateRef};Date d'émission;${todayStr}`,
+      "RELEVÉ OFFICIEL D'HEURES CERTIFIÉES - SAFIR CONSULTING",
+      `Relevé N°;${releveRef};Date d'émission;${todayStr}`,
       `Bénéficiaire;${targetName} <${targetEmail}>;Intitulé Poste;${jobTitle || "Développeur Solutions SAP"}`,
-      `Période Validée;${periodStr};Devise de Paiement;${activeCurrency}`,
-      `Validation Hiérarchique;Visa Direction BU SME (${activeAdminUser.name});Destinataire;Service Comptabilité & Trésorerie`,
+      `Période validée;${periodStr}`,
+      `Validation hiérarchique;Visa Direction BU SME (${activeAdminUser.name})`,
       "",
       "Ticket Réf;Titre du Projet SAP;Client / Entreprise;Date de Session;Durée Heures;Note d'intervention",
       ...filteredLogs.map((l) =>
@@ -2626,9 +2609,7 @@ export default function TicketManagerPage() {
       ),
       "",
       `TOTAL CUMULÉ DES HEURES;${totalHours.toFixed(2)} h`,
-      `TAUX HORAIRE CONVENTIONNÉ;${hourlyRate} ${activeCurrency} / heure`,
-      `MONTANT TOTAL NET À ORDONNANCER;${grossAmount.toLocaleString("fr-FR")} ${activeCurrency}`,
-      `MENTION LÉGALE;Feuille de temps certifiée sincère et conforme. Paiement à ordonnancer par virement bancaire.`
+      `MENTION LÉGALE;Feuille de temps certifiée sincère et conforme.`
     ];
 
     const csvContent = "\uFEFF" + csvRows.join("\n");
@@ -2637,7 +2618,7 @@ export default function TicketManagerPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Bordereau_Comptabilite_${targetName.replace(/\s+/g, "_")}_${periodStr}_${activeCurrency}.csv`;
+      a.download = `Releve_Heures_${targetName.replace(/\s+/g, "_")}_${periodStr}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -2647,13 +2628,13 @@ export default function TicketManagerPage() {
     }
 
     pushInAppNotification({
-      title: `💰 Bordereau comptable généré (${targetName})`,
-      message: `Mandat ${mandateRef} de ${grossAmount.toLocaleString("fr-FR")} ${activeCurrency} (${totalHours.toFixed(1)}h) exporté pour transmission au service Comptabilité.`,
+      title: `📄 Relevé d'heures généré (${targetName})`,
+      message: `Relevé ${releveRef} (${totalHours.toFixed(1)}h) exporté pour ${targetName}.`,
       category: "DELIVERY",
       targetRoles: ["HEAD"],
       actorName: activeAdminUser.name
     });
-    showToast(`💰 Bordereau comptable généré : ${grossAmount.toLocaleString("fr-FR")} ${activeCurrency} (${totalHours.toFixed(1)}h). Transmis pour paiement.`);
+    showToast(`📄 Relevé d'heures généré : ${totalHours.toFixed(1)}h pour ${targetName}.`);
   };
 
   // Action Développeur : Débloquer / Reprendre (le déblocage est répercuté en temps réel sur le tableau de bord Administrateur)
@@ -3269,7 +3250,6 @@ export default function TicketManagerPage() {
       clientCompany: newClient.trim() || "Safir Consulting",
       applicantName: resolvedApplicantName,
       applicantEmail: resolvedApplicantEmail,
-      currency: newCurrency || "XOF",
       assignedDeveloper: preAssignedDev
         ? { id: preAssignedDev.id, name: preAssignedDev.name, email: preAssignedDev.email }
         : null,
@@ -3542,7 +3522,6 @@ export default function TicketManagerPage() {
               status: "ASSIGNED",
               estimatedHours: totalEstHours,
               remainingHours: totalEstHours,
-              currency: assigningCurrency,
               assignedDeveloper: { id: dev.id, name: dev.name, email: dev.email },
               contributors: contributorsList,
               isSkillOverride: isOverride,
@@ -4150,7 +4129,7 @@ export default function TicketManagerPage() {
       {/* ================================================================= */}
       {/* BARRE DE NAVIGATION D'ENTREPRISE (TANDEM — SAFIR CONSULTING)      */}
       {/* ================================================================= */}
-      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(5,22,56,0.04)]">
+      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(5,22,56,0.04)] print:hidden">
         {/* Liseré identitaire Tandem : Marine (#051638) -> Bleu (#0062E6) -> Turquoise (#00B89C) */}
         <div className="h-0.5 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] to-[#00B89C]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -4272,25 +4251,6 @@ export default function TicketManagerPage() {
                   </button>
                   <div className="hidden sm:block h-5 w-px bg-slate-200" />
                 </>
-              )}
-
-              {/* SÉLECTEUR MULTI-DEVISES (AFRIQUE DE L'OUEST FCFA PAR DÉFAUT + EUR / USD) - RÉSERVÉ À ALIKO (HEAD) */}
-              {currentUser?.role === "HEAD" && (
-                <div className="hidden 2xl:flex items-center gap-1 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs shrink-0" title="Devise contractuelle (Prérogative Aliko)">
-                  <select
-                    value={activeCurrency}
-                    onChange={(e) => {
-                      const c = e.target.value as "XOF" | "EUR" | "USD";
-                      setActiveCurrency(c);
-                      showToast(c === "XOF" ? "Devise activée : FCFA (XOF — Afrique de l'Ouest)" : `Devise activée : ${c}`);
-                    }}
-                    className="bg-transparent font-semibold text-slate-800 text-xs cursor-pointer focus:outline-none"
-                  >
-                    <option value="XOF">FCFA (XOF)</option>
-                    <option value="EUR">Euro (€)</option>
-                    <option value="USD">Dollar ($)</option>
-                  </select>
-                </div>
               )}
 
               {/* SÉLECTEUR DE LANGUE BILINGUE (FR / EN) — LARGEUR FIXE ANTI-DÉCALAGE */}
@@ -4638,7 +4598,7 @@ export default function TicketManagerPage() {
       {/* ================================================================= */}
       {/* CONTENU PRINCIPAL SELON LE RÔLE                                  */}
       {/* ================================================================= */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full print:hidden">
         {/* =============================================================== */}
         {/* VUE 1 : ESPACE DÉVELOPPEUR (Anoop, Moha, Hassane, etc.)           */}
         {/* =============================================================== */}
@@ -7820,31 +7780,6 @@ export default function TicketManagerPage() {
                   </div>
                 )}
 
-                {/* Devise du contrat et Estimation de prix (Prérogative exclusive de l'Administrateur) */}
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Devise contractuelle (Administrateur)
-                    </label>
-                    <select
-                      value={assigningCurrency}
-                      onChange={(e) => setAssigningCurrency(e.target.value as "XOF" | "EUR" | "USD")}
-                      className="w-full text-xs p-1.5 border border-slate-300 rounded-lg bg-white"
-                    >
-                      <option value="XOF">FCFA (XOF)</option>
-                      <option value="EUR">Euro (€)</option>
-                      <option value="USD">Dollar ($)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Valorisation financière estimée
-                    </label>
-                    <div className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-200">
-                      {((isMultiDevAssignment && coDevId ? Number(leadHours) + Number(coDevHours) : Number(assigningHours) || 16) * (assigningCurrency === "XOF" ? 45000 : assigningCurrency === "EUR" ? 70 : 75)).toLocaleString("fr-FR")} {assigningCurrency === "XOF" ? "FCFA" : assigningCurrency === "EUR" ? "€" : "$"}
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <div>
@@ -9786,11 +9721,10 @@ export default function TicketManagerPage() {
                     Tandem — Reporting Comité de Direction — Safir Consulting
                   </span>
                   <h3 className="font-bold text-base sm:text-lg text-white mt-1">
-                    Synthèse Hebdomadaire d'Activité & Valorisation Financière BU SME
+                    Synthèse Hebdomadaire d'Activité BU SME
                   </h3>
                   <p className="text-xs text-slate-300">
-                    Pilotage centralisé par {currentUser?.name || activeAdminUser.name} • Devise de reporting :{" "}
-                    <strong>{activeCurrency === "XOF" ? "FCFA (XOF)" : activeCurrency === "EUR" ? "Euro (€)" : "Dollar US ($)"}</strong>
+                    Pilotage centralisé par {currentUser?.name || activeAdminUser.name}
                   </p>
                 </div>
               </div>
@@ -9805,8 +9739,6 @@ export default function TicketManagerPage() {
             <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs">
               {/* Synthèse Macro Financière & Opérationnelle */}
               {(() => {
-                const ratePerHour = activeCurrency === "XOF" ? 45000 : activeCurrency === "EUR" ? 70 : 75;
-                const symbol = activeCurrency === "XOF" ? "FCFA" : activeCurrency === "EUR" ? "€" : "$";
                 const totalEst = tickets.reduce((acc, t) => acc + (t.estimatedHours || 0), 0);
                 const totalRem = tickets.reduce((acc, t) => acc + (t.remainingHours ?? t.estimatedHours ?? 0), 0);
                 const totalDone = Math.max(0, totalEst - totalRem);
@@ -9825,20 +9757,14 @@ export default function TicketManagerPage() {
                       <div className="text-[10px] text-sky-700 font-medium mt-1">RAF global : {totalRem} h</div>
                     </div>
                     <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200">
-                      <div className="text-[11px] text-emerald-800">Valeur Produite (Heures Réalisées)</div>
-                      <div className="text-base sm:text-lg font-bold text-emerald-950 mt-0.5 font-mono">
-                        {(totalDone * ratePerHour).toLocaleString("fr-FR")} {symbol}
-                      </div>
-                      <div className="text-[10px] text-emerald-700 font-medium mt-1">{totalDone} h consommées</div>
+                      <div className="text-[11px] text-emerald-800">Heures Réalisées</div>
+                      <div className="text-xl font-bold text-emerald-950 mt-0.5">{totalDone} h</div>
+                      <div className="text-[10px] text-emerald-700 font-medium mt-1">Temps consommé sur le portefeuille</div>
                     </div>
                     <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200">
-                      <div className="text-[11px] text-amber-900">Valorisation Portefeuille Global</div>
-                      <div className="text-base sm:text-lg font-bold text-amber-950 mt-0.5 font-mono">
-                        {(totalEst * ratePerHour).toLocaleString("fr-FR")} {symbol}
-                      </div>
-                      <div className="text-[10px] text-amber-800 font-medium mt-1">
-                        Taux horaire : {ratePerHour.toLocaleString("fr-FR")} {symbol}/h
-                      </div>
+                      <div className="text-[11px] text-amber-900">Avancement Global</div>
+                      <div className="text-xl font-bold text-amber-950 mt-0.5">{totalEst > 0 ? Math.round((totalDone / totalEst) * 100) : 0} %</div>
+                      <div className="text-[10px] text-amber-800 font-medium mt-1">{totalDone} h sur {totalEst} h estimées</div>
                     </div>
                   </div>
                 );
@@ -9848,7 +9774,7 @@ export default function TicketManagerPage() {
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between">
                   <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
-                    État Consolidé du Portefeuille Tickets & Valorisation ({activeCurrency === "XOF" ? "FCFA (XOF)" : activeCurrency})
+                    État Consolidé du Portefeuille Tickets
                   </span>
                   <span className="text-[11px] text-slate-500">
                     Généré pour {currentUser?.name || activeAdminUser.name} (Administrateur BU SME)
@@ -9863,13 +9789,10 @@ export default function TicketManagerPage() {
                         <th className="py-2 px-3">Équipe / Lots</th>
                         <th className="py-2 px-3">Statut</th>
                         <th className="py-2 px-3 text-right">Estimé / RAF</th>
-                        <th className="py-2 px-3 text-right">Valorisation ({activeCurrency})</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {tickets.map((t) => {
-                        const ratePerHour = activeCurrency === "XOF" ? 45000 : activeCurrency === "EUR" ? 70 : 75;
-                        const symbol = activeCurrency === "XOF" ? "FCFA" : activeCurrency === "EUR" ? "€" : "$";
                         const rem = t.remainingHours ?? t.estimatedHours ?? 0;
                         return (
                           <tr key={t.id} className="hover:bg-slate-50">
@@ -9894,9 +9817,6 @@ export default function TicketManagerPage() {
                               <span className="font-semibold text-slate-900">{t.estimatedHours}h</span>{" "}
                               <span className="text-slate-400">/</span>{" "}
                               <span className="text-sky-700 font-bold">{rem}h</span>
-                            </td>
-                            <td className="py-2 px-3 text-right font-mono font-bold text-emerald-800">
-                              {(t.estimatedHours * ratePerHour).toLocaleString("fr-FR")} {symbol}
                             </td>
                           </tr>
                         );
@@ -9926,7 +9846,7 @@ export default function TicketManagerPage() {
                   className="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Télécharger Export Excel / CSV ({activeCurrency})</span>
+                  <span>Télécharger Export Excel / CSV</span>
                 </button>
               </div>
             </div>
@@ -9938,108 +9858,109 @@ export default function TicketManagerPage() {
       {/* MODALE 11 : IMPRESSION & VALIDATION DES RAPPORTS D'ACTIVITÉ ET FEUILLES DE TEMPS */}
       {/* (Accessible par le Développeur et par l'Administrateur pour chaque collaborateur) */}
       {/* ================================================================= */}
+      {/* RAPPORT INDIVIDUEL D'ACTIVITÉ & GOUVERNANCE DEV (IMPRESSION PARFAITE) */}
+      {/* ZÉRO PAGE VIERGE : DÉMARRE DIRECTEMENT À LA PAGE 1 PAR LE LOGO TANDEM */}
+      {/* ================================================================= */}
       {printingReport && (() => {
         const isDevRole = currentUser?.role === "DEVELOPER";
         const currentPeriodKey = `${printingReport.targetId}_${reportPeriod === "CUSTOM" ? `${reportDateFrom}_${reportDateTo}` : reportPeriod}`;
         const currentTimesheetStatus = timesheetStatuses[currentPeriodKey];
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:p-0 print:bg-white print:static">
-            <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden print:border-none print:shadow-none print:max-w-full print:max-h-none print:overflow-visible">
+          <div id="printable-report-wrapper" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:static print:p-0 print:m-0 print:bg-white print:block print:w-full print:h-auto">
+            <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden print:border-none print:shadow-none print:max-w-full print:max-h-none print:overflow-visible print:m-0 print:p-0 print:block">
               
-              {/* BARRE DE CONTRÔLE ADMIN (Affichée uniquement pour l'Administrateur) */}
-              {!isDevRole && (
-                <div className="p-4 bg-[#051638] text-white flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden">
-                  <div className="flex items-center gap-2.5">
-                    <Printer className="w-5 h-5 text-[#22F0D2]" />
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-sm">Tandem • Rapport d'Activité & Feuilles de Temps — Safir Consulting</h3>
-                        <span
-                          data-testid="individual-dev-report-badge"
-                          className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-200 border border-sky-400/30 font-mono text-[10px] font-bold uppercase"
+              {/* BARRE SUPÉRIEURE CORPORATE TANDEM (Affichée à l'écran pour Dev & Admin, STRICTEMENT MASQUÉE à l'impression) */}
+              <div className="p-4 bg-[#051638] text-white flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden">
+                <div className="flex items-center gap-2.5">
+                  <Printer className="w-5 h-5 text-[#22F0D2]" />
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-bold text-sm">Tandem • Rapport d'Activité & Feuilles de Temps — Safir Consulting</h3>
+                      <span
+                        data-testid="individual-dev-report-badge"
+                        className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-200 border border-sky-400/30 font-mono text-[10px] font-bold uppercase"
+                      >
+                        Rapport Individuel (Dev par Dev)
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px]">
+                      <span className="text-slate-400">Collaborateur individuel (Changer de développeur) :</span>
+                      {currentUser?.role === "HEAD" && printingReport.targetType === "DEVELOPER" ? (
+                        <select
+                          data-testid="print-report-dev-switcher"
+                          value={printingReport.targetId}
+                          onChange={(e) => {
+                            const chosenDev = developers.find((d) => d.id === e.target.value);
+                            if (chosenDev) {
+                              setPrintingReport({
+                                targetType: "DEVELOPER",
+                                targetId: chosenDev.id,
+                                targetName: chosenDev.name,
+                                targetEmail: chosenDev.email,
+                                role: "DEVELOPER",
+                                jobTitle: chosenDev.jobTitle
+                              });
+                            }
+                          }}
+                          className="bg-slate-800 text-sky-300 font-bold border border-slate-700 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
                         >
-                          Rapport Individuel (Dev par Dev)
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px]">
-                        <span className="text-slate-400">Collaborateur individuel (Changer de développeur) :</span>
-                        {currentUser?.role === "HEAD" && printingReport.targetType === "DEVELOPER" ? (
-                          <select
-                            data-testid="print-report-dev-switcher"
-                            value={printingReport.targetId}
-                            onChange={(e) => {
-                              const chosenDev = developers.find((d) => d.id === e.target.value);
-                              if (chosenDev) {
-                                setPrintingReport({
-                                  targetType: "DEVELOPER",
-                                  targetId: chosenDev.id,
-                                  targetName: chosenDev.name,
-                                  targetEmail: chosenDev.email,
-                                  role: "DEVELOPER",
-                                  jobTitle: chosenDev.jobTitle
-                                });
-                              }
-                            }}
-                            className="bg-slate-800 text-sky-300 font-bold border border-slate-700 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
-                          >
-                            {developers.map((d) => (
-                              <option key={d.id} value={d.id}>
-                                {d.name} ({d.jobTitle})
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className="font-semibold text-white">{printingReport.targetName} ({printingReport.role})</span>
-                        )}
-                      </div>
+                          {developers.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name} ({d.jobTitle})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="font-semibold text-white">{printingReport.targetName} ({printingReport.role})</span>
+                      )}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Action Admin : Valider et Transmettre à la Comptabilité */}
-                    {printingReport.targetType === "DEVELOPER" && (
-                      <button
-                        type="button"
-                        data-testid="admin-approve-timesheet-payroll-btn"
-                        onClick={() => handleAdminApproveTimesheetPayroll(printingReport.targetId, printingReport.targetName)}
-                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer ${
-                          currentTimesheetStatus?.status === "APPROVED_PAYROLL"
-                            ? "bg-emerald-700 text-emerald-100"
-                            : "bg-emerald-600 hover:bg-emerald-500 text-white"
-                        }`}
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>
-                          {currentTimesheetStatus?.status === "APPROVED_PAYROLL"
-                            ? "✓ Transmis à la Comptabilité (Paiement)"
-                            : "Valider & Transmettre à la Compta (Paiement)"}
-                        </span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>Lancer l'impression / PDF</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPrintingReport(null)}
-                      aria-label="Fermer le rapport"
-                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
-                    >
-                      Fermer
-                    </button>
-                  </div>
                 </div>
-              )}
 
-              {/* BARRE D'ACTIONS COMPACTE & SÉLECTION MANUELLE D'INTERVALLE DE TEMPS (NON IMPRIMÉE) */}
+                <div className="flex items-center gap-2">
+                  {/* Action Admin : Valider et Transmettre à la Comptabilité */}
+                  {!isDevRole && printingReport.targetType === "DEVELOPER" && (
+                    <button
+                      type="button"
+                      data-testid="admin-approve-timesheet-payroll-btn"
+                      onClick={() => handleAdminApproveTimesheetPayroll(printingReport.targetId, printingReport.targetName)}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer ${
+                        currentTimesheetStatus?.status === "APPROVED_PAYROLL"
+                          ? "bg-emerald-700 text-emerald-100"
+                          : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                      }`}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>
+                        {currentTimesheetStatus?.status === "APPROVED_PAYROLL"
+                          ? "✓ Relevé visé par la Direction"
+                          : "Viser le relevé d'heures"}
+                      </span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Lancer l'impression / PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintingReport(null)}
+                    aria-label="Fermer le rapport"
+                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </div>
+
+              {/* BARRE D'ACTIONS COMPACTE & SÉLECTION D'INTERVALLE DE TEMPS (NON IMPRIMÉE) */}
               <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden text-xs">
-                {/* Filtre d'Intervalle Manuel de Dates (Libre choix par le Développeur avant envoi à l'Admin) */}
+                {/* Filtre d'Intervalle Manuel de Dates */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
                   <div className="flex items-center gap-1.5 font-bold text-slate-800">
                     <Calendar className="w-4 h-4 text-sky-700" />
@@ -10128,10 +10049,10 @@ export default function TicketManagerPage() {
                     {currentTimesheetStatus?.status === "SUBMITTED" || currentTimesheetStatus?.status === "APPROVED_PAYROLL" ? (
                       <div
                         data-testid="timesheet-validated-badge"
-                        className="px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5"
+                        className="px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Relevé d'heures / Feuille de temps validée ({reportPeriod === "CUSTOM" ? `${reportDateFrom} → ${reportDateTo}` : reportPeriod})</span>
+                        <span>Feuille de temps validée ({reportPeriod === "CUSTOM" ? `${reportDateFrom} au ${reportDateTo}` : reportPeriod})</span>
                       </div>
                     ) : (
                       <button
@@ -10145,8 +10066,6 @@ export default function TicketManagerPage() {
                         <span>Valider mon relevé d'activité & Transmettre à l'Admin</span>
                       </button>
                     )}
-
-                    {/* AUCUN BOUTON BORDEREAU COMPTABLE POUR LE DÉVELOPPEUR : RETIRÉ À 100% */}
 
                     <button
                       type="button"
@@ -10164,9 +10083,10 @@ export default function TicketManagerPage() {
                       aria-label="Fermer le rapport"
                       className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-medium cursor-pointer"
                     >
-                      Fermer
+                      Fermer le rapport
                     </button>
-                  </div>) : (
+                  </div>
+                ) : (
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Actions Direction / Administrateur */}
                     {currentTimesheetStatus?.status === "SUBMITTED" && (
@@ -10186,19 +10106,19 @@ export default function TicketManagerPage() {
                       data-testid="export-payroll-csv-btn"
                       onClick={() => handleExportPayrollCsv(printingReport.targetId, printingReport.targetName, printingReport.targetEmail, printingReport.jobTitle)}
                       className="px-3.5 py-1.5 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer transition"
-                      title="Générer le bordereau de mandat de paiement pour le service comptabilité"
+                      title="Exporter le relevé d'heures certifiées en CSV"
                     >
                       <FileSpreadsheet className="w-3.5 h-3.5 text-sky-200" />
-                      <span>Ordonnancer Paie (CSV)</span>
+                      <span>Exporter le relevé d'heures (CSV)</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => window.print()}
-                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                      className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
                       title="Imprimer / Exporter en PDF"
                     >
-                      <Printer className="w-3 h-3" />
+                      <Printer className="w-3.5 h-3.5" />
                       <span>Imprimer</span>
                     </button>
 
@@ -10214,27 +10134,44 @@ export default function TicketManagerPage() {
                 )}
               </div>
 
-              {/* DOCUMENT OFFICIEL IMPRIMABLE — DÉMARRE DIRECTEMENT À PARTIR DU LOGO JUSQU'EN BAS DE PAGE */}
-              <div className="p-8 space-y-6 text-slate-900 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0" id="printable-report">
-                {/* En-tête d'Entreprise Corporate (Début strict du rapport officiel à partir du logo) */}
+              {/* ================================================================= */}
+              {/* DOCUMENT OFFICIEL IMPRIMABLE — DÉMARRE STRICTEMENT AU LOGO TANDEM */}
+              {/* PAGE 1 LIGNE 1 — AUCUNE PAGE VIERGE EN AMONT — MISE EN PAGE TOP   */}
+              {/* ================================================================= */}
+              <div
+                id="printable-report"
+                className="p-8 sm:p-10 space-y-6 text-slate-900 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0 print:m-0 print:space-y-4 print:static print:block"
+                style={{ pageBreakBefore: "avoid", breakBefore: "avoid" }}
+              >
+                {/* Liseré supérieur corporate Tandem (Marine -> Bleu -> Turquoise -> Orange) */}
+                <div className="h-2 w-full bg-gradient-to-r from-[#051638] via-[#0062E6] via-[#00B89C] to-[#F58220] rounded-sm print:h-2" />
+
+                {/* 1. En-tête de Prestige (Logo Tandem en grand en tête de document) */}
                 <div className="border-b-2 border-slate-900 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <img
-                        src="/tandem-logo.jpg"
-                        alt="Tandem — Du besoin à la solution."
-                        className="h-10 w-auto object-contain"
-                      />
-                      <span className="text-slate-300">|</span>
-                      <span className="text-base font-black tracking-tight text-slate-900">Safir Consulting</span>
+                  <div className="flex items-center gap-4">
+                    <img
+                      src="/tandem-logo.jpg"
+                      alt="Tandem — Du besoin à la solution."
+                      className="h-12 w-auto object-contain shrink-0"
+                    />
+                    <div className="border-l-2 border-slate-300 pl-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-black tracking-tight text-[#051638]">Safir Consulting</span>
+                        <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-900 text-[10px] font-bold uppercase tracking-wider">
+                          Direction BU SME
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 font-medium mt-0.5">
+                        Tandem • Système Central de Pilotage des Capacités & Développements SAP
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1 font-medium">
-                      Tandem • Rapport d'Activité & Feuilles de Temps — Safir Consulting | Business Unit SME — Pilotage des Développements SAP
-                    </p>
                   </div>
 
-                  <div className="sm:text-right">
-                    <div className="inline-block px-3 py-1 rounded bg-slate-100 text-slate-800 text-xs font-mono font-bold uppercase tracking-wider border border-slate-200">
+                  <div className="sm:text-right space-y-1">
+                    <div className="inline-block px-3.5 py-1.5 rounded-lg bg-[#051638] text-white text-xs font-mono font-bold uppercase tracking-wider shadow-xs">
+                      Relevé Certifié d'Activité
+                    </div>
+                    <div className="text-xs font-bold text-slate-800">
                       Rapport Périodique : {
                         reportPeriod === "CUSTOM"
                           ? `Intervalle du ${reportDateFrom} au ${reportDateTo}`
@@ -10246,38 +10183,46 @@ export default function TicketManagerPage() {
                           : "Annuel (Exercice 2026)"
                       }
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-1">
-                      Édité le 29/10/2026 à {new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      Édité le {new Date().toLocaleDateString("fr-FR")} à {new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} • Réf: CERT-SAP-{printingReport.targetId.toUpperCase()}
                     </div>
                   </div>
                 </div>
 
-                {/* Fiche Collaborateur & Contexte de Gouvernance (AUCUNE mention d'Aliko en dur pour le profil développeur) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
-                  <div>
-                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Collaborateur SAP</div>
-                    <div className="text-sm font-bold text-slate-900 mt-0.5">{printingReport.targetName}</div>
+                {/* 2. Cartouche Collaborateur & Cadre de Supervision BU SME */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-300 text-xs print:bg-slate-50">
+                  <div className="space-y-1">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                      Collaborateur SAP Certifié
+                    </div>
+                    <div className="text-base font-bold text-[#051638]">{printingReport.targetName}</div>
                     <div className="text-slate-600 font-mono text-[11px]">{printingReport.targetEmail}</div>
-                    <div className="text-slate-700 font-medium mt-1">{printingReport.jobTitle || "Développeur Solutions SAP"}</div>
+                    <div className="text-sky-800 font-semibold text-[11px]">
+                      {printingReport.jobTitle || `${printingReport.role} SAP`}
+                    </div>
                   </div>
 
-                  <div className="sm:text-right space-y-1">
-                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Supervision & Direction</div>
-                    <div className="text-xs font-bold text-slate-900">
-                      {isDevRole ? "Direction BU SME — Administration SAP" : `${activeAdminUser.name} (HEAD — Administrateur BU SME)`}
+                  <div className="space-y-1 sm:text-right">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                      Validation & Conformité Hiérarchique
                     </div>
-                    <div className="text-[11px] text-slate-600">Base SAP : SAP Business One & SAP S/4HANA</div>
-                    <div className="text-[11px] text-emerald-800 font-semibold">
+                    <div className="text-xs font-bold text-[#051638]">
+                      Getheme Aliko — Administrateur BU SME
+                    </div>
+                    <div className="text-[11px] text-slate-600">
+                      Environnements SAP : SAP Business One & SAP S/4HANA
+                    </div>
+                    <div className="text-[11px] font-bold text-emerald-800">
                       {currentTimesheetStatus?.status === "APPROVED_PAYROLL"
-                        ? "Statut : Validé Direction BU SME & Transmis à la Comptabilité"
+                        ? "✓ Visa Direction BU SME Validé — Transmis au Service Comptabilité"
                         : currentTimesheetStatus?.status === "SUBMITTED"
-                        ? "Statut : Validé par le Développeur — En attente visa Administrateur"
-                        : "Statut : Feuille d'activité conforme au référentiel central"}
+                        ? "⏳ Relevé Transmis par le Développeur — En attente visa Direction"
+                        : "✓ Traçabilité continue conforme au référentiel central"}
                     </div>
                   </div>
                 </div>
 
-                {/* Filtrage et Calcul des Heures Réelles selon la Période Choisie */}
+                {/* 3. Filtrage et Calcul des Heures Réelles selon la Période Choisie */}
                 {(() => {
                   const targetEmailLower = printingReport.targetEmail.toLowerCase();
                   const devLogs = timeLogs.filter(
@@ -10294,7 +10239,7 @@ export default function TicketManagerPage() {
                       return true;
                     }
                     if (reportPeriod === "DAILY") return l.date === "2026-10-29";
-                    if (reportPeriod === "WEEKLY") return l.date >= "2026-10-26" && l.date <= "2026-10-31";
+                    if (reportPeriod === "WEEKLY") return l.date >= "2026-10-26" && l.date <= "2026-11-01";
                     if (reportPeriod === "MONTHLY") return l.date.startsWith("2026-10");
                     if (reportPeriod === "QUARTERLY") return l.date >= "2026-10-01" && l.date <= "2026-12-31";
                     if (reportPeriod === "SEMESTER") return l.date >= "2026-07-01" && l.date <= "2026-12-31";
@@ -10308,71 +10253,87 @@ export default function TicketManagerPage() {
 
                   return (
                     <>
-                      {/* Indicateurs Synthétiques Périodiques */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="p-3 bg-sky-50 rounded-xl border border-sky-200">
-                          <div className="text-[10px] text-sky-800 font-bold uppercase tracking-wider">Total Heures Travaillées</div>
-                          <div className="text-2xl font-black text-sky-950 font-mono mt-0.5">{totalH.toFixed(1)} h</div>
-                          <div className="text-[10px] text-sky-700 mt-0.5">Temps décompté certifié</div>
+                      {/* 4 Indicateurs Synthétiques Périodiques (Cartes Net & Professionnelles) */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print-avoid-break">
+                        <div className="p-3 bg-sky-50/80 rounded-xl border border-sky-300">
+                          <div className="text-[10px] text-sky-800 font-bold uppercase tracking-wider">
+                            Total Heures Travaillées
+                          </div>
+                          <div className="text-2xl font-black text-sky-950 font-mono mt-0.5">
+                            {totalH.toFixed(1)} h
+                          </div>
+                          <div className="text-[10px] text-sky-700 mt-0.5">Temps certifié conforme</div>
                         </div>
 
-                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-                          <div className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider">Sessions de Travail</div>
-                          <div className="text-2xl font-black text-emerald-950 font-mono mt-0.5">{filteredLogs.length}</div>
-                          <div className="text-[10px] text-emerald-700 mt-0.5">Pointages enregistrés</div>
+                        <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-300">
+                          <div className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider">
+                            Sessions Pointées
+                          </div>
+                          <div className="text-2xl font-black text-emerald-950 font-mono mt-0.5">
+                            {filteredLogs.length}
+                          </div>
+                          <div className="text-[10px] text-emerald-700 mt-0.5">Pointages horodatés</div>
                         </div>
 
-                        <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
-                          <div className="text-[10px] text-purple-800 font-bold uppercase tracking-wider">Tickets Couverts</div>
-                          <div className="text-2xl font-black text-purple-950 font-mono mt-0.5">{distinctTickets.length}</div>
-                          <div className="text-[10px] text-purple-700 mt-0.5">Demandes SAP distinctes</div>
+                        <div className="p-3 bg-purple-50/80 rounded-xl border border-purple-300">
+                          <div className="text-[10px] text-purple-800 font-bold uppercase tracking-wider">
+                            Tickets Résolus
+                          </div>
+                          <div className="text-2xl font-black text-purple-950 font-mono mt-0.5">
+                            {distinctTickets.length}
+                          </div>
+                          <div className="text-[10px] text-purple-700 mt-0.5">Projets SAP couverts</div>
                         </div>
 
-                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                          <div className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Comptes Clients</div>
-                          <div className="text-2xl font-black text-slate-900 font-mono mt-0.5">{distinctClients.length}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">Entreprises bénéficiaires</div>
+                        <div className="p-3 bg-slate-100 rounded-xl border border-slate-300">
+                          <div className="text-[10px] text-slate-700 font-bold uppercase tracking-wider">
+                            Comptes Clients
+                          </div>
+                          <div className="text-2xl font-black text-slate-900 font-mono mt-0.5">
+                            {distinctClients.length}
+                          </div>
+                          <div className="text-[10px] text-slate-600 mt-0.5">Entreprises clientes</div>
                         </div>
                       </div>
 
-                      {/* Tableau Détaillé des Lignes d'Heures & Tâches Réalisées */}
-                      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead>
-                            <tr className="bg-slate-100 border-b border-slate-200 font-bold text-slate-800 text-[11px]">
+                      {/* 4. Tableau Détaillé des Prestations & Feuilles de Temps */}
+                      <div className="rounded-xl border border-slate-300 overflow-hidden shadow-2xs print:border print:border-slate-400">
+                        <table className="w-full text-xs text-left border-collapse">
+                          <thead className="bg-[#051638] text-white uppercase text-[10px] tracking-wider font-semibold">
+                            <tr>
                               <th className="py-2.5 px-3">Date</th>
                               <th className="py-2.5 px-3">Réf. Ticket</th>
-                              <th className="py-2.5 px-3">Client / Entreprise</th>
-                              <th className="py-2.5 px-3">Description & Tâche Effectuée</th>
-                              <th className="py-2.5 px-3 text-right">Durée Réelle</th>
+                              <th className="py-2.5 px-3">Client SAP</th>
+                              <th className="py-2.5 px-3">Prestation / Tâche Réalisée</th>
+                              <th className="py-2.5 px-3 text-right">Durée Pointée</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-100">
+                          <tbody className="divide-y divide-slate-200 text-slate-800">
                             {filteredLogs.length === 0 ? (
                               <tr>
-                                <td colSpan={5} className="py-6 text-center text-slate-400 italic">
-                                  Aucun relevé d'heures consigné pour la période sélectionnée ({
-                                    reportPeriod === "CUSTOM" ? `du ${reportDateFrom} au ${reportDateTo}` : reportPeriod
-                                  }).
+                                <td colSpan={5} className="py-8 text-center text-slate-500 italic bg-slate-50">
+                                  Aucune session de développement pointée pour {printingReport.targetName} sur cet intervalle.
                                 </td>
                               </tr>
                             ) : (
                               filteredLogs.map((log) => (
-                                <tr key={log.id} className="hover:bg-slate-50/60">
+                                <tr key={log.id} className="hover:bg-slate-50/80 even:bg-slate-50/40">
                                   <td className="py-2.5 px-3 font-mono font-medium text-slate-700 whitespace-nowrap">
                                     {log.date}
                                   </td>
-                                  <td className="py-2.5 px-3 font-mono font-bold text-sky-800 whitespace-nowrap">
-                                    {log.ticketReference}
+                                  <td className="py-2.5 px-3 font-mono font-bold text-sky-900 whitespace-nowrap">
+                                    <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-900">
+                                      {log.ticketReference}
+                                    </span>
                                   </td>
                                   <td className="py-2.5 px-3 font-semibold text-slate-900 whitespace-nowrap">
                                     {log.clientCompany}
                                   </td>
-                                  <td className="py-2.5 px-3 text-slate-700">
-                                    <div className="font-medium text-slate-900 leading-tight">{log.ticketTitle}</div>
+                                  <td className="py-2.5 px-3 text-slate-800">
+                                    <div className="font-semibold text-slate-900 leading-tight">{log.ticketTitle}</div>
                                     {log.note && <div className="text-[11px] text-slate-500 mt-0.5 italic">{log.note}</div>}
                                   </td>
-                                  <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                                  <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-950 whitespace-nowrap">
                                     {log.durationHours} h <span className="text-[10px] text-slate-500 font-normal">({log.durationMinutes} min)</span>
                                   </td>
                                 </tr>
@@ -10380,11 +10341,11 @@ export default function TicketManagerPage() {
                             )}
                           </tbody>
                           <tfoot>
-                            <tr className="bg-slate-100/80 font-bold text-slate-900 border-t border-slate-200">
-                              <td colSpan={4} className="py-2.5 px-3 text-right uppercase text-[11px] tracking-wider text-slate-600">
-                                Total des heures enregistrées sur la période :
+                            <tr className="bg-slate-100 font-bold text-slate-950 border-t-2 border-slate-300">
+                              <td colSpan={4} className="py-3 px-3 text-right uppercase text-[11px] tracking-wider text-slate-700">
+                                Total Général des Heures Certifiées sur la Période :
                               </td>
-                              <td className="py-2.5 px-3 text-right font-mono font-black text-sm text-sky-950">
+                              <td className="py-3 px-3 text-right font-mono font-black text-sm text-[#051638]">
                                 {totalH.toFixed(1)} h
                               </td>
                             </tr>
@@ -10395,35 +10356,52 @@ export default function TicketManagerPage() {
                   );
                 })()}
 
-                {/* Zone d'Émargement & Signatures Officielles (Zéro mention en dur d'Aliko) */}
-                <div className="pt-6 border-t border-slate-300 grid grid-cols-2 gap-8 text-xs">
-                  <div className="space-y-12">
+                {/* 5. Zone d'Émargement & Double Visa Officiel */}
+                <div className="pt-6 border-t-2 border-slate-300 grid grid-cols-2 gap-8 text-xs print-avoid-break">
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-10">
                     <div>
-                      <span className="font-bold text-slate-900">Visa & Émargement du Développeur</span>
-                      <p className="text-[11px] text-slate-500">{printingReport.targetName} ({printingReport.role})</p>
+                      <span className="font-bold text-[#051638] uppercase tracking-wider text-[11px]">
+                        Visa & Émargement du Développeur
+                      </span>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        {printingReport.targetName} ({printingReport.role})
+                      </p>
+                      <p className="text-[10px] text-slate-500 italic mt-1">
+                        « Je certifie sur l'honneur l'exactitude des heures de développement consignées ci-dessus. »
+                      </p>
                     </div>
-                    <div className="border-t border-dashed border-slate-400 pt-1 text-[10px] text-slate-400 font-mono">
-                      Signature Collaborateur
+                    <div className="border-t border-dashed border-slate-400 pt-1.5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                      <span>Date : ____ / ____ / 2026</span>
+                      <span>Signature Collaborateur</span>
                     </div>
                   </div>
 
-                  <div className="space-y-12 text-right">
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-10 text-right">
                     <div>
-                      <span className="font-bold text-slate-900">Approbation & Clôture de Direction</span>
-                      <p className="text-[11px] text-slate-500">
-                        {isDevRole ? "Direction BU SME / Administrateur SAP" : `${activeAdminUser.name} — Administrateur BU SME`}
+                      <span className="font-bold text-[#051638] uppercase tracking-wider text-[11px]">
+                        Approbation & Visa Direction BU SME
+                      </span>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Getheme Aliko — Administrateur BU SME
+                      </p>
+                      <p className="text-[10px] text-slate-500 italic mt-1">
+                        « Validé pour ordonnancement comptable, archivage et clôture de période. »
                       </p>
                     </div>
-                    <div className="border-t border-dashed border-slate-400 pt-1 text-[10px] text-slate-400 font-mono">
-                      Signature & Cachet Safir Consulting — Transmission Comptabilité
+                    <div className="border-t border-dashed border-slate-400 pt-1.5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                      <span>Cachet BU SME</span>
+                      <span>Signature Direction BU SME</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Note Réglementaire et Séparation Comptable */}
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-[11px] text-slate-500 flex items-center justify-between">
+                {/* 6. Note de Gouvernance et Mentions Réglementaires */}
+                <div className="p-3 bg-slate-100 rounded-lg border border-slate-300 text-[10px] text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2 print-avoid-break">
                   <span>
-                    Note de gouvernance : Cette application assure la traçabilité des temps passés et la validation hiérarchique par l'Administration. Le paiement effectif est ordonnancé par le service Comptabilité après réception de la feuille signée.
+                    <strong>Gouvernance Safir Consulting :</strong> Ce relevé fait foi pour la clôture des sprints et l'ordonnancement par le service Comptabilité. Traçabilité inviolable gérée par la plateforme Tandem.
+                  </span>
+                  <span className="font-mono shrink-0">
+                    Safir Consulting © 2026 • BU SME
                   </span>
                 </div>
               </div>
