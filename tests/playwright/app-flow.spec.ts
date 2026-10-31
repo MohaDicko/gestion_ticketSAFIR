@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 async function loginAsAliko(page: any) {
   await page.goto("/");
-  const alikoBtn = page.getByRole("button", { name: /Aliko Getheme/i }).first();
+  const alikoBtn = page.getByRole("button", { name: /Getheme Aliko/i }).first();
   if (await alikoBtn.isVisible({ timeout: 2500 }).catch(() => false)) {
     await alikoBtn.click();
     await expect(page.getByRole("button", { name: /Tableau de bord/i })).toBeVisible();
@@ -21,14 +21,14 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.locator("body")).toContainText("Adresse e-mail professionnelle (Login)");
     await expect(page.getByRole("button", { name: /Se connecter à mon portail/i })).toBeVisible();
 
-    // Connexion en tant qu'Aliko Getheme (Direction)
-    const alikoBtn = page.getByRole("button", { name: /Aliko Getheme/i }).first();
+    // Connexion en tant que Getheme Aliko (Administrateur & Direction)
+    const alikoBtn = page.getByRole("button", { name: /Getheme Aliko/i }).first();
     await expect(alikoBtn).toBeVisible();
     await alikoBtn.click();
 
     // Vérifier l'arrivée dans le portail Direction (HEAD)
     const header = page.locator("header");
-    await expect(header).toContainText("Aliko Getheme");
+    await expect(header).toContainText("Getheme Aliko");
     await expect(header).toContainText("HEAD");
     await expect(page.getByRole("button", { name: /Tableau de bord/i })).toBeVisible();
     await expect(page.locator("body")).toContainText("Capacité disponible");
@@ -89,10 +89,10 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(melissaBtn).toBeVisible();
     await melissaBtn.click();
 
-    // Vérifier l'arrivée sur le portail Consultante dédié
+    // Vérifier l'arrivée sur le portail Demandeur dédié
     await expect(page.locator("body")).toContainText("Mélissa Diakité");
-    await expect(page.locator("header")).toContainText("CONSULTANT");
-    await expect(page.locator("body")).toContainText("Espace Consulting SAP — Mélissa Diakité");
+    await expect(page.locator("header")).toContainText("Demandeur — Mélissa Diakité");
+    await expect(page.locator("body")).toContainText("Espace Demandeur — Mélissa Diakité");
 
     // Vérifier l'onglet dédié Consultante
     await expect(page.getByRole("button", { name: /Mes Demandes Émises/i })).toBeVisible();
@@ -234,7 +234,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     const closeBtn = page.getByRole("button", { name: /Clôturer le Ticket \(Réglé\)|Valider la Clôture Définitive/i });
     await expect(closeBtn).toBeVisible();
     await closeBtn.click();
-    await expect(page.getByText(/La consultante doit d'abord tester et approuver la recette/i)).toBeVisible();
+    await expect(page.getByText(/doit d'abord tester et approuver la recette/i)).toBeVisible();
 
     // Fermer la modale de supervision
     await page.getByRole("button", { name: /Fermer/i }).first().click();
@@ -264,7 +264,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await exchangeBtn.click();
 
     // 5. Vérifier la modale de fil d'échange tracé
-    await expect(page.getByText("Fil d'Échange Tracé — Développeur ↔ Consultante ↔ Direction")).toBeVisible();
+    await expect(page.getByText(/Fil d'Échange Tracé — Développeur ↔ Demandeur ↔ Administrateur/i)).toBeVisible();
     await expect(page.locator("body")).toContainText("Bonjour Mélissa, l'anomalie de lettrage");
 
     // 6. Rédiger la réponse apportant les précisions attendues
@@ -275,7 +275,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await page.getByRole("button", { name: /Envoyer/i }).click();
 
     // 8. Vérifier la prise en compte et le déblocage du ticket
-    await expect(page.locator("body")).toContainText("Précision apportée par la consultante");
+    await expect(page.locator("body")).toContainText("Précision apportée par le demandeur");
   });
 
   test("12. Collaboration Multi-Développeurs par brique technique : Aliko affecte plusieurs devs à différents niveaux (Addon, HANA) et chaque dev pilote son lot", async ({ page }) => {
@@ -295,15 +295,9 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.locator("body")).toContainText("Intégration HANA & Vues SQLScript");
     await expect(page.locator("body")).toContainText("Anoop Pandimukkula");
 
-    // 4. Hassane saisit le reste à faire sur son lot technique
-    await page.getByRole("button", { name: /Saisir Reste à Faire/i }).first().click();
-    await expect(page.getByText("Votre Lot")).toBeVisible();
-    await expect(page.locator("form").getByText("Intégration HANA & Vues SQLScript")).toBeVisible();
-
-    const rafInput = page.locator("input[type='number']");
-    await rafInput.fill("5");
-    await page.getByRole("button", { name: /Enregistrer/i }).click();
-    await expect(page.locator("body")).toContainText("Reste à faire mis à jour");
+    // 4. Hassane pilote son lot technique : chronomètre dédié et respect de la charge fixée par l'Admin
+    await expect(page.getByTestId("ticket-chrono-controls").first()).toBeVisible();
+    await expect(page.locator("body")).toContainText("Intégration HANA & Vues SQLScript");
 
     // 5. Déconnexion et Reconnexion en tant qu'Aliko (Direction HEAD)
     const logoutBtn = page.getByRole("button", { name: /Déconnexion/i });
@@ -357,7 +351,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
 
     // Ouvrir le fil de discussion et joindre un document SAP
     await page.getByRole("button", { name: /Ouvrir le fil de discussion/i }).click();
-    await expect(page.getByText(/Joindre un document SAP ou une capture au message/i)).toBeVisible();
+    await expect(page.getByText(/Joindre un document SAP ou un fichier au message/i)).toBeVisible();
     await page.getByPlaceholder(/Ou saisir le nom d'un fichier joint/i).fill("Validation_Architecture_Aliko.pdf");
     await page.locator("textarea").fill("Validation de l'architecture par la Direction BU SME avec le document joint.");
     await page.getByRole("button", { name: /Envoyer/i }).click();
@@ -407,7 +401,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByRole("button", { name: /Mes Demandes Émises/i })).not.toBeVisible();
 
     // Vérifier que le menu utilisateur ne propose plus aucun switcher de session vers d'autres rôles
-    await page.getByText(/Aliko Getheme/i).first().click();
+    await page.getByText(/Getheme Aliko/i).first().click();
     const userMenu = page.locator(".absolute.right-0.mt-2.w-80");
     await expect(userMenu.getByText(/Session Active Sécurisée/i)).toBeVisible();
     await expect(userMenu.getByText(/Tester les niveaux d'accès/i)).not.toBeVisible();
@@ -415,7 +409,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(userMenu.getByText(/Mélissa Diakité/i)).not.toBeVisible();
 
     // Fermer le menu
-    await page.getByText(/Aliko Getheme/i).first().click();
+    await page.getByText(/Getheme Aliko/i).first().click();
 
     // Vérifier que la grille consultants ne contient plus de bouton 'Tester session'
     const teamBtn = page.getByRole("button", { name: /Équipe & Capacité/i });
@@ -467,11 +461,11 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await deliverBtn.click();
     await expect(page.getByText(/Livré \(À tester\)/i).first()).toBeVisible();
 
-    // 2. Déconnexion et Connexion Consultante (Mélissa Diakité)
+    // 2. Déconnexion et Connexion Demandeur (Mélissa Diakité)
     await page.getByRole("button", { name: /Déconnexion/i }).click();
     const melissaBtn = page.getByRole("button", { name: /Mélissa Diakité/i }).first();
     await melissaBtn.click();
-    await expect(page.getByText(/Espace Consulting SAP — Mélissa Diakité/i)).toBeVisible();
+    await expect(page.getByText(/Espace Demandeur — Mélissa Diakité/i)).toBeVisible();
 
     // Vérifier la présence de l'espace de recette sur le ticket livré
     await expect(page.getByText(/Solution Livrée par l'Équipe Dév — Recette Fonctionnelle SAP Requise/i)).toBeVisible();
@@ -495,7 +489,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await page.getByRole("button", { name: /Anoop Pandimukkula/i }).first().click();
 
     // Le développeur voit l'alerte d'anomalie de recette
-    await expect(page.getByText(/Reprise demandée suite à Recette Consultante/i)).toBeVisible();
+    await expect(page.getByText(/Reprise demandée suite à Recette Demandeur/i)).toBeVisible();
     await expect(page.getByText(/Anomalie constatée : Le calcul de remise sur facture ne s'applique pas correctement sous SAP B1/i)).toBeVisible();
 
     // Le développeur effectue la correction et renvoie le ticket en test
@@ -503,11 +497,11 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await redeliverBtn.click();
     await expect(page.getByText(/Livré \(À tester\)/i).first()).toBeVisible();
 
-    // 5. Déconnexion et Reconnexion Consultante (Mélissa) pour Approbation
+    // 5. Déconnexion et Reconnexion Demandeur (Mélissa) pour Approbation
     await page.getByRole("button", { name: /Déconnexion/i }).click();
     await page.getByRole("button", { name: /Mélissa Diakité/i }).first().click();
 
-    // La consultante valide la recette avec succès
+    // Le demandeur valide la recette avec succès
     const approveBtn = page.getByRole("button", { name: /Tester & Approuver la Recette/i });
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
@@ -516,9 +510,9 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.getByText(/Recette testée & validée avec succès par vos soins/i)).toBeVisible();
     await expect(page.getByText(/Attente Clôture Direction/i)).toBeVisible();
 
-    // 6. Déconnexion et Connexion Direction (Aliko) pour Clôture Définitive
+    // 6. Déconnexion et Connexion Direction (Getheme Aliko) pour Clôture Définitive
     await page.getByRole("button", { name: /Déconnexion/i }).click();
-    await page.getByRole("button", { name: /Aliko Getheme/i }).first().click();
+    await page.getByRole("button", { name: /Getheme Aliko/i }).first().click();
     await expect(page.getByRole("button", { name: /Tableau de bord/i })).toBeVisible();
 
     // Aliko ouvre le ticket dans Tous les Tickets SAP
@@ -527,7 +521,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await superviseBtn.click();
 
     // Vérifier que la modale indique que la recette est validée
-    await expect(page.getByText(/Recette approuvée par la consultante/i)).toBeVisible();
+    await expect(page.getByText(/Recette approuvée par le demandeur/i)).toBeVisible();
     const closeBtn = page.getByRole("button", { name: /Valider la Clôture Définitive \(Recette Approuvée\)/i });
     await expect(closeBtn).toBeEnabled();
 
@@ -558,56 +552,63 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
       await companySelect.selectOption({ value: "ALL" });
     }
 
-    // 3. Test du Chronomètre / Compteur de temps en direct (Règle mono-tâche stricte)
-    await expect(page.getByTestId("dev-timer-console")).toBeVisible();
-    await expect(page.getByTestId("dev-live-timer-display")).toHaveText("00:00:00");
+    // 3. Test du Chronomètre individuel par projet/ticket (Règle mono-tâche stricte)
+    const startChronoBtn = page.getByTestId("ticket-chrono-controls").first().getByRole("button", { name: /Démarrer chrono/i });
+    await expect(startChronoBtn).toBeVisible();
+    await startChronoBtn.click();
 
-    const startTimerBtn = page.getByRole("button", { name: /Démarrer chrono/i }).first();
-    await startTimerBtn.click();
+    // Vérifier les commandes de chrono actif sur le ticket (Pause/Reprendre et Arrêter)
+    const pauseBtn = page.getByTestId("ticket-chrono-pause-btn").first();
+    const stopBtn = page.getByTestId("ticket-chrono-stop-btn").first();
+    await expect(pauseBtn).toBeVisible();
+    await expect(stopBtn).toBeVisible();
 
-    // Vérifier l'apparition du bandeau actif en temps réel et l'incrément réel des secondes
-    await expect(page.getByText(/Compteur d'heures actif \(Règle mono-tâche\)/i)).toBeVisible();
-    await expect(page.getByTestId("dev-live-timer-display")).not.toHaveText("00:00:00", { timeout: 3000 });
+    // Tester la mise en pause et la reprise
+    await pauseBtn.click();
+    await page.getByRole("button", { name: /^Reprendre$/i }).first().click();
 
-    // Tester la mise en pause et la reprise du chronomètre
-    await page.getByRole("button", { name: /^Pause$/i }).click();
-    await expect(page.getByTestId("dev-timer-console").getByText("EN PAUSE")).toBeVisible();
-    await page.getByRole("button", { name: /^Reprendre$/i }).click();
+    // Arrêter le chrono et vérifier l'enregistrement de la session (ou le seuil d'exclusion anti-fraude < 30s)
+    await stopBtn.click();
+    await expect(page.getByText(/Session enregistrée|moins de 30 secondes ignorée/i)).toBeVisible();
 
-    await expect(page.getByRole("button", { name: /Arrêter & Enregistrer/i })).toBeVisible();
-
-    // Arrêter le chrono et vérifier l'enregistrement
-    await page.getByRole("button", { name: /Arrêter & Enregistrer/i }).click();
-    await expect(page.getByText(/Session enregistrée/i)).toBeVisible();
-
-    // 4. Test d'impression de son propre rapport par le Développeur
+    // 4. Test du Rapport du Développeur : Filtre d'intervalle (14 au 14), Validation feuille de temps & Zéro Aliko
     const devPrintBtn = page.getByRole("button", { name: /Imprimer mon rapport d'heures/i });
     await expect(devPrintBtn).toBeVisible();
     await devPrintBtn.click();
 
-    // Vérifier l'ouverture de la modale de rapport périodique
-    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
+    // Vérifier l'ouverture de la modale de rapport et l'absence d'Aliko en dur
+    await expect(page.getByText(/Tandem • Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
     await expect(page.getByText(/Collaborateur SAP/i)).toBeVisible();
 
-    // Tester les bascules de granularité périodique
+    // Tester le filtre d'intervalle (Preset 14 M-1 au 14 M)
+    const preset14Btn = page.getByTestId("report-preset-14-btn");
+    await expect(preset14Btn).toBeVisible();
+    await preset14Btn.click();
+    await expect(page.getByText(/Intervalle du 2026-09-14 au 2026-10-14/i)).toBeVisible();
+
+    // Tester les bascules rapides de période
     await page.getByRole("button", { name: /Journalier/i }).click();
     await expect(page.getByText(/Rapport Périodique : Journalier/i)).toBeVisible();
 
     await page.getByRole("button", { name: /Hebdomadaire/i }).click();
     await expect(page.getByText(/Rapport Périodique : Hebdomadaire/i)).toBeVisible();
 
-    await page.getByRole("button", { name: /Mensuel/i }).click();
-    await expect(page.getByText(/Rapport Périodique : Mensuel/i)).toBeVisible();
+    // Revenir sur l'intervalle et tester le bouton "Valider la feuille de temps"
+    await preset14Btn.click();
+    const validateTimesheetBtn = page.getByTestId("validate-timesheet-btn");
+    await expect(validateTimesheetBtn).toBeVisible();
+    await validateTimesheetBtn.click();
 
-    await page.getByRole("button", { name: /Annuel/i }).click();
-    await expect(page.getByText(/Rapport Périodique : Annuel/i)).toBeVisible();
+    // Vérifier la validation confirmée pour le développeur
+    await expect(page.getByTestId("timesheet-validated-badge")).toBeVisible();
+    await expect(page.getByTestId("timesheet-validated-badge")).toContainText("Feuille de temps validée");
 
     // Fermer la modale
     await page.getByRole("button", { name: /Fermer le rapport/i }).click();
 
-    // 5. Test d'accès Direction : Aliko imprime le rapport d'un développeur et d'un consultant
+    // 5. Test d'accès Direction : Getheme Aliko imprime le rapport d'un développeur et d'un consultant
     await page.getByRole("button", { name: /Déconnexion/i }).click();
-    await page.getByRole("button", { name: /Aliko Getheme/i }).first().click();
+    await page.getByRole("button", { name: /Getheme Aliko/i }).first().click();
     await expect(page.getByRole("button", { name: /Tableau de bord/i })).toBeVisible();
 
     // Navigation vers Équipe & Capacité
@@ -619,7 +620,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await devCardReportBtn.click();
 
     // Vérifier que la modale d'impression s'ouvre pour le développeur sélectionné
-    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
+    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i).first()).toBeVisible();
     await page.getByRole("button", { name: /Fermer le rapport/i }).click();
 
     // Basculer vers l'onglet Consultants
@@ -629,7 +630,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await consultantReportBtn.click();
 
     // Vérifier l'ouverture du rapport pour la consultante
-    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
+    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i).first()).toBeVisible();
     await page.getByRole("button", { name: /Fermer le rapport/i }).click();
   });
 
@@ -668,10 +669,10 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await printReportBtn.click();
 
     // Vérifier que la modale de rapport s'ouvre avec le sélecteur corporate
-    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i)).toBeVisible();
+    await expect(page.getByText(/Rapport d'Activité & Feuilles de Temps — Safir Consulting/i).first()).toBeVisible();
     await expect(page.getByText(/Total Heures Travaillées/i)).toBeVisible();
-    await expect(page.getByText(/Visa & Émargement du Collaborateur/i)).toBeVisible();
-    await expect(page.getByText(/Aliko Getheme — Directeur BU SME/i)).toBeVisible();
+    await expect(page.getByText(/Visa & Émargement du Développeur|Visa & Émargement du Collaborateur/i)).toBeVisible();
+    await expect(page.getByText(/Getheme Aliko — Administrateur BU SME/i)).toBeVisible();
 
     // Vérifier le sélecteur de changement de développeur pour Aliko
     await expect(page.getByText(/Changer de développeur/i)).toBeVisible();
@@ -702,7 +703,7 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await expect(page.locator("html")).toHaveClass(/dark-theme/);
 
     // 3. Connexion au portail en Anglais & Mode Sombre
-    await page.getByRole("button", { name: /Aliko Getheme/i }).first().click();
+    await page.getByRole("button", { name: /Getheme Aliko/i }).first().click();
     await expect(page.locator("body")).toContainText("Active Tickets");
     await expect(page.locator("body")).toContainText("Available Capacity");
     await expect(page.locator("body")).toContainText("Live Developer Activity Supervision");
@@ -724,5 +725,168 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
 
     await page.getByLabel("Basculer le mode Clair / Sombre").click();
     await expect(page.locator("html")).not.toHaveClass(/dark-theme/);
+  });
+
+  test("20. Nouvelles améliorations Portail Demandeur & Administrateur : Filtres par statut, Création de ticket sans chiffrage/prix ni guide de cadrage, Upload de fichier réel, Badges colorés, Label dynamique Demandeur + Nom & Heures supplémentaires gérées par l'Administrateur", async ({ page }) => {
+    await page.goto("/");
+
+    // 1. Vérifier que le nom de l'Administrateur par défaut est bien "Getheme Aliko" (et jamais "Aliko Getheme")
+    await expect(page.locator("body")).toContainText("Getheme Aliko");
+    await expect(page.locator("body")).not.toContainText("Aliko Getheme");
+
+    // 2. Connexion en tant que Demandeur (Mélissa Diakité)
+    const melissaBtn = page.getByRole("button", { name: /Mélissa Diakité/i }).first();
+    await melissaBtn.click();
+
+    // 3. Vérifier l'affichage dynamique "Demandeur" suivi du nom de la personne connectée
+    await expect(page.locator("header")).toContainText("Demandeur — Mélissa Diakité");
+    await expect(page.locator("body")).toContainText("Espace Demandeur — Mélissa Diakité");
+    await expect(page.locator("body")).toContainText("Demandeur : Mélissa Diakité");
+
+    // 4. Vérifier les filtres par statut côté Demandeur (Tous, Reçu, En cours, Bloqué, En recette, Fini / Clôturé)
+    const filterAll = page.getByTestId("consultant-filter-ALL");
+    const filterInProgress = page.getByTestId("consultant-filter-IN_PROGRESS");
+    const filterBlocked = page.getByTestId("consultant-filter-BLOCKED");
+    const filterClosed = page.getByTestId("consultant-filter-CLOSED");
+    await expect(filterAll).toBeVisible();
+    await expect(filterInProgress).toBeVisible();
+    await expect(filterBlocked).toBeVisible();
+    await expect(filterClosed).toBeVisible();
+
+    // Filtrer sur "En cours"
+    await filterInProgress.click();
+    await expect(page.locator("body")).toContainText("ADD-2026-0001");
+    await expect(page.locator("body")).not.toContainText("Correction anomalie lettrage comptable sur CDS Views S/4HANA");
+
+    // Filtrer sur "Bloqué"
+    await filterBlocked.click();
+    await expect(page.locator("body")).toContainText("Correction anomalie lettrage comptable sur CDS Views S/4HANA");
+
+    // Revenir sur "Tous"
+    await filterAll.click();
+    await expect(page.locator("body")).toContainText("ADD-2026-0001");
+    await expect(page.locator("body")).toContainText("BUG-2026-0004");
+
+    // 5. Ouvrir la fenêtre de création de ticket côté Demandeur
+    await page.getByRole("button", { name: /Soumettre un nouveau besoin SAP|Nouvelle Demande/i }).first().click();
+    await expect(page.getByText("Nouveau Ticket de Développement SAP")).toBeVisible();
+
+    // Vérifier que le bandeau "Guide de cadrage Guichet Central" est bien supprimé
+    await expect(page.locator("body")).not.toContainText("Guide de cadrage Guichet Central");
+
+    // Vérifier qu'il n'y a AUCUNE partie chiffrage / estimation de prix / devise côté Demandeur
+    await expect(page.locator("body")).not.toContainText("Chiffrage, estimation de prix");
+    await expect(page.locator("body")).not.toContainText("Estimation du temps de travail");
+    await expect(page.locator("body")).not.toContainText("Devise du Contrat");
+    await expect(page.getByTestId("create-modal-demandeur-badge")).toContainText("Demandeur : Mélissa Diakité");
+
+    // 6. Tester l'ajout de fichier réel sur le formulaire de création de ticket + type MAINTENANCE
+    await page.getByPlaceholder("ex : Addon validation commandes fournisseurs SAP B1").fill("Maintenance corrective base SAP B1 — Indexation HANA");
+    const modal = page.locator(".fixed.inset-0.z-50");
+    await modal.locator("select").first().selectOption("MAINTENANCE");
+    await page.getByPlaceholder(/Décrivez précisément les exigences fonctionnelles/i).fill("Optimisation des index HANA sur la table OINV.");
+
+    const fileInput = page.getByTestId("ticket-file-upload-input");
+    await fileInput.setInputFiles({
+      name: "Cahier_Maintenance_SAP_HANA.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("Contenu PDF de test pour maintenance SAP B1"),
+    });
+
+    // Vérifier l'aperçu du fichier uploadé
+    await expect(page.getByTestId("uploaded-ticket-file-preview")).toBeVisible();
+    await expect(page.getByTestId("uploaded-ticket-file-preview")).toContainText("Cahier_Maintenance_SAP_HANA.pdf");
+
+    // Soumettre le ticket
+    await page.getByRole("button", { name: /Enregistrer le ticket/i }).click();
+
+    // 7. Vérifier que le nouveau ticket apparaît avec les badges colorés "MAINTENANCE" et "📥 Reçu" ainsi que le fichier joint
+    await expect(page.locator("body")).toContainText("Maintenance corrective base SAP B1 — Indexation HANA");
+    await expect(page.locator("body")).toContainText("Cahier_Maintenance_SAP_HANA.pdf");
+    await expect(page.getByTestId("type-badge-MAINTENANCE").first()).toBeVisible();
+    await expect(page.getByTestId("type-badge-ADDON").first()).toBeVisible();
+    await expect(page.getByTestId("status-badge-RECEIVED").first()).toBeVisible();
+
+    // Tester le filtre "Reçu"
+    await page.getByTestId("consultant-filter-RECEIVED").click();
+    await expect(page.locator("body")).toContainText("Maintenance corrective base SAP B1 — Indexation HANA");
+    await page.getByTestId("consultant-filter-ALL").click();
+
+    // 8. Se connecter en tant qu'Administrateur (Getheme Aliko) et créditer des heures supplémentaires sur un ticket non clôturé
+    await page.getByRole("button", { name: /Déconnexion/i }).click();
+    await loginAsAliko(page);
+
+    const followBtn = page.getByRole("button", { name: /Suivre/i }).first();
+    await followBtn.click();
+
+    await expect(page.getByTestId("admin-extra-hours-panel")).toBeVisible();
+    const extraHoursInput = page.getByTestId("admin-extra-hours-input");
+    await extraHoursInput.fill("6");
+    await page.getByTestId("admin-add-extra-hours-btn").click();
+
+    // Vérifier la confirmation de crédit d'heures supplémentaires par l'Administrateur
+    await expect(page.locator("body")).toContainText("+6h supplémentaires créditées");
+  });
+
+  test("21. Portail Admin & Architecture Super Admin : E-mails automatiques (Dev/Admin/Demandeur), Analytique financier en stand-by, Rapport individuel dev par dev, Rejet UAT sans heures par le consultant, Interdiction de réaffecter un ticket clôturé, Statuts démarrés/non démarrés & Création de types sur les listes déroulantes", async ({ page }) => {
+    await loginAsAliko(page);
+
+    // 1. Vérifier le badge d'architecture SUPER ADMINISTRATEUR et le générateur de rapport individuel par dev
+    await expect(page.getByTestId("admin-architecture-level-badge")).toContainText("SUPER ADMINISTRATEUR");
+    await expect(page.getByTestId("admin-individual-dev-select")).toBeVisible();
+    await page.getByTestId("admin-individual-dev-select").selectOption("dev-hassane");
+    await page.getByTestId("admin-generate-individual-report-btn").click();
+    await expect(page.getByTestId("individual-dev-report-badge")).toContainText("Rapport Individuel (Dev par Dev)");
+    await expect(page.locator("#printable-report")).toContainText("Hassane Bocoum");
+    await page.getByLabel("Fermer le rapport").click();
+
+    // 2. Vérifier dans la fenêtre de création de ticket Admin :
+    //    - Analytique financier en Stand-by d'abord
+    //    - Création d'une nouvelle Priorité dans la liste déroulante
+    //    - Notification e-mail automatique (Développeur, Administrateur, Demandeur/Consultant)
+    await page.getByRole("button", { name: /Nouveau Ticket/i }).click();
+    await expect(page.getByTestId("admin-financial-analytics-standby")).toBeVisible();
+    await expect(page.getByTestId("admin-financial-analytics-standby")).toContainText("Analytique Financier en Stand-by");
+    await expect(page.getByTestId("create-modal-auto-email-notice")).toBeVisible();
+
+    // Ajouter une nouvelle priorité depuis la liste déroulante
+    await page.getByTestId("add-priority-inline-btn").click();
+    await page.getByTestId("custom-priority-input").fill("Urgence Directionnelle");
+    await page.getByTestId("confirm-add-priority-btn").click();
+
+    // Créer le ticket côté Admin en ciblant un développeur (Hassane Bocoum)
+    await page.getByPlaceholder("ex : Addon validation commandes fournisseurs SAP B1").fill("Intégration API Bancaire Automatisée SAP B1");
+    await page.getByTestId("create-modal-dev-select").selectOption("dev-hassane");
+    await page.getByPlaceholder(/Décrivez précisément les exigences fonctionnelles/i).fill("Synchronisation automatique des relevés bancaires MT940 dans SAP B1.");
+    await page.getByRole("button", { name: /Enregistrer le ticket/i }).click();
+
+    // Vérifier que la bannière de notification e-mail automatique confirme l'envoi au Développeur, à l'Admin et au Demandeur
+    await expect(page.getByTestId("latest-auto-email-banner")).toBeVisible();
+    await expect(page.getByTestId("latest-auto-email-banner")).toContainText("Hassane Bocoum");
+    await expect(page.getByTestId("latest-auto-email-banner")).toContainText("Getheme Aliko");
+    await expect(page.getByTestId("latest-auto-email-banner")).toContainText("Mélissa Diakité");
+
+    // 3. Vérifier la visibilité des statuts projets (Démarrés vs Non démarrés) et le filtre associé
+    await page.getByRole("button", { name: /Tous les Tickets SAP/i }).click();
+    await expect(page.getByTestId("project-start-badge-STARTED").first()).toBeVisible();
+    await expect(page.getByTestId("project-start-badge-NOT_STARTED").first()).toBeVisible();
+    await page.getByTestId("project-start-filter-select").selectOption("NOT_STARTED");
+    await expect(page.getByTestId("project-start-badge-NOT_STARTED").first()).toBeVisible();
+    await page.getByTestId("project-start-filter-select").selectOption("ALL");
+
+    // 4. Vérifier le niveau Super Admin / Administrateurs multiples (ex: Koffi Mensah + création d'un nouvel Administrateur)
+    await page.getByRole("button", { name: /Équipe & Capacité/i }).click();
+    await page.getByTestId("team-subtab-admins").click();
+    await expect(page.getByTestId("admins-grid")).toContainText("Getheme Aliko");
+    await expect(page.getByTestId("admins-grid")).toContainText("Koffi Mensah");
+
+    await page.getByTestId("open-add-admin-modal-btn").click();
+    await page.getByTestId("new-admin-firstname-input").fill("Jean-Marc");
+    await page.getByTestId("new-admin-lastname-input").fill("Yao");
+    await page.getByTestId("new-admin-email-input").fill("jeanmarc.yao@safirconsulting.net");
+    await page.getByTestId("confirm-create-admin-btn").click();
+
+    await expect(page.getByTestId("admins-grid")).toContainText("Jean-Marc Yao");
+
   });
 });
