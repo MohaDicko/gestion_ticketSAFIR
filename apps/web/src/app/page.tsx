@@ -6679,13 +6679,13 @@ export default function TicketManagerPage() {
                 </div>
               </div>
 
-              {/* Estimation de la charge, Entreprise & Analytique Financier (en Stand-by d'abord) : Réservés à l'Administrateur (HEAD) */}
+              {/* Estimation de la charge, Entreprise & Développeur concerné : Réservés à l'Administrateur (HEAD) */}
               {currentUser?.role === "HEAD" ? (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Estimation du temps de travail (heures) *
+                        Estimation du temps (heures) *
                       </label>
                       <input
                         type="number"
@@ -6694,7 +6694,7 @@ export default function TicketManagerPage() {
                         required
                         value={newHours}
                         onChange={(e) => setNewHours(Number(e.target.value))}
-                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-mono"
+                        className="w-full text-xs px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-mono"
                       />
                     </div>
 
@@ -6704,7 +6704,7 @@ export default function TicketManagerPage() {
                         type="text"
                         value={newApplicant}
                         onChange={(e) => setNewApplicant(e.target.value)}
-                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
+                        className="w-full text-xs px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600"
                       />
                     </div>
 
@@ -6714,7 +6714,7 @@ export default function TicketManagerPage() {
                         data-testid="create-modal-dev-select"
                         value={newTicketAssignedDevId}
                         onChange={(e) => setNewTicketAssignedDevId(e.target.value)}
-                        className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white"
                       >
                         <option value="">-- En attente / Tous notifiés --</option>
                         {developers.map((d) => (
@@ -6726,111 +6726,72 @@ export default function TicketManagerPage() {
                     </div>
                   </div>
 
-                  {/* Entreprise ou Client + Analytique Financier en Stand-by d'abord */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-semibold text-slate-700">
-                          Entreprise / Nouveau Client
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setShowAddClientInline(!showAddClientInline)}
-                            className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>+ Client</span>
-                          </button>
-                          {clientsList.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteClient(newClient)}
-                              title="Supprimer cette entreprise de la liste"
-                              className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Suppr.</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {showAddClientInline && (
-                        <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex gap-1.5 animate-in fade-in">
-                          <input
-                            type="text"
-                            placeholder="Nom de l'entreprise (ex: AgroTech CI)"
-                            value={customClientName}
-                            onChange={(e) => setCustomClientName(e.target.value)}
-                            className="w-full text-xs px-2.5 py-1 border border-emerald-300 rounded bg-white focus:outline-none"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleAddClient()}
-                            className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
-                          >
-                            Ajouter
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setShowAddClientInline(false)}
-                            className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      )}
-
-                      <select
-                        value={newClient}
-                        onChange={(e) => setNewClient(e.target.value)}
-                        className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
-                      >
-                        {clientsList.map((client) => (
-                          <option key={client} value={client}>
-                            {client}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Analytique Financier en Stand-by d'abord */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-semibold text-slate-700">Analytique Financier</label>
+                  {/* Entreprise ou Client */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Entreprise / Client SAP
+                      </label>
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          data-testid="toggle-financial-analytics-btn"
-                          onClick={() => setFinancialAnalyticsStandby(!financialAnalyticsStandby)}
-                          className="text-[11px] font-semibold text-amber-800 hover:text-amber-950 underline cursor-pointer"
+                          onClick={() => setShowAddClientInline(!showAddClientInline)}
+                          className="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center gap-0.5 cursor-pointer"
                         >
-                          {financialAnalyticsStandby ? "Activer le chiffrage" : "Mettre en stand-by"}
+                          <Plus className="w-3 h-3" />
+                          <span>+ Client</span>
+                        </button>
+                        {clientsList.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteClient(newClient)}
+                            title="Supprimer cette entreprise de la liste"
+                            className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Suppr.</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {showAddClientInline && (
+                      <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex gap-1.5 animate-in fade-in">
+                        <input
+                          type="text"
+                          placeholder="Nom de l'entreprise (ex: AgroTech CI)"
+                          value={customClientName}
+                          onChange={(e) => setCustomClientName(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1 border border-emerald-300 rounded bg-white focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddClient()}
+                          className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer"
+                        >
+                          Ajouter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddClientInline(false)}
+                          className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer"
+                        >
+                          ✕
                         </button>
                       </div>
+                    )}
 
-                      {financialAnalyticsStandby ? (
-                        <div
-                          data-testid="admin-financial-analytics-standby"
-                          className="w-full text-xs px-3 py-2 border border-amber-300 rounded-lg bg-amber-50/90 text-amber-950 font-semibold flex items-center justify-between gap-2"
-                        >
-                          <span>⏸️ Analytique Financier en Stand-by</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-200 text-amber-950 uppercase">
-                            Stand-by
-                          </span>
-                        </div>
-                      ) : (
-                        <select
-                          value={newCurrency}
-                          onChange={(e) => setNewCurrency(e.target.value as "XOF" | "EUR" | "USD")}
-                          className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 font-medium bg-white"
-                        >
-                          <option value="XOF">FCFA (XOF)</option>
-                          <option value="EUR">Euro (€)</option>
-                          <option value="USD">Dollar ($)</option>
-                        </select>
-                      )}
-                    </div>
+                    <select
+                      value={newClient}
+                      onChange={(e) => setNewClient(e.target.value)}
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-600 bg-white font-medium"
+                    >
+                      {clientsList.map((client) => (
+                        <option key={client} value={client}>
+                          {client}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </>
               ) : (

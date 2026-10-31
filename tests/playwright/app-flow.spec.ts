@@ -841,12 +841,11 @@ test.describe("Tests E2E Interface, Login & Portails RBAC (Playwright)", () => {
     await page.getByLabel("Fermer le rapport").click();
 
     // 2. Vérifier dans la fenêtre de création de ticket Admin :
-    //    - Analytique financier en Stand-by d'abord
+    //    - Fenêtre épurée : Analytique financier complètement retiré
     //    - Création d'une nouvelle Priorité dans la liste déroulante
     //    - Notification e-mail automatique (Développeur, Administrateur, Demandeur/Consultant)
     await page.getByRole("button", { name: /Nouveau Ticket/i }).click();
-    await expect(page.getByTestId("admin-financial-analytics-standby")).toBeVisible();
-    await expect(page.getByTestId("admin-financial-analytics-standby")).toContainText("Analytique Financier en Stand-by");
+    await expect(page.locator("body")).not.toContainText("Analytique Financier");
     await expect(page.getByTestId("create-modal-auto-email-notice")).toBeVisible();
 
     // Ajouter une nouvelle priorité depuis la liste déroulante
