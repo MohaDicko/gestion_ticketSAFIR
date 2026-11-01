@@ -1,4 +1,4 @@
-import { createApiApp } from "../../api/src/server";
+import { createApiApp } from "../../api/dist/src/server";
 
 let appPromise: ReturnType<typeof createApiApp> | undefined;
 

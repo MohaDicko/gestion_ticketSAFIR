@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
-    "vercel-build": "npx prisma generate --schema apps/api/prisma/schema.prisma && npm run build --workspace=@devcapacity/shared && npm run build --workspace=@devcapacity/web",
+    "vercel-build": "npx prisma generate --schema apps/api/prisma/schema.prisma && npm run build --workspace=@devcapacity/api && npm run build --workspace=@devcapacity/shared && npm run build --workspace=@devcapacity/web",
     "test": "npm run test --workspaces --if-present",
     "test:vitest": "vitest run",
     "test:playwright": "playwright test",
