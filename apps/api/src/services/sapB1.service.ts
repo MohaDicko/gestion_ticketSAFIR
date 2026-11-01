@@ -1,5 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import * as net from "net";
+import * as https from "https";
+import { URL } from "url";
 
 export interface SapB1Config {
   serverHost: string;
@@ -111,6 +113,44 @@ export class SapB1Service {
     });
   }
 
+  private requestJson(
+    urlString: string,
+    options: { method?: string; headers?: Record<string, string>; body?: string },
+    verifySsl: boolean,
+  ): Promise<{ statusCode: number; headers: Record<string, string | string[] | undefined>; body: string }> {
+    return new Promise((resolve, reject) => {
+      const url = new URL(urlString);
+      const request = https.request(
+        {
+          hostname: url.hostname,
+          port: url.port || 443,
+          path: `${url.pathname}${url.search}`,
+          method: options.method || "GET",
+          headers: options.headers,
+          rejectUnauthorized: verifySsl,
+        },
+        (response) => {
+          const chunks: Buffer[] = [];
+          response.on("data", (chunk: Buffer) => chunks.push(chunk));
+          response.on("end", () => {
+            resolve({
+              statusCode: response.statusCode || 500,
+              headers: response.headers,
+              body: Buffer.concat(chunks).toString("utf8"),
+            });
+          });
+        },
+      );
+
+      request.setTimeout(30000, () => request.destroy(new Error("Délai de connexion SAP dépassé")));
+      request.on("error", reject);
+      if (options.body) {
+        request.write(options.body);
+      }
+      request.end();
+    });
+  }
+
   /**
    * Réalise un diagnostic complet de connexion vers SAP Business One.
    */
@@ -179,30 +219,31 @@ export class SapB1Service {
       UserName: config.username,
       Password: process.env.SAP_B1_PASSWORD || "",
     };
+    const body = JSON.stringify(payload);
 
     try {
-      const response = await fetch(loginUrl, {
+      const response = await this.requestJson(loginUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Content-Length": String(Buffer.byteLength(body)),
           Accept: "application/json",
         },
-        body: JSON.stringify(payload),
-      });
+        body,
+      }, config.verifySsl);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(`[SapB1Service] Échec Login SAP B1 HTTP ${response.status}: ${errorText}`);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        this.logger.error(`[SapB1Service] Échec Login SAP B1 HTTP ${response.statusCode}: ${response.body}`);
         return false;
       }
 
       // Récupérer le cookie de session
-      const setCookie = response.headers.get("set-cookie");
+      const setCookie = response.headers["set-cookie"];
       if (setCookie) {
-        this.sessionCookie = setCookie;
+        this.sessionCookie = Array.isArray(setCookie) ? setCookie.join("; ") : setCookie;
       }
 
-      const data = (await response.json()) as any;
+      const data = JSON.parse(response.body) as { SessionTimeout?: number };
       const timeoutMinutes = data.SessionTimeout || 30;
       this.sessionExpiry = Date.now() + (timeoutMinutes - 2) * 60 * 1000;
 
@@ -234,18 +275,18 @@ export class SapB1Service {
         url += ` and contains(CardName, '${search.replace(/'/g, "''")}')`;
       }
 
-      const response = await fetch(url, {
+      const response = await this.requestJson(url, {
         headers: {
           Accept: "application/json",
           Cookie: this.sessionCookie || "",
         },
-      });
+      }, this.getConfig().verifySsl);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw new Error(`HTTP ${response.statusCode}: ${response.body}`);
       }
 
-      const data = (await response.json()) as any;
+      const data = JSON.parse(response.body) as { value?: Array<Record<string, string>> };
       return (data.value || []).map((bp: any) => ({
         cardCode: bp.CardCode,
         cardName: bp.CardName,
@@ -275,18 +316,18 @@ export class SapB1Service {
       const config = this.getConfig();
       const url = `${config.serviceLayerUrl.replace(/\/$/, "")}/Projects?$select=Code,Name,Active&$filter=Active eq 'tYES'`;
 
-      const response = await fetch(url, {
+      const response = await this.requestJson(url, {
         headers: {
           Accept: "application/json",
           Cookie: this.sessionCookie || "",
         },
-      });
+      }, this.getConfig().verifySsl);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw new Error(`HTTP ${response.statusCode}: ${response.body}`);
       }
 
-      const data = (await response.json()) as any;
+      const data = JSON.parse(response.body) as { value?: Array<Record<string, string>> };
       return (data.value || []).map((p: any) => ({
         code: p.Code,
         name: p.Name,
@@ -298,4 +339,3 @@ export class SapB1Service {
     }
   }
 }
-

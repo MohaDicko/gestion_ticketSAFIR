@@ -359,7 +359,7 @@ const SYSTEM_USERS: AuthUser[] = [
   {
     id: "user-aliko",
     name: "Getheme Aliko",
-    email: "admin@safirconsulting.net",
+    email: "aliko.getheme@safirconsulting.net",
     role: "HEAD",
     adminLevel: "SUPER_ADMIN",
     roleLabel: "Super Administrateur & Responsable CoE DEV",
@@ -2009,22 +2009,66 @@ export default function TicketManagerPage() {
   };
 
   // Connexion manuelle
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
-    const emailToFind = loginEmail.trim().toLowerCase();
-    const found = systemUsers.find(
-      (u) => u.email.toLowerCase() === emailToFind
-    );
-    if (!found) {
-      setLoginError(`Aucun collaborateur trouvé avec l'identifiant '${emailToFind}'. Vérifiez votre saisie ou utilisez un compte de démonstration.`);
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: loginEmail.trim().toLowerCase(),
+          password: loginPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Identifiants invalides");
+      }
+
+      const payload = (await response.json()) as {
+        user?: {
+          id: string;
+          email: string;
+          firstName: string;
+          lastName: string;
+          roles: string[];
+        };
+      };
+      const user = payload.user;
+      if (!user) {
+        throw new Error("Profil utilisateur introuvable");
+      }
+
+      const role = user.roles.includes("HEAD")
+        ? "HEAD"
+        : user.roles.includes("DEVELOPER")
+          ? "DEVELOPER"
+          : user.roles.includes("CONSULTANT")
+            ? "CONSULTANT"
+            : "ADMIN";
+      const found: AuthUser = {
+        id: user.id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role,
+        adminLevel: user.roles.includes("HEAD") ? "SUPER_ADMIN" : user.roles.includes("ADMIN") ? "ADMIN" : undefined,
+        roleLabel: user.roles.includes("HEAD") ? "Super Administrateur & Responsable CoE DEV" : "Administrateur",
+        initials: `${user.firstName[0] || ""}${user.lastName[0] || ""}`.toUpperCase(),
+        isFirstLogin: user.email === "aliko.getheme@safirconsulting.net",
+      };
+
+      setCurrentUser(found);
+      setShowLoginModal(false);
+      setLoginEmail("");
+      setLoginPassword("");
+      showToast(`Connexion réussie — Bienvenue sur votre espace, ${found.name}`);
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : "Échec de la connexion");
       return;
     }
-    setCurrentUser(found);
-    setShowLoginModal(false);
-    setLoginEmail("");
-    setLoginPassword("");
-    showToast(`Connexion réussie — Bienvenue sur votre espace, ${found.name}`);
   };
 
   // Modification du mot de passe utilisateur (première connexion ou à tout moment)

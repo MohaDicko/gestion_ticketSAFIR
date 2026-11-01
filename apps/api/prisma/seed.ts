@@ -99,6 +99,12 @@ async function main() {
   console.log("✓ Paramètres applicatifs configurés");
 
   // 5. Compte HEAD : Aliko Getheme
+  const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+  if (!initialAdminPassword || initialAdminPassword.length < 8) {
+    throw new Error("INITIAL_ADMIN_PASSWORD doit être défini et contenir au moins 8 caractères.");
+  }
+
+  const adminPasswordHash = await argon2.hash(initialAdminPassword);
   const devPasswordHash = await argon2.hash("Safir2026!DevCapacity");
 
   const aliko = await prisma.user.upsert({
@@ -108,6 +114,7 @@ async function main() {
       lastName: "Getheme",
       roles: [Role.HEAD, Role.ADMIN],
       isActive: true,
+      passwordHash: adminPasswordHash,
       timezone: "Europe/Paris",
     },
     create: {
@@ -116,7 +123,7 @@ async function main() {
       lastName: "Getheme",
       roles: [Role.HEAD, Role.ADMIN],
       isActive: true,
-      passwordHash: devPasswordHash,
+      passwordHash: adminPasswordHash,
       timezone: "Europe/Paris",
     },
   });
