@@ -1947,26 +1947,35 @@ export default function TicketManagerPage() {
   const refreshData = async () => {
     setLoading(true);
     try {
+      const fetchJson = async (url: string) => {
+        const response = await fetch(url, { credentials: "include" });
+        if (!response.ok) {
+          throw new Error(`API request failed: ${response.status}`);
+        }
+        return response.json();
+      };
       const [devsRes, tixRes, emailsRes] = await Promise.all([
-        fetch(`${API_BASE}/developers`).then((r) => r.json()).catch(() => []),
-        fetch(`${API_BASE}/tickets`).then((r) => r.json()).catch(() => []),
-        fetch(`${API_BASE}/emails/inbox`).then((r) => r.json()).catch(() => [])
+        fetchJson(`${API_BASE}/developers`),
+        fetchJson(`${API_BASE}/tickets`),
+        fetchJson(`${API_BASE}/emails/inbox`),
       ]);
 
-      if (Array.isArray(devsRes) && devsRes.length > 0) setDevelopers(devsRes);
-      if (Array.isArray(tixRes) && tixRes.length > 0) setTickets(tixRes);
-      if (Array.isArray(emailsRes) && emailsRes.length > 0) setEmails(emailsRes);
+      if (Array.isArray(devsRes)) setDevelopers(devsRes);
+      if (Array.isArray(tixRes)) setTickets(tixRes);
+      if (Array.isArray(emailsRes)) setEmails(emailsRes);
       showToast("Données synchronisées avec succès");
-    } catch {
-      showToast("Mode local connecté");
+    } catch (error) {
+      console.error("[refreshData] Échec de synchronisation API", error);
+      showToast("Impossible de synchroniser les données avec le serveur.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!currentUser) return;
     refreshData();
-  }, []);
+  }, [currentUser]);
 
   // Cloisonnement strict RBAC : verrouillage automatique et étanche de l'espace selon le rôle connecté
   useEffect(() => {
@@ -3439,7 +3448,7 @@ export default function TicketManagerPage() {
     };
 
     try {
-      await fetch(`${API_BASE}/developers`, {
+      const response = await fetch(`${API_BASE}/developers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3450,8 +3459,13 @@ export default function TicketManagerPage() {
           weeklyCapacityHours: capacity,
         }),
       });
-    } catch {
-      // Mode local connecté
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("[handleAddDeveloper] Échec de création API", error);
+      showToast("Impossible de créer le développeur sur le serveur.");
+      return;
     }
 
     const newAuthUser: AuthUser = {
@@ -3492,7 +3506,11 @@ export default function TicketManagerPage() {
 
     const emailLower = newConsultantEmail.trim().toLowerCase();
     const fullName = `${newConsultantFirstName.trim()} ${newConsultantLastName.trim()}`;
-    const initialPass = newConsultantPassword.trim() || "Safir2026!Consultant";
+    const initialPass = newConsultantPassword.trim();
+    if (initialPass.length < 8) {
+      showToast("Le mot de passe doit contenir au moins 8 caractères.");
+      return;
+    }
 
     const newConsultantObj: ConsultantProfile = {
       id: `consultant-${Date.now()}`,
@@ -3513,7 +3531,7 @@ export default function TicketManagerPage() {
     };
 
     try {
-      await fetch(`${API_BASE}/consultants`, {
+      const response = await fetch(`${API_BASE}/consultants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3524,8 +3542,13 @@ export default function TicketManagerPage() {
           passwordPlain: initialPass,
         }),
       });
-    } catch {
-      // Mode local connecté
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("[handleAddConsultant] Échec de création API", error);
+      showToast("Impossible de créer le consultant sur le serveur.");
+      return;
     }
 
     setConsultants((prev) => [...prev, newConsultantObj]);

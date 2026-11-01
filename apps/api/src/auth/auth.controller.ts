@@ -1,12 +1,14 @@
 import { Controller, Post, Get, Body, Req, Res, UnauthorizedException } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { Request, Response } from "express";
+import { Public } from "./public.decorator";
 
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post("login")
+  @Public()
   async login(
     @Body() body: { email?: string; password?: string },
     @Res({ passthrough: true }) res: Response,
@@ -41,16 +43,7 @@ export class AuthController {
   async me(@Req() req: Request) {
     const token = req.cookies?.dc_session || req.headers.authorization?.replace("Bearer ", "");
     if (!token) {
-      // Pour la démo / repli, si aucun token n'est fourni, on retourne le profil Aliko par défaut
-      return {
-        id: "aliko-head-id",
-        email: "aliko.getheme@safirconsulting.net",
-        firstName: "Aliko",
-        lastName: "Getheme",
-        roles: ["HEAD", "ADMIN"],
-        timezone: "Europe/Paris",
-        mode: "HEAD_SESSION",
-      };
+      throw new UnauthorizedException("Authentification requise");
     }
 
     const user = await this.authService.getSessionUser(token);
@@ -62,6 +55,7 @@ export class AuthController {
   }
 
   @Post("logout")
+  @Public()
   async logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie("dc_session");
     res.clearCookie("dc_csrf");

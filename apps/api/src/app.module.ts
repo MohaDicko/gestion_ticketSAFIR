@@ -17,6 +17,8 @@ import { ConsultantsService } from "./consultants/consultants.service";
 import { ConsultantsController } from "./consultants/consultants.controller";
 import { SapB1Service } from "./services/sapB1.service";
 import { SapB1Controller } from "./services/sapB1.controller";
+import { APP_GUARD } from "@nestjs/core";
+import { SessionGuard } from "./auth/session.guard";
 
 @Module({
   imports: [
@@ -46,6 +48,10 @@ import { SapB1Controller } from "./services/sapB1.controller";
     EmailsService,
     ConsultantsService,
     SapB1Service,
+    {
+      provide: APP_GUARD,
+      useClass: SessionGuard,
+    },
   ],
 })
 export class AppModule {}
