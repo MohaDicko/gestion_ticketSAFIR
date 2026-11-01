@@ -9,5 +9,15 @@ export default async function handler(req: any, res: any) {
     req.url = `/api/v1${req.url.startsWith("/") ? req.url : `/${req.url}`}`;
   }
   const expressApp = app.getHttpAdapter().getInstance();
-  return expressApp(req, res);
+  await new Promise<void>((resolve, reject) => {
+    const finish = () => {
+      res.removeListener("finish", finish);
+      res.removeListener("close", finish);
+      resolve();
+    };
+
+    res.once("finish", finish);
+    res.once("close", finish);
+    Promise.resolve(expressApp(req, res)).catch(reject);
+  });
 }

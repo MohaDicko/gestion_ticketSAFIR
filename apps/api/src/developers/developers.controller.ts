@@ -1,16 +1,20 @@
 import { Controller, Get, Post, Param, Body } from "@nestjs/common";
+import { Role } from "@prisma/client";
 import { DevelopersService } from "./developers.service";
+import { Roles } from "../auth/roles.decorator";
 
 @Controller("developers")
 export class DevelopersController {
   constructor(private readonly developersService: DevelopersService) {}
 
   @Get()
+  @Roles(Role.HEAD, Role.ADMIN)
   async getDevelopers() {
     return this.developersService.findAll();
   }
 
   @Post()
+  @Roles(Role.HEAD)
   async createDeveloper(
     @Body()
     body: {
@@ -26,6 +30,7 @@ export class DevelopersController {
   }
 
   @Post(":id/skills")
+  @Roles(Role.HEAD)
   async updateSkill(
     @Param("id") developerId: string,
     @Body() body: { skillId: string; level: number },
@@ -39,6 +44,7 @@ export class SkillsController {
   constructor(private readonly developersService: DevelopersService) {}
 
   @Get()
+  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER, Role.CONSULTANT)
   async getSkills() {
     return this.developersService.getSkillsCatalogue();
   }

@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -39,6 +40,18 @@ export class SessionGuard implements CanActivate {
     }
 
     request.user = user;
+
+    const usesCookieSession = Boolean(request.cookies?.dc_session);
+    const mutatingMethod = !["GET", "HEAD", "OPTIONS"].includes(request.method);
+    if (usesCookieSession && mutatingMethod) {
+      const csrfCookie = request.cookies?.dc_csrf;
+      const csrfHeader = request.headers["x-csrf-token"];
+      const csrfToken = Array.isArray(csrfHeader) ? csrfHeader[0] : csrfHeader;
+      if (!csrfCookie || !csrfToken || csrfCookie !== csrfToken) {
+        throw new ForbiddenException("Jeton CSRF manquant ou invalide");
+      }
+    }
+
     return true;
   }
 }

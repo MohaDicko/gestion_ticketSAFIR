@@ -61,6 +61,23 @@ import { ChangePasswordModal } from "@/components/modals/ChangePasswordModal";
 
 const API_BASE = "/api/v1";
 
+const getCsrfToken = () => {
+  if (typeof document === "undefined") return "";
+  return document.cookie
+    .split("; ")
+    .find((cookie) => cookie.startsWith("dc_csrf="))
+    ?.split("=")[1] ?? "";
+};
+
+const apiFetch = (url: string, init: RequestInit = {}) => {
+  const method = (init.method || "GET").toUpperCase();
+  const headers = new Headers(init.headers);
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    headers.set("X-CSRF-Token", getCsrfToken());
+  }
+  return fetch(url, { ...init, headers, credentials: "include" });
+};
+
 export interface TicketAttachment {
   id: string;
   fileName: string;
@@ -2080,6 +2097,23 @@ export default function TicketManagerPage() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      const response = await apiFetch(`${API_BASE}/auth/logout`, { method: "POST" });
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("[handleLogout] Échec de clôture de session API", error);
+      showToast("Impossible de clôturer la session sur le serveur.");
+      return;
+    }
+
+    setCurrentUser(null);
+    setShowUserMenu(false);
+    showToast("Déconnexion réussie — Retour à la page de connexion");
+  };
+
   // Modification du mot de passe utilisateur (première connexion ou à tout moment)
   const handleUserPasswordChanged = (newPassword: string) => {
     if (!currentUser) return;
@@ -3448,7 +3482,7 @@ export default function TicketManagerPage() {
     };
 
     try {
-      const response = await fetch(`${API_BASE}/developers`, {
+      const response = await apiFetch(`${API_BASE}/developers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3531,7 +3565,7 @@ export default function TicketManagerPage() {
     };
 
     try {
-      const response = await fetch(`${API_BASE}/consultants`, {
+      const response = await apiFetch(`${API_BASE}/consultants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -4540,11 +4574,7 @@ export default function TicketManagerPage() {
                       </button>
 
                       <button
-                        onClick={() => {
-                          setCurrentUser(null);
-                          setShowUserMenu(false);
-                          showToast("Session clôturée avec succès");
-                        }}
+                        onClick={handleLogout}
                         className="w-full text-left text-xs text-rose-700 hover:text-rose-900 hover:bg-rose-50 p-2 rounded-lg flex items-center gap-2 font-semibold transition-colors cursor-pointer border border-rose-200"
                       >
                         <LogOut className="w-3.5 h-3.5 text-rose-600" />
@@ -4557,10 +4587,7 @@ export default function TicketManagerPage() {
 
               {/* Bouton Déconnexion Directe */}
               <button
-                onClick={() => {
-                  setCurrentUser(null);
-                  showToast("Déconnexion réussie — Retour à la page de connexion");
-                }}
+                onClick={handleLogout}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 hover:text-rose-800 bg-rose-50/80 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer shadow-2xs"
                 title="Déconnexion immédiate"
               >

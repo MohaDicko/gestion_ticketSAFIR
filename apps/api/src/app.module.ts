@@ -19,6 +19,7 @@ import { SapB1Service } from "./services/sapB1.service";
 import { SapB1Controller } from "./services/sapB1.controller";
 import { APP_GUARD } from "@nestjs/core";
 import { SessionGuard } from "./auth/session.guard";
+import { RolesGuard } from "./auth/roles.guard";
 
 @Module({
   imports: [
@@ -51,6 +52,10 @@ import { SessionGuard } from "./auth/session.guard";
     {
       provide: APP_GUARD,
       useClass: SessionGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })

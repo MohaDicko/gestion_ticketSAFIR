@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Patch, Param, Body, Query, HttpCode, HttpStatus } from "@nestjs/common";
 import { TicketsService } from "./tickets.service";
 import { TicketStatus } from "@prisma/client";
+import { Role } from "@prisma/client";
 import { sendTicketCreatedNotification } from "../services/emailService";
+import { Roles } from "../auth/roles.decorator";
 
 @Controller("tickets")
 export class TicketsController {
@@ -23,6 +25,7 @@ export class TicketsController {
   }
 
   @Post()
+  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER, Role.CONSULTANT)
   @HttpCode(HttpStatus.CREATED)
   async createTicket(@Body() body: any) {
     // 1. Enregistrement réussi du ticket en base de données
@@ -56,6 +59,7 @@ export class TicketsController {
   }
 
   @Patch(":id/status")
+  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER)
   async updateStatus(
     @Param("id") id: string,
     @Body() body: { status: TicketStatus; reason?: string; actorId?: string },
@@ -64,6 +68,7 @@ export class TicketsController {
   }
 
   @Post(":id/blockers")
+  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER, Role.CONSULTANT)
   async declareBlocker(
     @Param("id") id: string,
     @Body() body: { reason: string; actorId: string },
@@ -72,6 +77,7 @@ export class TicketsController {
   }
 
   @Patch(":id/blockers/:blockerId/resolve")
+  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER, Role.CONSULTANT)
   async resolveBlocker(
     @Param("id") id: string,
     @Param("blockerId") blockerId: string,
