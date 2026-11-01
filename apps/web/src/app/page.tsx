@@ -3792,7 +3792,7 @@ export default function TicketManagerPage() {
         {/* ================================================================= */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
           <img
-            src="/login-bg.jpg"
+            src="/login-bg.png"
             alt="Espace Développement Tandem SAP"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src = "/dev-workspace-bg.jpg";
@@ -3817,19 +3817,10 @@ export default function TicketManagerPage() {
         )}
 
         {/* ================================================================= */}
-        {/* BARRE SUPÉRIEURE : GRAND LOGO TANDEM, BADGE COE DEV & SÉLECTEURS  */}
+        {/* BARRE SUPÉRIEURE : BADGE COE DEV & SÉLECTEURS                      */}
         {/* ================================================================= */}
         <header className="relative z-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-5 pb-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            {/* Logo officiel Tandem agrandi et sublimé */}
-            <div className="bg-white/95 dark:bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-xl border border-white/30 flex items-center">
-              <img
-                src="/tandem-logo.jpg"
-                alt="Tandem — Du besoin à la solution."
-                className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto object-contain"
-              />
-            </div>
-
             {/* Badge impersonnel Centre de Compétences DEV (mention "BU SME" retirée) */}
             <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-slate-100 shadow-sm">
               <Shield className="w-4 h-4 text-[#00B89C]" />
