@@ -23,6 +23,7 @@ export async function createApiApp() {
     allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
   });
 
+  await app.init();
   return app;
 }
 
