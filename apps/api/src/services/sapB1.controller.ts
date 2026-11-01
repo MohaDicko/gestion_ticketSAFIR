@@ -1,0 +1,32 @@
+import { Controller, Get, Post, HttpCode, HttpStatus } from "@nestjs/common";
+import { SapB1Service } from "./sapB1.service";
+
+@Controller("sap")
+export class SapB1Controller {
+  constructor(private readonly sapB1Service: SapB1Service) {}
+
+  @Get("status")
+  async getStatus() {
+    return this.sapB1Service.getDiagnostics();
+  }
+
+  @Post("test-connection")
+  @HttpCode(HttpStatus.OK)
+  async testConnection() {
+    const config = this.sapB1Service.getConfig();
+    const isTcpReachable = await this.sapB1Service.testTcpPort(config.serverHost, config.rdpPort, 3000);
+    const diag = await this.sapB1Service.getDiagnostics();
+
+    return {
+      serverHost: config.serverHost,
+      rdpPort: config.rdpPort,
+      rdpReachable: isTcpReachable,
+      serviceLayerUrl: config.serviceLayerUrl,
+      isConfigured: diag.isConfigured,
+      authenticated: diag.authenticated || false,
+      message: diag.message,
+      timestamp: diag.timestamp,
+    };
+  }
+}
+

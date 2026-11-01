@@ -15,6 +15,8 @@ import { EmailsService } from "./emails/emails.service";
 import { EmailsController } from "./emails/emails.controller";
 import { ConsultantsService } from "./consultants/consultants.service";
 import { ConsultantsController } from "./consultants/consultants.controller";
+import { SapB1Service } from "./services/sapB1.service";
+import { SapB1Controller } from "./services/sapB1.controller";
 
 @Module({
   imports: [
@@ -34,6 +36,7 @@ import { ConsultantsController } from "./consultants/consultants.controller";
     RecommendationController,
     EmailsController,
     ConsultantsController,
+    SapB1Controller,
   ],
   providers: [
     AuthService,
@@ -42,6 +45,7 @@ import { ConsultantsController } from "./consultants/consultants.controller";
     RecommendationService,
     EmailsService,
     ConsultantsService,
+    SapB1Service,
   ],
 })
 export class AppModule {}
