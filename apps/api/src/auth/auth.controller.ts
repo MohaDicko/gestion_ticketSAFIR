@@ -41,16 +41,7 @@ export class AuthController {
   async me(@Req() req: Request) {
     const token = req.cookies?.dc_session || req.headers.authorization?.replace("Bearer ", "");
     if (!token) {
-      // Pour la démo / repli, si aucun token n'est fourni, on retourne le profil Aliko par défaut
-      return {
-        id: "aliko-head-id",
-        email: "aliko.getheme@safirconsulting.net",
-        firstName: "Aliko",
-        lastName: "Getheme",
-        roles: ["HEAD", "ADMIN"],
-        timezone: "Europe/Paris",
-        mode: "HEAD_SESSION",
-      };
+      throw new UnauthorizedException("Authentification requise");
     }
 
     const user = await this.authService.getSessionUser(token);
