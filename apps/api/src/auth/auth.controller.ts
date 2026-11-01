@@ -54,6 +54,22 @@ export class AuthController {
     return user;
   }
 
+  @Post("change-password")
+  async changePassword(
+    @Req() req: Request & { user?: { id: string } },
+    @Body() body: { currentPassword?: string; newPassword?: string },
+  ) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException("Authentification requise");
+    }
+
+    return this.authService.changePassword(
+      req.user.id,
+      body.currentPassword || "",
+      body.newPassword || "",
+    );
+  }
+
   @Post("logout")
   @Public()
   async logout(@Res({ passthrough: true }) res: Response) {

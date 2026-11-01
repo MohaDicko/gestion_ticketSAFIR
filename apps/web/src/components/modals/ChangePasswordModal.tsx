@@ -12,7 +12,7 @@ export interface ChangePasswordModalProps {
     email: string;
     role: string;
   } | null;
-  onPasswordChanged: (newPassword: string) => void;
+  onPasswordChanged: (currentPassword: string, newPassword: string) => Promise<void>;
   showToast: (msg: string) => void;
 }
 
@@ -49,7 +49,7 @@ export function ChangePasswordModal({
 
   if (!isOpen || !user) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
@@ -74,7 +74,12 @@ export function ChangePasswordModal({
     }
 
     // Validation réussie
-    onPasswordChanged(newPassword);
+    try {
+      await onPasswordChanged(oldPassword, newPassword);
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : "Impossible de modifier le mot de passe.");
+      return;
+    }
     showToast("✅ Mot de passe modifié avec succès ! Votre compte est sécurisé.");
     setOldPassword("");
     setNewPassword("");
@@ -243,4 +248,3 @@ export function ChangePasswordModal({
     </div>
   );
 }
-

@@ -81,6 +81,29 @@ export class AuthService {
 
     return session.user;
   }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    if (!currentPassword || !newPassword || newPassword.length < 8) {
+      throw new UnauthorizedException("Mot de passe invalide");
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.passwordHash) {
+      throw new UnauthorizedException("Compte sans mot de passe configuré");
+    }
+
+    const isCurrentPasswordValid = await argon2.verify(user.passwordHash, currentPassword);
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException("Mot de passe actuel incorrect");
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: await argon2.hash(newPassword) },
+    });
+
+    return { message: "Mot de passe modifié avec succès" };
+  }
 }
 
 async function prismaUser(prisma: PrismaService, email: string) {

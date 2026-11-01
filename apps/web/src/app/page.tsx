@@ -1273,10 +1273,10 @@ export default function TicketManagerPage() {
   const [teamSubTab, setTeamSubTab] = useState<"devs" | "consultants" | "admins">("devs");
 
   // Données
-  const [developers, setDevelopers] = useState<Developer[]>(INITIAL_DEVELOPERS);
-  const [consultants, setConsultants] = useState<ConsultantProfile[]>(INITIAL_CONSULTANTS);
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
-  const [emails, setEmails] = useState<InboxEmail[]>(INITIAL_EMAILS);
+  const [developers, setDevelopers] = useState<Developer[]>([]);
+  const [consultants, setConsultants] = useState<ConsultantProfile[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [emails, setEmails] = useState<InboxEmail[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Journal des e-mails automatiques envoyés aux acteurs concernés (Développeurs, Admin, Demandeur/Consultant)
@@ -1286,7 +1286,7 @@ export default function TicketManagerPage() {
   const [financialAnalyticsStandby, setFinancialAnalyticsStandby] = useState<boolean>(true);
 
   // Sélecteur direct de Développeur pour impression individuelle de rapport (dev par dev)
-  const [selectedIndividualDevId, setSelectedIndividualDevId] = useState<string>("dev-anoop");
+  const [selectedIndividualDevId, setSelectedIndividualDevId] = useState<string>("");
 
   // Filtres globaux (Administrateur) et Filtres Portail Demandeur (Consultant)
   const [searchQuery, setSearchQuery] = useState("");
@@ -1432,7 +1432,7 @@ export default function TicketManagerPage() {
   const timerPausedTotalMsRef = useRef<number>(0);
   const timerPauseStartRef = useRef<number | null>(null);
   const timerStartedAtRef = useRef<number | null>(null);
-  const [timeLogs, setTimeLogs] = useState<TimeLog[]>(INITIAL_TIME_LOGS);
+  const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
 
   // Modale d'Impression des Rapports d'Activité & Feuilles de Temps (Développeurs & Consultants)
   const [printingReport, setPrintingReport] = useState<{
@@ -1971,15 +1971,20 @@ export default function TicketManagerPage() {
         }
         return response.json();
       };
-      const [devsRes, tixRes, emailsRes] = await Promise.all([
+      const results = await Promise.allSettled([
         fetchJson(`${API_BASE}/developers`),
         fetchJson(`${API_BASE}/tickets`),
         fetchJson(`${API_BASE}/emails/inbox`),
+        fetchJson(`${API_BASE}/consultants`),
       ]);
 
+      const [devsRes, tixRes, emailsRes, consultantsRes] = results.map((result) =>
+        result.status === "fulfilled" ? result.value : null
+      );
       if (Array.isArray(devsRes)) setDevelopers(devsRes);
       if (Array.isArray(tixRes)) setTickets(tixRes);
       if (Array.isArray(emailsRes)) setEmails(emailsRes);
+      if (Array.isArray(consultantsRes)) setConsultants(consultantsRes);
       showToast("Données synchronisées avec succès");
     } catch (error) {
       console.error("[refreshData] Échec de synchronisation API", error);
@@ -2115,8 +2120,18 @@ export default function TicketManagerPage() {
   };
 
   // Modification du mot de passe utilisateur (première connexion ou à tout moment)
-  const handleUserPasswordChanged = (newPassword: string) => {
+  const handleUserPasswordChanged = async (currentPassword: string, newPassword: string) => {
     if (!currentUser) return;
+    const response = await apiFetch(`${API_BASE}/auth/change-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.message || "Impossible de modifier le mot de passe.");
+    }
+
     const nowStr = new Date().toLocaleDateString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     setSystemUsers((prev) =>
       prev.map((u) =>
