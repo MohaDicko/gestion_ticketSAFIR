@@ -28,17 +28,25 @@ describe("Création de ticket avec notification e-mail en échec", () => {
     };
     const controller = new TicketsController(ticketsService as never);
 
-    await expect(
-      controller.createTicket({
-        title: ticket.title,
-        description: ticket.description,
-        typeCode: "ADDON",
-        priorityCode: "HIGH",
-        creatorName: "Aliko Getheme",
-        creatorEmail: "aliko.getheme@safirconsulting.net",
-        recipientEmails: ["developer@safirconsulting.net"],
-      }),
-    ).resolves.toBe(ticket);
+    const response = await controller.createTicket({
+      title: ticket.title,
+      description: ticket.description,
+      typeCode: "ADDON",
+      priorityCode: "HIGH",
+      creatorName: "Aliko Getheme",
+      creatorEmail: "aliko.getheme@safirconsulting.net",
+      recipientEmails: ["developer@safirconsulting.net"],
+    });
+
+    expect(response).toMatchObject({
+      ...ticket,
+      emailNotification: {
+        sent: false,
+        recipients: ["developer@safirconsulting.net"],
+        error: "Brevo a refusé l'envoi (401)",
+      },
+    });
+    expect(response).toBeDefined();
 
     expect(ticketsService.create).toHaveBeenCalledOnce();
     expect(sendTicketCreatedNotification).toHaveBeenCalledOnce();

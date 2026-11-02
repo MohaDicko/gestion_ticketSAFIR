@@ -41,8 +41,13 @@ export class TicketsController {
     const baseUrl = process.env.APP_URL || "http://localhost:3000";
     const ticketUrl = body.ticketUrl || `${baseUrl}/tickets/${ticket.id || ticket.reference}`;
 
+    let emailNotification: { sent: boolean; messageId?: string; recipients: string[]; error?: string } = {
+      sent: false,
+      recipients: recipientEmails,
+    };
+
     try {
-      await sendTicketCreatedNotification({
+      const result = await sendTicketCreatedNotification({
         creatorName,
         creatorEmail,
         recipientEmails,
@@ -51,15 +56,21 @@ export class TicketsController {
         ticketDescription: ticket.description,
         ticketUrl,
       });
+      emailNotification = {
+        sent: true,
+        messageId: result?.messageId,
+        recipients: recipientEmails,
+      };
     } catch (error) {
+      emailNotification.error = error instanceof Error ? error.message : "Erreur d'envoi e-mail";
       console.error(
         `[tickets] Le ticket ${ticket.reference || ticket.id} a été créé, mais la notification e-mail a échoué :`,
-        error instanceof Error ? error.message : error,
+        emailNotification.error,
       );
     }
 
     // 3. Retour HTTP 201 même si le fournisseur e-mail est indisponible.
-    return ticket;
+    return { ...ticket, emailNotification };
   }
 
   @Patch(":id/status")

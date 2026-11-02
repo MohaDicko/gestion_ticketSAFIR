@@ -1907,6 +1907,7 @@ export default function TicketManagerPage() {
   // Chargement synchronisé API
   const refreshData = async () => {
     setLoading(true);
+
     try {
       const fetchJson = async (url: string) => {
         const response = await fetch(url, { credentials: "include" });
@@ -3409,6 +3410,8 @@ export default function TicketManagerPage() {
       }))
     ];
 
+    let emailNotificationSent = false;
+
     try {
       const response = await apiFetch(`${API_BASE}/tickets`, {
         method: "POST",
@@ -3431,23 +3434,38 @@ export default function TicketManagerPage() {
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.message || "Impossible d'enregistrer le ticket.");
       }
-      const persistedTicket = (await response.json()) as { id: string; reference: string };
+      const persistedTicket = (await response.json()) as {
+        id: string;
+        reference: string;
+        emailNotification?: { sent: boolean; messageId?: string; recipients: string[]; error?: string };
+      };
       newTicket.id = persistedTicket.id;
       newTicket.reference = persistedTicket.reference;
+
+      if (!persistedTicket.emailNotification?.sent) {
+        showToast(
+          `Ticket créé, mais l'e-mail n'a pas été envoyé${persistedTicket.emailNotification?.error
+            ? ` : ${persistedTicket.emailNotification.error}`
+            : "."}`,
+        );
+      }
+
+      if (persistedTicket.emailNotification?.sent) {
+        emailNotificationSent = true;
+        dispatchAutomaticEmails({
+          ticketReference: persistedTicket.reference,
+          ticketTitle: newTicket.title,
+          subject: `[Notification E-mail Automatique] Nouveau Ticket ${persistedTicket.reference} — ${newTicket.title}`,
+          eventType: "TICKET_CREATED",
+          recipients: emailRecipients,
+        });
+      }
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Impossible d'enregistrer le ticket.");
       return;
     }
 
     setTickets([newTicket, ...tickets]);
-
-    const dispatchedMail = dispatchAutomaticEmails({
-      ticketReference: refCode,
-      ticketTitle: newTicket.title,
-      subject: `[Notification E-mail Automatique] Nouveau Ticket SAP ${refCode} — ${newTicket.title}`,
-      eventType: "TICKET_CREATED",
-      recipients: emailRecipients
-    });
 
     // Si la demande est émise par un demandeur (consultant), elle alimente automatiquement le Guichet Central
     if (currentUser?.role === "CONSULTANT") {
@@ -3469,10 +3487,14 @@ export default function TicketManagerPage() {
     }
 
     const hoursLabel = isHead ? `${newTicket.estimatedHours}h` : "Charge à estimer par l'Administrateur";
-    const recipientsSummary = dispatchedMail.recipients.map((r) => `${r.name} (${r.roleLabel})`).join(", ");
+    const recipientsSummary = emailRecipients.map((r) => `${r.name} (${r.roleLabel})`).join(", ");
     pushInAppNotification({
-      title: `📧 Nouveau ticket ${refCode} créé — E-mails automatiques envoyés`,
-      message: `${newTicket.applicantName} a créé « ${newTitle} » (${hoursLabel}). Notifications e-mail envoyées automatiquement à : ${recipientsSummary}.`,
+      title: emailNotificationSent
+        ? `📧 Nouveau ticket ${refCode} créé — E-mails automatiques envoyés`
+        : `⚠️ Nouveau ticket ${refCode} créé — E-mail non envoyé`,
+      message: emailNotificationSent
+        ? `${newTicket.applicantName} a créé « ${newTitle} » (${hoursLabel}). Notifications e-mail envoyées automatiquement à : ${recipientsSummary}.`
+        : `${newTicket.applicantName} a créé « ${newTitle} » (${hoursLabel}), mais la notification e-mail n'a pas été confirmée.`,
       category: "DEMAND",
       targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
       ticketId: newTicket.id,
@@ -3486,9 +3508,9 @@ export default function TicketManagerPage() {
     setNewTicketAttachmentName("");
     setNewTicketAssignedDevId("");
     setUploadedTicketFile(null);
-    showToast(
-      `📧 Ticket ${refCode} créé ! E-mails automatiques envoyés à l'Administrateur, au Demandeur et au(x) Développeur(s).`
-    );
+    showToast(emailNotificationSent
+      ? `📧 Ticket ${refCode} créé ! E-mails automatiques envoyés.`
+      : `⚠️ Ticket ${refCode} créé, mais l'envoi e-mail n'a pas été confirmé.`);
   };
 
   // Action HEAD : Intégrer un nouveau Développeur dans l'équipe
