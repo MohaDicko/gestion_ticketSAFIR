@@ -111,7 +111,11 @@ async function getTransporter() {
     });
   }
 
-  // 2. Si aucun serveur SMTP n'est renseigné, génération d'un vrai compte SMTP de test Ethereal
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Configuration e-mail manquante : SMTP_HOST ou BREVO_API_KEY est requis en production");
+  }
+
+  // En développement uniquement, permettre les tests sans serveur SMTP local.
   try {
     const testAccount = await nodemailer.createTestAccount();
     console.log(`[send-email] Compte SMTP test Ethereal généré : ${testAccount.user}`);

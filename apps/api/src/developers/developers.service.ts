@@ -155,6 +155,7 @@ export class DevelopersService {
           roles: [Role.DEVELOPER],
           isActive: true,
           passwordHash: defaultPasswordHash,
+          mustChangePassword: true,
           timezone: "Europe/Paris",
         },
       });

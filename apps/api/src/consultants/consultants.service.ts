@@ -50,6 +50,7 @@ export class ConsultantsService {
           roles: [Role.CONSULTANT],
           isActive: true,
           passwordHash,
+          mustChangePassword: true,
           timezone: "Europe/Paris",
         },
       });

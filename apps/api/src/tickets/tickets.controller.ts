@@ -41,7 +41,7 @@ export class TicketsController {
     const baseUrl = process.env.APP_URL || "http://localhost:3000";
     const ticketUrl = body.ticketUrl || `${baseUrl}/tickets/${ticket.id || ticket.reference}`;
 
-    sendTicketCreatedNotification({
+    await sendTicketCreatedNotification({
       creatorName,
       creatorEmail,
       recipientEmails,
@@ -49,12 +49,9 @@ export class TicketsController {
       ticketTitle: ticket.title,
       ticketDescription: ticket.description,
       ticketUrl,
-    }).catch((err) => {
-      // Gestion d'erreur sans faire planter la création du ticket (log console propre)
-      console.error(`[TicketsController] Échec de l'envoi de la notification e-mail pour le ticket ${ticket.id}:`, err?.message || err);
     });
 
-    // 3. Retour HTTP 201 immédiat au client sans subir la latence réseau SMTP
+    // 3. Retour HTTP 201 après confirmation de l'envoi de la notification
     return ticket;
   }
 

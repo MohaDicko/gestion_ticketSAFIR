@@ -133,6 +133,7 @@ model User {
   lastName      String
   roles         Role[]
   isActive      Boolean   @default(true)
+  mustChangePassword Boolean @default(false)
   entraObjectId String?   @unique
   passwordHash  String?
   locale        String    @default("fr")

@@ -56,5 +56,11 @@ Dans **Vercel Project Settings > Environment Variables** :
 | :--- | :--- | :--- |
 | `API_URL` | URL de votre backend NestJS en production (ex. Render, Railway, Supabase) | `https://api-safir-tickets.up.railway.app` |
 | `NEXT_PUBLIC_API_URL` | Identique à `API_URL` si nécessaire côté client | `https://api-safir-tickets.up.railway.app` |
+| `BREVO_API_KEY` | Clé API Brevo pour les notifications réelles de création de ticket | À définir comme secret |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_SECURE` | Alternative SMTP à Brevo | À définir comme secrets |
+
+Le backend doit recevoir les mêmes secrets e-mail dans son environnement de production. La création d'un ticket est persistée par `POST /api/v1/tickets` et confirme l'envoi de la notification avant de répondre. En production, aucun transport de test (Ethereal ou `jsonTransport`) n'est utilisé.
+
+Après déploiement du backend, appliquer les migrations Prisma avec `npx prisma migrate deploy --schema apps/api/prisma/schema.prisma`. La migration `20261102095000_add_must_change_password` force les développeurs provisionnés sans connexion antérieure à changer leur mot de passe temporaire.
 
 > **Note :** Si aucune variable n'est renseignée, le frontend se déploie et fonctionne immédiatement en mode démonstration autonome avec l'équipe Safir Consulting et les tickets pré-chargés.

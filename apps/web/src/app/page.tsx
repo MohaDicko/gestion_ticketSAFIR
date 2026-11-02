@@ -327,6 +327,7 @@ interface AuthUser {
   developerId?: string;
   initials: string;
   isFirstLogin?: boolean;
+  mustChangePassword?: boolean;
   passwordHash?: string;
   passwordChangedAt?: string;
 }
@@ -2066,6 +2067,7 @@ export default function TicketManagerPage() {
           firstName: string;
           lastName: string;
           roles: string[];
+          mustChangePassword?: boolean;
         };
       };
       const user = payload.user;
@@ -2088,10 +2090,12 @@ export default function TicketManagerPage() {
         adminLevel: user.roles.includes("HEAD") ? "SUPER_ADMIN" : user.roles.includes("ADMIN") ? "ADMIN" : undefined,
         roleLabel: user.roles.includes("HEAD") ? "Super Administrateur & Responsable CoE DEV" : "Administrateur",
         initials: `${user.firstName[0] || ""}${user.lastName[0] || ""}`.toUpperCase(),
-        isFirstLogin: user.email === "aliko.getheme@safirconsulting.net",
+        isFirstLogin: Boolean(payload.user?.mustChangePassword),
+        mustChangePassword: Boolean(payload.user?.mustChangePassword),
       };
 
       setCurrentUser(found);
+      setShowChangePasswordModal(Boolean(found.mustChangePassword));
       setShowLoginModal(false);
       setLoginEmail("");
       setLoginPassword("");
@@ -2136,12 +2140,12 @@ export default function TicketManagerPage() {
     setSystemUsers((prev) =>
       prev.map((u) =>
         u.id === currentUser.id
-          ? { ...u, isFirstLogin: false, passwordChangedAt: nowStr }
+          ? { ...u, isFirstLogin: false, mustChangePassword: false, passwordChangedAt: nowStr }
           : u
       )
     );
     setCurrentUser((prev) =>
-      prev ? { ...prev, isFirstLogin: false, passwordChangedAt: nowStr } : null
+      prev ? { ...prev, isFirstLogin: false, mustChangePassword: false, passwordChangedAt: nowStr } : null
     );
     pushInAppNotification({
       title: "🔒 Mot de passe modifié avec succès",
@@ -3293,7 +3297,7 @@ export default function TicketManagerPage() {
   };
 
   // Action HEAD / CONSULTANT : Créer un ticket (Flux 100% interne à l'application)
-  const handleCreateTicket = (e: React.FormEvent) => {
+  const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) {
       showToast("Veuillez renseigner le titre de la demande");
@@ -3372,8 +3376,6 @@ export default function TicketManagerPage() {
       attachments: initialAttachment
     };
 
-    setTickets([newTicket, ...tickets]);
-
     // Notification automatique par E-mail de toutes les personnes concernées (le ou les Développeurs, l'Administrateur et le Demandeur/Consultant)
     const targetDevsForEmail = preAssignedDev
       ? [preAssignedDev]
@@ -3398,6 +3400,37 @@ export default function TicketManagerPage() {
       }))
     ];
 
+    try {
+      const response = await apiFetch(`${API_BASE}/tickets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTicket.title,
+          description: newTicket.description,
+          typeCode: newType,
+          priorityCode: newPriority,
+          estimatedHours: initialHours,
+          actorId: currentUser?.id,
+          creatorName: resolvedApplicantName,
+          creatorEmail: resolvedApplicantEmail,
+          recipientEmails: emailRecipients.map((recipient) => recipient.email),
+          ticketUrl: typeof window !== "undefined" ? `${window.location.origin}/#ticket-${refCode}` : undefined,
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.message || "Impossible d'enregistrer le ticket.");
+      }
+      const persistedTicket = (await response.json()) as { id: string; reference: string };
+      newTicket.id = persistedTicket.id;
+      newTicket.reference = persistedTicket.reference;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Impossible d'enregistrer le ticket.");
+      return;
+    }
+
+    setTickets([newTicket, ...tickets]);
+
     const dispatchedMail = dispatchAutomaticEmails({
       ticketReference: refCode,
       ticketTitle: newTicket.title,
@@ -3405,26 +3438,6 @@ export default function TicketManagerPage() {
       eventType: "TICKET_CREATED",
       recipients: emailRecipients
     });
-
-    // Envoi réel d'e-mail via le module Nodemailer en tâche de fond non bloquante
-    const realRecipientEmails = emailRecipients.map((r) => r.email).filter(Boolean);
-    if (typeof window !== "undefined" && realRecipientEmails.length > 0) {
-      fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          creatorName: resolvedApplicantName,
-          creatorEmail: resolvedApplicantEmail,
-          recipientEmails: realRecipientEmails,
-          ticketId: refCode,
-          ticketTitle: newTicket.title,
-          ticketDescription: newTicket.description,
-          ticketUrl: `${window.location.origin}/#ticket-${refCode}`,
-        }),
-      }).catch((err) => {
-        console.error("[EmailNotification] Erreur non-bloquante lors de l'envoi SMTP :", err);
-      });
-    }
 
     // Si la demande est émise par un demandeur (consultant), elle alimente automatiquement le Guichet Central
     if (currentUser?.role === "CONSULTANT") {
@@ -6872,8 +6885,13 @@ export default function TicketManagerPage() {
                     key={user.id}
                     type="button"
                     onClick={() => {
-                      setCurrentUser(user);
+                      const demoUser = {
+                        ...user,
+                        mustChangePassword: Boolean(user.isFirstLogin),
+                      };
+                      setCurrentUser(demoUser);
                       setShowLoginModal(false);
+                      setShowChangePasswordModal(Boolean(demoUser.mustChangePassword));
                       showToast(`Connecté en tant que ${user.name}`);
                     }}
                     className="p-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-left text-xs flex items-center justify-between"
@@ -10429,6 +10447,7 @@ export default function TicketManagerPage() {
       {/* Modale de Modification du Mot de Passe Sécurisé (Première connexion ou mise à jour profil) */}
       <ChangePasswordModal
         isOpen={showChangePasswordModal}
+        isMandatory={Boolean(currentUser?.mustChangePassword)}
         onClose={() => setShowChangePasswordModal(false)}
         user={currentUser}
         onPasswordChanged={handleUserPasswordChanged}

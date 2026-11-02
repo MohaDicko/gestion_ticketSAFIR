@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import * as argon2 from "argon2";
 import * as crypto from "crypto";
@@ -50,6 +50,7 @@ export class AuthService {
         lastName: user.lastName,
         roles: user.roles,
         timezone: user.timezone,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
@@ -69,6 +70,7 @@ export class AuthService {
             lastName: true,
             roles: true,
             timezone: true,
+            mustChangePassword: true,
             developerProfile: true,
           },
         },
@@ -83,8 +85,17 @@ export class AuthService {
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
-    if (!currentPassword || !newPassword || newPassword.length < 8) {
-      throw new UnauthorizedException("Mot de passe invalide");
+    if (
+      !currentPassword ||
+      !newPassword ||
+      newPassword.length < 8 ||
+      !/[A-Z]/.test(newPassword) ||
+      !/[0-9]/.test(newPassword) ||
+      !/[^A-Za-z0-9]/.test(newPassword)
+    ) {
+      throw new BadRequestException(
+        "Le nouveau mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial",
+      );
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -99,7 +110,10 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash: await argon2.hash(newPassword) },
+      data: {
+        passwordHash: await argon2.hash(newPassword),
+        mustChangePassword: false,
+      },
     });
 
     return { message: "Mot de passe modifié avec succès" };

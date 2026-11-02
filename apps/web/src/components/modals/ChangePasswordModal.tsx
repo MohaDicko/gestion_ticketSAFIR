@@ -5,6 +5,7 @@ import { Key, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, X, ShieldCheck } fro
 
 export interface ChangePasswordModalProps {
   isOpen: boolean;
+  isMandatory?: boolean;
   onClose: () => void;
   user: {
     id: string;
@@ -18,6 +19,7 @@ export interface ChangePasswordModalProps {
 
 export function ChangePasswordModal({
   isOpen,
+  isMandatory = false,
   onClose,
   user,
   onPasswordChanged,
@@ -104,17 +106,24 @@ export function ChangePasswordModal({
               <p className="text-[11px] text-sky-200/80">Compte : {user.name} ({user.email})</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-md transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {!isMandatory && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-slate-400 hover:text-white p-1 rounded-md transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="p-5 space-y-3.5 text-xs">
+          {isMandatory && (
+            <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs">
+              Cette étape est obligatoire lors de votre première connexion avec le mot de passe temporaire.
+            </div>
+          )}
           {errorMsg && (
             <div
               data-testid="change-password-error"

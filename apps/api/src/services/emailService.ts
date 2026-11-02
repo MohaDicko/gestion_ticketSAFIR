@@ -68,7 +68,10 @@ function createTransporter() {
     });
   }
 
-  // Fallback jsonTransport pour tests unitaires et intégration sans serveur local
+  if (process.env.NODE_ENV === "production" && !process.env.BREVO_API_KEY?.trim()) {
+    throw new Error("Configuration e-mail manquante : SMTP_HOST ou BREVO_API_KEY est requis en production");
+  }
+
   return nodemailer.createTransport({
     jsonTransport: true,
   });
@@ -196,6 +199,35 @@ export async function sendTicketCreatedNotification(ticketData: TicketCreatedNot
   };
 
   try {
+    const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+    if (brevoApiKey) {
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "api-key": brevoApiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: creatorName, email: senderUser },
+          replyTo: { email: creatorEmail },
+          to: recipientEmails.map((email) => ({ email })),
+          subject,
+          textContent: text,
+          htmlContent: html,
+        }),
+      });
+
+      if (!response.ok) {
+        const details = await response.text();
+        throw new Error(`Brevo a refusé l'envoi (${response.status}): ${details.slice(0, 300)}`);
+      }
+
+      const result = (await response.json()) as { messageId?: string };
+      console.log(`[emailService] E-mail envoyé via Brevo pour ${ticketId}. MessageId: ${result.messageId || "N/A"}`);
+      return result;
+    }
+
     const info = await emailTransporter.sendMail(mailOptions);
     console.log(`[emailService] E-mail de création de ticket envoyé avec succès pour ${ticketId}. Destinataires: ${to}. MessageId: ${info.messageId || "N/A"}`);
     return info;

@@ -223,6 +223,7 @@ async function main() {
         roles: [Role.DEVELOPER],
         isActive: true,
         passwordHash: devPasswordHash,
+        mustChangePassword: true,
         timezone: "Europe/Paris",
       },
     });
@@ -277,6 +278,7 @@ async function main() {
       roles: [Role.CONSULTANT],
       isActive: true,
       passwordHash: devPasswordHash,
+      mustChangePassword: true,
       timezone: "Europe/Paris",
     },
   });

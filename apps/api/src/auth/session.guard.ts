@@ -41,6 +41,17 @@ export class SessionGuard implements CanActivate {
 
     request.user = user;
 
+    if (
+      user.mustChangePassword &&
+      !(
+        request.path.endsWith("/auth/me") ||
+        request.path.endsWith("/auth/change-password") ||
+        request.path.endsWith("/auth/logout")
+      )
+    ) {
+      throw new ForbiddenException("Vous devez modifier votre mot de passe avant de continuer");
+    }
+
     const usesCookieSession = Boolean(request.cookies?.dc_session);
     const mutatingMethod = !["GET", "HEAD", "OPTIONS"].includes(request.method);
     if (usesCookieSession && mutatingMethod) {
