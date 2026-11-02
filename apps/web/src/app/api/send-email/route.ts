@@ -256,7 +256,13 @@ export async function POST(req: Request) {
     const textContent = `Nouveau Ticket SAP : ${ticketTitle} (${safeId})\nCréé par : ${creatorName} (${creatorEmail})\n\nDescription :\n${ticketDescription}\n\nLien : ${ticketUrl}`;
 
     // 1. Détection prioritaire Clé API Brevo (Port 443 HTTPS sans blocage réseau)
-    const brevoApiKey = process.env.BREVO_API_KEY?.trim() || (process.env.SMTP_PASS?.trim().startsWith("xkeysib-") ? process.env.SMTP_PASS.trim() : null);
+    const configuredBrevoKey = process.env.BREVO_API_KEY?.trim();
+    if (configuredBrevoKey?.startsWith("xsmtpsib-")) {
+      throw new Error(
+        "BREVO_API_KEY contient une clé SMTP Brevo (xsmtpsib-). Utilisez une clé API Brevo xkeysib- ou configurez SMTP_HOST, SMTP_PORT, SMTP_USER et SMTP_PASS.",
+      );
+    }
+    const brevoApiKey = configuredBrevoKey || (process.env.SMTP_PASS?.trim().startsWith("xkeysib-") ? process.env.SMTP_PASS.trim() : null);
     if (brevoApiKey) {
       console.log(`[send-email] 🚀 Envoi direct via l'API REST HTTPS Brevo vers ${recipientList.join(", ")}...`);
       const brevoSenderEmail = process.env.MAIL_FROM_EMAIL?.trim() || "aliko.getheme@safirconsulting.net";

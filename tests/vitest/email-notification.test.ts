@@ -104,4 +104,20 @@ describe("Module d'envoi d'e-mails réels lors de la création d'un ticket", () 
       })
     ).rejects.toThrow("SMTP Connection refused");
   });
+
+  it("doit refuser explicitement une clé SMTP utilisée comme clé API Brevo", async () => {
+    vi.stubEnv("BREVO_API_KEY", "xsmtpsib-invalid-for-rest-api");
+
+    await expect(
+      sendTicketCreatedNotification({
+        creatorName: "Getheme Aliko",
+        creatorEmail: "aliko@safirconsulting.net",
+        recipientEmails: ["dest@safirconsulting.net"],
+        ticketId: "TIX-KEY",
+        ticketTitle: "Clé Brevo invalide",
+        ticketDescription: "Description",
+        ticketUrl: "http://localhost:3000/tickets/TIX-KEY",
+      }),
+    ).rejects.toThrow("clé SMTP Brevo");
+  });
 });

@@ -56,7 +56,7 @@ Dans **Vercel Project Settings > Environment Variables** :
 | :--- | :--- | :--- |
 | `API_URL` | URL de votre backend NestJS en production (ex. Render, Railway, Supabase) | `https://api-safir-tickets.up.railway.app` |
 | `NEXT_PUBLIC_API_URL` | Identique à `API_URL` si nécessaire côté client | `https://api-safir-tickets.up.railway.app` |
-| `BREVO_API_KEY` | Clé API Brevo pour les notifications réelles de création de ticket | À définir comme secret |
+| `BREVO_API_KEY` | Clé API REST Brevo commençant par `xkeysib-` pour les notifications réelles de création de ticket | À définir comme secret |
 | `MAIL_FROM_EMAIL` | Adresse expéditrice vérifiée dans Brevo (par exemple l'e-mail professionnel d'Aliko) | `aliko.getheme@safirconsulting.net` |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_SECURE` | Alternative SMTP à Brevo | À définir comme secrets |
 

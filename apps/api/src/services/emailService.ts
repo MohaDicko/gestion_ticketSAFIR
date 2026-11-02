@@ -200,6 +200,11 @@ export async function sendTicketCreatedNotification(ticketData: TicketCreatedNot
 
   try {
     const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+    if (brevoApiKey?.startsWith("xsmtpsib-")) {
+      throw new Error(
+        "BREVO_API_KEY contient une clé SMTP Brevo (xsmtpsib-). Utilisez une clé API Brevo xkeysib- ou configurez SMTP_HOST, SMTP_PORT, SMTP_USER et SMTP_PASS.",
+      );
+    }
     if (brevoApiKey) {
       const response = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
