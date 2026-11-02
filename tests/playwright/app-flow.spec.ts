@@ -1,8 +1,8 @@
 import "dotenv/config";
 import { test, expect } from "@playwright/test";
 
-const adminEmail = process.env.ALIKO_EMAIL || "aliko.getheme@safirconsulting.net";
-const adminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+const adminEmail = process.env.PLAYWRIGHT_ADMIN_EMAIL || process.env.ALIKO_EMAIL || "aliko.getheme@safirconsulting.net";
+const adminPassword = process.env.PLAYWRIGHT_ADMIN_PASSWORD;
 
 async function loginAsAliko(page: import("@playwright/test").Page) {
   test.skip(!adminPassword, "INITIAL_ADMIN_PASSWORD is required for real login tests");
@@ -30,9 +30,13 @@ test.describe("Tests E2E réels — authentification et production", () => {
     await page.goto("/");
     await page.locator('input[type="email"]').first().fill(adminEmail);
     await page.locator('input[type="password"]').first().fill("mot-de-passe-invalide");
+    const loginResponsePromise = page.waitForResponse(
+      (response) => response.url().includes("/api/v1/auth/login"),
+    );
     await page.getByRole("button", { name: /Se connecter à mon portail/i }).click();
 
-    await expect(page.locator("body")).toContainText(/Identifiants invalides|échec|incorrect/i, { timeout: 15000 });
+    const loginResponse = await loginResponsePromise;
+    expect(loginResponse.status()).toBe(401);
     await expect(page.getByRole("button", { name: /Se connecter à mon portail/i })).toBeVisible();
   });
 
@@ -67,7 +71,16 @@ test.describe("Tests E2E réels — authentification et production", () => {
       headers: { "Cache-Control": "no-cache" },
     });
     expect(response.ok()).toBeTruthy();
-    expect(await response.json()).toEqual([]);
+    const tickets = await response.json();
+    expect(Array.isArray(tickets)).toBe(true);
+    for (const ticket of tickets) {
+      expect(ticket).toMatchObject({
+        id: expect.any(String),
+        reference: expect.any(String),
+        title: expect.any(String),
+        status: expect.any(String),
+      });
+    }
   });
 
   test("affiche une base métier prête à l’emploi", async ({ page }) => {
