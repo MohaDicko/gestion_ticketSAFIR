@@ -31,7 +31,7 @@ export class TicketsController {
     // 1. Enregistrement réussi du ticket en base de données
     const ticket = await this.ticketsService.create(body);
 
-    // 2. Déclenchement de la notification par e-mail en tâche de fond (non bloquante)
+    // 2. La notification ne doit pas rendre la création du ticket échouée.
     const creatorName = body.creatorName || body.applicantName || "Collaborateur Safir";
     const creatorEmail = body.creatorEmail || body.applicantEmail || process.env.ALIKO_EMAIL || "aliko@safirconsulting.net";
     const recipientEmails = Array.isArray(body.recipientEmails) && body.recipientEmails.length > 0
@@ -41,17 +41,24 @@ export class TicketsController {
     const baseUrl = process.env.APP_URL || "http://localhost:3000";
     const ticketUrl = body.ticketUrl || `${baseUrl}/tickets/${ticket.id || ticket.reference}`;
 
-    await sendTicketCreatedNotification({
-      creatorName,
-      creatorEmail,
-      recipientEmails,
-      ticketId: ticket.reference || ticket.id,
-      ticketTitle: ticket.title,
-      ticketDescription: ticket.description,
-      ticketUrl,
-    });
+    try {
+      await sendTicketCreatedNotification({
+        creatorName,
+        creatorEmail,
+        recipientEmails,
+        ticketId: ticket.reference || ticket.id,
+        ticketTitle: ticket.title,
+        ticketDescription: ticket.description,
+        ticketUrl,
+      });
+    } catch (error) {
+      console.error(
+        `[tickets] Le ticket ${ticket.reference || ticket.id} a été créé, mais la notification e-mail a échoué :`,
+        error instanceof Error ? error.message : error,
+      );
+    }
 
-    // 3. Retour HTTP 201 après confirmation de l'envoi de la notification
+    // 3. Retour HTTP 201 même si le fournisseur e-mail est indisponible.
     return ticket;
   }
 
