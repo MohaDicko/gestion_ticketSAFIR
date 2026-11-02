@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { TicketStatus, TicketSource } from "@prisma/client";
+import { AssignmentStatus, TicketStatus, TicketSource } from "@prisma/client";
 
 @Injectable()
 export class TicketsService {
@@ -143,6 +143,7 @@ export class TicketsService {
     requiredSkillIds?: { skillId: string; minimumLevel: number }[];
     acceptanceCriteria?: string[];
     actorId?: string;
+    assignedDeveloperId?: string;
   }) {
     const type = await this.prisma.ticketType.findUniqueOrThrow({
       where: { code: data.typeCode },
@@ -162,7 +163,7 @@ export class TicketsService {
           description: data.description,
           typeId: type.id,
           priorityId: priority.id,
-          status: TicketStatus.RECEIVED,
+          status: data.assignedDeveloperId ? TicketStatus.ASSIGNED : TicketStatus.RECEIVED,
           source: TicketSource.FORM,
           clientId: data.clientId,
           projectId: data.projectId,
@@ -170,8 +171,54 @@ export class TicketsService {
           remainingEstimatedHours: data.estimatedHours,
           requestedDueDate: data.requestedDueDate ? new Date(data.requestedDueDate) : undefined,
           createdById: data.actorId,
+          plannedStartDate: data.assignedDeveloperId ? new Date() : undefined,
         },
       });
+
+      if (data.assignedDeveloperId) {
+        if (!data.actorId) {
+          throw new BadRequestException("Un créateur est requis pour affecter un ticket");
+        }
+
+        const developer = await tx.developerProfile.findUnique({
+          where: { id: data.assignedDeveloperId },
+          include: { user: true },
+        });
+        if (!developer || !developer.user.isActive) {
+          throw new BadRequestException("Développeur introuvable ou inactif");
+        }
+
+        const allocatedHours = data.estimatedHours || 0;
+        const plannedStartDate = new Date();
+        const plannedEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const assignment = await tx.assignment.create({
+          data: {
+            ticketId: ticket.id,
+            developerId: data.assignedDeveloperId,
+            allocatedHours,
+            remainingHours: allocatedHours,
+            status: AssignmentStatus.ACTIVE,
+            assignedById: data.actorId,
+            plannedStartDate,
+            plannedEndDate,
+          },
+        });
+
+        await tx.outboxJob.create({
+          data: {
+            type: "mail.send.assignment",
+            idempotencyKey: `assignment-mail-${assignment.id}`,
+            payload: {
+              assignmentId: assignment.id,
+              ticketReference: ticket.reference,
+              ticketTitle: ticket.title,
+              recipientEmail: developer.user.email,
+              recipientName: `${developer.user.firstName} ${developer.user.lastName}`,
+              allocatedHours,
+            },
+          },
+        });
+      }
 
       // Compétences requises
       if (data.requiredSkillIds && data.requiredSkillIds.length > 0) {
@@ -207,7 +254,7 @@ export class TicketsService {
       await tx.ticketStatusHistory.create({
         data: {
           ticketId: ticket.id,
-          toStatus: TicketStatus.RECEIVED,
+          toStatus: data.assignedDeveloperId ? TicketStatus.ASSIGNED : TicketStatus.RECEIVED,
           actorId: data.actorId,
           reason: "Création du ticket",
         },

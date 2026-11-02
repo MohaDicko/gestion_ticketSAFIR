@@ -1983,7 +1983,31 @@ export default function TicketManagerPage() {
         result.status === "fulfilled" ? result.value : null
       );
       if (Array.isArray(devsRes)) setDevelopers(devsRes);
-      if (Array.isArray(tixRes)) setTickets(tixRes);
+      if (Array.isArray(tixRes)) {
+        setTickets(
+          tixRes.map((ticket) => {
+            const activeAssignment = Array.isArray(ticket.assignments)
+              ? ticket.assignments.find((assignment: any) => assignment.status === "ACTIVE")
+              : undefined;
+            const assignedUser = activeAssignment?.developer?.user;
+            return {
+              ...ticket,
+              typeCode: ticket.typeCode || ticket.type?.code,
+              priorityCode: ticket.priorityCode || ticket.priority?.code,
+              clientCompany: ticket.clientCompany || ticket.client?.name,
+              estimatedHours: Number(ticket.estimatedHours || 0),
+              remainingHours: Number(ticket.remainingEstimatedHours ?? ticket.estimatedHours ?? 0),
+              assignedDeveloper: assignedUser
+                ? {
+                    id: activeAssignment.developer.id,
+                    name: `${assignedUser.firstName} ${assignedUser.lastName}`,
+                    email: assignedUser.email,
+                  }
+                : null,
+            };
+          })
+        );
+      }
       if (Array.isArray(emailsRes)) setEmails(emailsRes);
       if (Array.isArray(consultantsRes)) setConsultants(consultantsRes);
       showToast("Données synchronisées avec succès");
@@ -3411,6 +3435,7 @@ export default function TicketManagerPage() {
           priorityCode: newPriority,
           estimatedHours: initialHours,
           actorId: currentUser?.id,
+          assignedDeveloperId: preAssignedDev?.id,
           creatorName: resolvedApplicantName,
           creatorEmail: resolvedApplicantEmail,
           recipientEmails: emailRecipients.map((recipient) => recipient.email),
