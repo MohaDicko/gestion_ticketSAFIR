@@ -3391,16 +3391,17 @@ export default function TicketManagerPage() {
     const effectiveDevsForEmail = targetDevsForEmail.length > 0 ? targetDevsForEmail : developers.slice(0, 1);
 
     const emailRecipients: { name: string; email: string; roleLabel: string }[] = [
-      {
-        name: activeAdminUser.name,
-        email: activeAdminUser.email,
-        roleLabel: activeAdminUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"
-      },
-      {
-        name: resolvedApplicantName,
-        email: resolvedApplicantEmail,
-        roleLabel: "Demandeur / Consultant"
-      },
+      ...(currentUser?.role === "CONSULTANT"
+        ? [{
+            name: activeAdminUser.name,
+            email: activeAdminUser.email,
+            roleLabel: activeAdminUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"
+          }]
+        : [{
+            name: resolvedApplicantName,
+            email: resolvedApplicantEmail,
+            roleLabel: "Demandeur / Consultant"
+          }]),
       ...effectiveDevsForEmail.map((d) => ({
         name: d.name,
         email: d.email,
