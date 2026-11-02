@@ -9,6 +9,10 @@ export class DevelopersService {
 
   async findAll() {
     const devs = await this.prisma.developerProfile.findMany({
+      where: {
+        profileStatus: ProfileStatus.ACTIVE,
+        user: { isActive: true },
+      },
       include: {
         user: {
           select: {
@@ -89,6 +93,29 @@ export class DevelopersService {
         hasUpcomingAbsence: d.availabilities.length > 0,
       };
     });
+  }
+
+  async deactivateDeveloper(developerId: string) {
+    const developer = await this.prisma.developerProfile.findUnique({
+      where: { id: developerId },
+      select: { id: true, userId: true },
+    });
+    if (!developer) {
+      throw new NotFoundException("Développeur introuvable");
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.developerProfile.update({
+        where: { id: developer.id },
+        data: { profileStatus: ProfileStatus.INACTIVE },
+      }),
+      this.prisma.user.update({
+        where: { id: developer.userId },
+        data: { isActive: false },
+      }),
+    ]);
+
+    return { id: developer.id, deleted: true };
   }
 
   async getSkillsCatalogue() {

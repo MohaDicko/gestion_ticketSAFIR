@@ -3590,6 +3590,19 @@ export default function TicketManagerPage() {
     showToast(`Développeur ${newDevObj.name} intégré avec succès dans l'équipe Safir !`);
   };
 
+  const handleDeleteDeveloper = async (dev: Developer) => {
+    if (!window.confirm(`Désactiver le compte de ${dev.name} ?`)) return;
+
+    const response = await apiFetch(`${API_BASE}/developers/${dev.id}`, { method: "DELETE" });
+    if (!response.ok) {
+      showToast("Impossible de supprimer ce développeur.");
+      return;
+    }
+
+    setDevelopers((prev) => prev.filter((item) => item.id !== dev.id));
+    showToast(`Le compte de ${dev.name} a été désactivé.`);
+  };
+
   // Action HEAD : Intégrer un nouveau Consultant avec identifiants (Login/Password)
   const handleAddConsultant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3653,6 +3666,19 @@ export default function TicketManagerPage() {
     setNewConsultantEmail("");
     setNewConsultantPassword("Safir2026!Consultant");
     showToast(`Compte Consultant créé ! Login : ${emailLower} | Mot de passe : ${initialPass}`);
+  };
+
+  const handleDeleteConsultant = async (consultant: ConsultantProfile) => {
+    if (!window.confirm(`Désactiver le compte de ${consultant.name} ?`)) return;
+
+    const response = await apiFetch(`${API_BASE}/consultants/${consultant.id}`, { method: "DELETE" });
+    if (!response.ok) {
+      showToast("Impossible de supprimer ce consultant.");
+      return;
+    }
+
+    setConsultants((prev) => prev.filter((item) => item.id !== consultant.id));
+    showToast(`Le compte de ${consultant.name} a été désactivé.`);
   };
 
   // Action HEAD : Affecter développeur (Support Mono-développeur ou Équipe Multi-développeurs par lot)
@@ -6554,8 +6580,9 @@ export default function TicketManagerPage() {
                       </div>
                     </div>
 
-                    <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                       <span className="text-[10px] text-slate-400 font-mono">Profil : DEVELOPER</span>
+                      <div className="flex items-center gap-1.5">
                       <button
                         onClick={() =>
                           setPrintingReport({
@@ -6573,6 +6600,18 @@ export default function TicketManagerPage() {
                         <Printer className="w-3.5 h-3.5 text-sky-700" />
                         <span>Imprimer son rapport</span>
                       </button>
+                      {currentUser?.role === "HEAD" || currentUser?.role === "ADMIN" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDeveloper(dev)}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                          title={`Désactiver le compte de ${dev.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Supprimer</span>
+                        </button>
+                      ) : null}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -6648,6 +6687,17 @@ export default function TicketManagerPage() {
                             <Lock className="w-2.5 h-2.5" />
                             <span>Espace cloisonné</span>
                           </span>
+                          {currentUser?.role === "HEAD" || currentUser?.role === "ADMIN" ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteConsultant(c)}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                              title={`Désactiver le compte de ${c.name}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Supprimer</span>
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -6700,7 +6750,7 @@ export default function TicketManagerPage() {
                           </div>
                         </div>
 
-                        <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between">
+                        <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                           <span className="text-[10px] text-slate-400 font-mono">
                             Architecture : {admin.adminLevel || "ADMIN"}
                           </span>

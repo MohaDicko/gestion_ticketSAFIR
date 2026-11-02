@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body } from "@nestjs/common";
+import { Controller, Get, Post, Param, Body, Delete } from "@nestjs/common";
 import { Role } from "@prisma/client";
 import { DevelopersService } from "./developers.service";
 import { Roles } from "../auth/roles.decorator";
@@ -36,6 +36,12 @@ export class DevelopersController {
     @Body() body: { skillId: string; level: number },
   ) {
     return this.developersService.setDeveloperSkill(developerId, body.skillId, body.level);
+  }
+
+  @Delete(":id")
+  @Roles(Role.HEAD, Role.ADMIN)
+  async deleteDeveloper(@Param("id") developerId: string) {
+    return this.developersService.deactivateDeveloper(developerId);
   }
 }
 

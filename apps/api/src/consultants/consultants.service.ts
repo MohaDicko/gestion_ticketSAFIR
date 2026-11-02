@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { Role } from "@prisma/client";
 import * as argon2 from "argon2";
@@ -9,6 +9,10 @@ export class ConsultantsService {
 
   async findAll() {
     return this.prisma.consultant.findMany({
+      where: {
+        status: "ACTIVE",
+        user: { isActive: true },
+      },
       include: {
         user: {
           select: { id: true, firstName: true, lastName: true, email: true, isActive: true },
@@ -19,6 +23,33 @@ export class ConsultantsService {
       },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  async deactivate(consultantId: string) {
+    const consultant = await this.prisma.consultant.findUnique({
+      where: { id: consultantId },
+      select: { id: true, userId: true },
+    });
+    if (!consultant) {
+      throw new NotFoundException("Consultant introuvable");
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.consultant.update({
+        where: { id: consultant.id },
+        data: { status: "INACTIVE" },
+      }),
+      ...(consultant.userId
+        ? [
+            this.prisma.user.update({
+              where: { id: consultant.userId },
+              data: { isActive: false },
+            }),
+          ]
+        : []),
+    ]);
+
+    return { id: consultant.id, deleted: true };
   }
 
   async create(data: {

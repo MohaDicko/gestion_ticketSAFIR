@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from "@nestjs/common";
+import { Controller, Get, Post, Body, Delete, Param } from "@nestjs/common";
 import { Role } from "@prisma/client";
 import { ConsultantsService } from "./consultants.service";
 import { Roles } from "../auth/roles.decorator";
@@ -27,5 +27,11 @@ export class ConsultantsController {
     },
   ) {
     return this.consultantsService.create(body);
+  }
+
+  @Delete(":id")
+  @Roles(Role.HEAD, Role.ADMIN)
+  async deleteConsultant(@Param("id") consultantId: string) {
+    return this.consultantsService.deactivate(consultantId);
   }
 }
