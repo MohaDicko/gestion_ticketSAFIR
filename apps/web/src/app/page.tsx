@@ -58,6 +58,7 @@ import {
   EyeOff
 } from "lucide-react";
 import { ChangePasswordModal } from "@/components/modals/ChangePasswordModal";
+import { translateAttribute, translateText } from "@/lib/i18n";
 
 const API_BASE = "/api/v1";
 
@@ -1473,54 +1474,13 @@ export default function TicketManagerPage() {
     }
   }, [themeMode, appLang]);
 
-  // Traducteur automatique des noeuds texte profonds (Tableaux, Statuts, Modales, Rapports) FR <-> EN
+  // Traducteur des noeuds texte et attributs générés dynamiquement.
   const originalTextMapRef = useRef<WeakMap<Node, string>>(new WeakMap());
+  const originalAttributeMapRef = useRef<WeakMap<Element, Record<string, string>>>(
+    new WeakMap()
+  );
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const FR_TO_EN_PHRASES: Array<[string, string]> = [
-      ["Tickets en cours", "Active Tickets"],
-      ["Demandes de développement actives", "Active development requests"],
-      ["Capacité disponible", "Available Capacity"],
-      ["Heures de développement libres cette semaine", "Free development hours this week"],
-      ["Alertes Blocage", "Blocker Alerts"],
-      ["Développeurs arrêtés en attente d'arbitrage", "Developers paused awaiting arbitration"],
-      ["Guichet Central Demandes", "Central Request Hub"],
-      ["Demandes In-App soumises à qualifier par l'Administration", "In-App requests awaiting Admin qualification"],
-      ["Supervision de l'Activité des Développeurs en Direct", "Live Developer Activity Supervision"],
-      ["LIVE TEMPS RÉEL", "REAL-TIME LIVE"],
-      ["En production :", "Working:"],
-      ["Bloqué (Stop-the-line) :", "Blocked (Stop-the-line):"],
-      ["Disponible :", "Available:"],
-      ["Imprimer son rapport", "Print Report"],
-      ["Imprimer mon rapport d'heures", "Print My Timesheet Report"],
-      ["Voir projet", "View Project"],
-      ["Suivre", "Track"],
-      ["Affecter", "Assign"],
-      ["Réaffecter", "Reassign"],
-      ["Nouveau ticket", "New Ticket"],
-      ["Tableau de bord", "Dashboard"],
-      ["Tous les Tickets SAP", "All SAP Tickets"],
-      ["Équipe & Capacité", "Team & Capacity"],
-      ["Mon Espace Développeur", "My Developer Workspace"],
-      ["Mes Demandes Émises", "My Submitted Requests"],
-      ["Déconnexion", "Sign Out"],
-      ["En cours", "In Progress"],
-      ["Bloqué", "Blocked"],
-      ["Livré (En Recette)", "Delivered (In UAT)"],
-      ["Clôturé", "Closed"],
-      ["Prêt à affecter", "Ready to Assign"],
-      ["Assigné", "Assigned"],
-      ["Envoyer en test chez le consultant", "Send to Consultant for Testing"],
-      ["Tester & Approuver la Recette (Conforme)", "Test & Approve UAT (Compliant)"],
-      ["Renvoyer à l'Équipe Dév (Problème / Anomalie)", "Return to Dev Team (Issue / Defect)"],
-      ["Valider la Clôture Définitive (Recette Approuvée)", "Validate Final Closure (UAT Approved)"],
-      ["Clôturer le Ticket (Réglé)", "Close Ticket (Resolved)"],
-      ["Télécharger CSV / Excel", "Download CSV / Excel"],
-      ["Synthèse Comité Direction", "Executive Committee Summary"],
-      ["Fermer", "Close"],
-      ["Annuler", "Cancel"],
-    ];
-
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const nodes: Text[] = [];
     let current = walker.nextNode();
@@ -1535,11 +1495,7 @@ export default function TicketManagerPage() {
     for (const node of nodes) {
       const val = node.nodeValue;
       if (!val || !val.trim()) continue;
-      if (!originalTextMapRef.current.has(node)) {
-        const matchesAny = FR_TO_EN_PHRASES.some(([frStr]) => val.includes(frStr));
-        if (!matchesAny) continue;
-        originalTextMapRef.current.set(node, val);
-      }
+      if (!originalTextMapRef.current.has(node)) originalTextMapRef.current.set(node, val);
       const orig = originalTextMapRef.current.get(node);
       if (!orig) continue;
       if (appLang === "fr") {
@@ -1547,16 +1503,27 @@ export default function TicketManagerPage() {
           node.nodeValue = orig;
         }
       } else {
-        let translated = orig;
-        for (const [frStr, enStr] of FR_TO_EN_PHRASES) {
-          if (translated.includes(frStr)) {
-            translated = translated.split(frStr).join(enStr);
-          }
-        }
+        const translated = translateText(orig, appLang);
         if (node.nodeValue !== translated) {
           node.nodeValue = translated;
         }
       }
+    }
+
+    const elements = document.querySelectorAll<HTMLElement>(
+      "button, input, textarea, select, [title], [aria-label]"
+    );
+    for (const element of elements) {
+      const original = originalAttributeMapRef.current.get(element) || {};
+      for (const attribute of ["placeholder", "title", "aria-label"]) {
+        const value = element.getAttribute(attribute);
+        if (value !== null && original[attribute] === undefined) original[attribute] = value;
+        const source = original[attribute];
+        if (source !== undefined) {
+          element.setAttribute(attribute, translateAttribute(source, appLang) || "");
+        }
+      }
+      originalAttributeMapRef.current.set(element, original);
     }
   }, [appLang, activeTab, currentUser, showCreateModal, supervisingTicket, discussingTicket, printingReport, showReportModal]);
 
