@@ -185,6 +185,7 @@ interface Ticket {
   estimatedHours: number;
   remainingHours?: number;
   blockerReason?: string;
+  blockerId?: string;
   clientCompany?: string;
   applicantName?: string;
   applicantEmail?: string;
@@ -1997,6 +1998,14 @@ export default function TicketManagerPage() {
               clientCompany: ticket.clientCompany || ticket.client?.name,
               estimatedHours: Number(ticket.estimatedHours || 0),
               remainingHours: Number(ticket.remainingEstimatedHours ?? ticket.estimatedHours ?? 0),
+              blockerReason:
+                ticket.blockerReason ||
+                (Array.isArray(ticket.blockers)
+                  ? ticket.blockers.find((blocker: any) => !blocker.resolvedAt)?.reason
+                  : undefined),
+              blockerId: Array.isArray(ticket.blockers)
+                ? ticket.blockers.find((blocker: any) => !blocker.resolvedAt)?.id
+                : undefined,
               assignedDeveloper: assignedUser
                 ? {
                     id: activeAssignment.developer.id,
@@ -3146,12 +3155,45 @@ export default function TicketManagerPage() {
   };
 
   // Action Collaborative : Envoyer un message (+ pièce jointe optionnelle) dans le fil du ticket
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!discussingTicket || (!ticketMessageText.trim() && !selectedAttachmentTemplate && !customAttachmentName.trim() && !uploadedDiscussionFile) || !currentUser) return;
 
     const isQuestion = currentUser.role === "DEVELOPER" && isQuestionBlocker;
     const isReply = currentUser.role === "CONSULTANT" && (discussingTicket.status === "BLOCKED" || !!discussingTicket.blockerReason);
+
+    if (isQuestion) {
+      const response = await apiFetch(`${API_BASE}/tickets/${discussingTicket.id}/blockers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: ticketMessageText.trim() || "Précision métier requise pour poursuivre le développement",
+          actorId: currentUser.id,
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        showToast(payload?.message || "Impossible d'enregistrer le blocage du ticket.");
+        return;
+      }
+    } else if (isReply && unblockOnReply && discussingTicket.blockerId) {
+      const response = await apiFetch(
+        `${API_BASE}/tickets/${discussingTicket.id}/blockers/${discussingTicket.blockerId}/resolve`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resolution: ticketMessageText.trim() || "Précision métier transmise",
+            actorId: currentUser.id,
+          }),
+        }
+      );
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        showToast(payload?.message || "Impossible de lever le blocage du ticket.");
+        return;
+      }
+    }
 
     let msgAttachment: TicketAttachment | undefined = undefined;
     if (uploadedDiscussionFile) {
