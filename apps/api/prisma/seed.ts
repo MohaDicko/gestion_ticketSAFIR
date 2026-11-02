@@ -269,6 +269,8 @@ async function main() {
       lastName: "Diakité",
       roles: [Role.CONSULTANT],
       isActive: true,
+      passwordHash: devPasswordHash,
+      mustChangePassword: true,
       timezone: "Europe/Paris",
     },
     create: {
