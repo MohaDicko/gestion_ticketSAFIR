@@ -259,7 +259,7 @@ export async function POST(req: Request) {
     const brevoApiKey = process.env.BREVO_API_KEY?.trim() || (process.env.SMTP_PASS?.trim().startsWith("xkeysib-") ? process.env.SMTP_PASS.trim() : null);
     if (brevoApiKey) {
       console.log(`[send-email] 🚀 Envoi direct via l'API REST HTTPS Brevo vers ${recipientList.join(", ")}...`);
-      const brevoSenderEmail = process.env.SMTP_USER?.trim() || "notifications@safirconsulting.net";
+      const brevoSenderEmail = process.env.MAIL_FROM_EMAIL?.trim() || "aliko.getheme@safirconsulting.net";
       const apiResult = await sendViaBrevoHttpApi(brevoApiKey, {
         senderName: creatorName,
         senderEmail: brevoSenderEmail,
@@ -281,7 +281,7 @@ export async function POST(req: Request) {
 
     // 2. Envoi via Transporteur SMTP Nodemailer standard
     const transporter = await getTransporter();
-    const authSmtpUser = process.env.SMTP_USER || "notifications@safirconsulting.net";
+    const authSmtpUser = process.env.MAIL_FROM_EMAIL || process.env.SMTP_USER || "aliko.getheme@safirconsulting.net";
     const from = `"${creatorName}" <${authSmtpUser}>`;
     const replyTo = creatorEmail;
     const to = recipientList.join(", ");

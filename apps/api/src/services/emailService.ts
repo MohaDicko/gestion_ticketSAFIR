@@ -181,7 +181,7 @@ export async function sendTicketCreatedNotification(ticketData: TicketCreatedNot
     return { skipped: true, reason: "No recipients" };
   }
 
-  const senderUser = process.env.SMTP_USER || "notifications@safirconsulting.net";
+  const senderUser = process.env.MAIL_FROM_EMAIL || "aliko.getheme@safirconsulting.net";
   const from = `"${creatorName}" <${senderUser}>`;
   const replyTo = creatorEmail;
   const to = recipientEmails.join(", ");
