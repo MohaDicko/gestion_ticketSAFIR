@@ -391,4 +391,35 @@ export class TicketsService {
       throw new BadRequestException(`Transition non autorisée de ${current} vers ${target}`);
     }
   }
+
+  async remove(idOrRef: string) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrRef);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: isUuid ? { id: idOrRef } : { reference: idOrRef },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket introuvable: ${idOrRef}`);
+    }
+
+    const ticketId = ticket.id;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.assignment.deleteMany({ where: { ticketId } });
+      await tx.ticketStatusHistory.deleteMany({ where: { ticketId } });
+      await tx.ticketDependency.deleteMany({ where: { OR: [{ ticketId }, { dependsOnTicketId: ticketId }] } });
+      await tx.ticketSkillRequirement.deleteMany({ where: { ticketId } });
+      await tx.ticketBlocker.deleteMany({ where: { ticketId } });
+      await tx.acceptanceCriterion.deleteMany({ where: { ticketId } });
+      await tx.comment.deleteMany({ where: { ticketId } });
+      await tx.attachment.deleteMany({ where: { ticketId } });
+      await tx.emailMessage.updateMany({
+        where: { associatedTicketId: ticketId },
+        data: { associatedTicketId: null },
+      });
+      await tx.ticket.delete({ where: { id: ticketId } });
+    });
+
+    return { success: true, deletedTicketId: ticketId, reference: ticket.reference };
+  }
 }

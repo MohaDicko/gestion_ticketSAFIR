@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, HttpCode, HttpStatus } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus } from "@nestjs/common";
 import { TicketsService } from "./tickets.service";
 import { TicketStatus } from "@prisma/client";
 import { Role } from "@prisma/client";
@@ -99,5 +99,11 @@ export class TicketsController {
     @Body() body: { resolution: string; actorId: string },
   ) {
     return this.ticketsService.resolveBlocker(id, blockerId, body.resolution, body.actorId);
+  }
+
+  @Delete(":id")
+  @Roles(Role.HEAD, Role.ADMIN)
+  async removeTicket(@Param("id") id: string) {
+    return this.ticketsService.remove(id);
   }
 }
