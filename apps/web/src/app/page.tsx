@@ -1596,31 +1596,6 @@ export default function TicketManagerPage() {
     const recSummary = uniqueRecipients.map((r) => r.email).join(", ");
     showToast(`📧 Alerte e-mail envoyée à ${uniqueRecipients.length} destinataire(s) (${recSummary})`);
 
-    // Trace backend d'envoi SMTP (avec catch silencieux si hors ligne)
-    // Envoi réel d'e-mail via le module Nodemailer en tâche de fond non bloquante
-    if (typeof window !== "undefined" && uniqueRecipients.length > 0) {
-      const recipientEmailsList = uniqueRecipients.map((r) => r.email).filter(Boolean);
-      fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          creatorName: currentUser?.name || "Collaborateur Safir",
-          creatorEmail: currentUser?.email || "notifications@safirconsulting.net",
-          recipientEmails: recipientEmailsList,
-          ticketId: params.ticketReference,
-          ticketTitle: params.ticketTitle,
-          ticketDescription: params.subject,
-          ticketUrl: `${window.location.origin}/#ticket-${params.ticketReference}`,
-        }),
-      }).then(async (res) => {
-        const data = await res.json().catch(() => null);
-        if (data?.success) {
-          console.log(`[EmailNotification] E-mail délivré avec succès à ${recipientEmailsList.join(", ")} ! ID:`, data.messageId);
-        }
-      }).catch((err) => {
-        console.error("[EmailNotification] Erreur non-bloquante lors de l'envoi SMTP :", err);
-      });
-    }
     return dispatchRecord;
   };
 
