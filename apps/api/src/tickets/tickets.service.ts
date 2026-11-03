@@ -312,7 +312,7 @@ export class TicketsService {
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.ticket.update({
-        where: { id: ticketId },
+        where: { id: ticket.id },
         data: {
           status: targetStatus,
           statusBeforeBlock: targetStatus === TicketStatus.BLOCKED ? ticket.status : ticket.statusBeforeBlock,
@@ -324,7 +324,7 @@ export class TicketsService {
 
       await tx.ticketStatusHistory.create({
         data: {
-          ticketId,
+          ticketId: ticket.id,
           fromStatus: ticket.status,
           toStatus: targetStatus,
           actorId,
@@ -466,7 +466,7 @@ export class TicketsService {
       });
 
       const updated = await tx.ticket.update({
-        where: { id: ticketId },
+        where: { id: ticket.id },
         data: {
           status: returnStatus,
           statusBeforeBlock: null,
@@ -475,7 +475,7 @@ export class TicketsService {
 
       await tx.ticketStatusHistory.create({
         data: {
-          ticketId,
+          ticketId: ticket.id,
           fromStatus: TicketStatus.BLOCKED,
           toStatus: returnStatus,
           actorId,
@@ -543,20 +543,25 @@ export class TicketsService {
   }
 
   async assign(ticketIdOrRef: string, developerId: string, allocatedHours?: number, actorId?: string) {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketIdOrRef);
-    const ticket = await this.prisma.ticket.findFirst({
-      where: isUuid ? { id: ticketIdOrRef } : { reference: ticketIdOrRef },
-      include: { assignments: { where: { status: AssignmentStatus.ACTIVE } } },
-    });
+    const ticket = await this.findOne(ticketIdOrRef);
 
-    if (!ticket) {
-      throw new NotFoundException(`Ticket introuvable: ${ticketIdOrRef}`);
-    }
-
-    const developer = await this.prisma.developerProfile.findUnique({
-      where: { id: developerId },
+    const isDevUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(developerId);
+    const cleanDev = developerId.replace(/^dev-/, "").replace(/^user-/, "").toLowerCase();
+    const developer = await this.prisma.developerProfile.findFirst({
+      where: isDevUuid
+        ? { id: developerId }
+        : {
+            OR: [
+              { id: developerId },
+              { userId: developerId },
+              { user: { email: { contains: cleanDev, mode: "insensitive" } } },
+              { user: { lastName: { contains: cleanDev, mode: "insensitive" } } },
+              { user: { firstName: { contains: cleanDev, mode: "insensitive" } } },
+            ],
+          },
       include: { user: true },
     });
+
     if (!developer) {
       throw new NotFoundException(`Développeur introuvable: ${developerId}`);
     }

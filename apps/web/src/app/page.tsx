@@ -946,6 +946,17 @@ const INITIAL_DEV_LIVE_ACTIVITIES: Record<string, DeveloperLiveActivity> = {
     startedAtTimestamp: Date.now() - (2 * 3600 + 15 * 60 + 30) * 1000,
     elapsedSeconds: 2 * 3600 + 15 * 60 + 30
   },
+  "012337d8-fe1a-4c5b-9b01-78b9c9f29529": {
+    developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
+    status: "WORKING",
+    activeTicketId: "tix-2",
+    activeTicketReference: "INT-2026-0002",
+    activeTicketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
+    clientCompany: "Omega Distribution",
+    currentTaskDescription: "Configuration des endpoints REST Service Layer & tests de payload JSON",
+    startedAtTimestamp: Date.now() - (2 * 3600 + 15 * 60 + 30) * 1000,
+    elapsedSeconds: 2 * 3600 + 15 * 60 + 30
+  },
   "dev-hassane": {
     developerId: "dev-hassane",
     status: "BLOCKED",
@@ -1544,7 +1555,7 @@ export default function TicketManagerPage() {
   const timerPausedTotalMsRef = useRef<number>(0);
   const timerPauseStartRef = useRef<number | null>(null);
   const timerStartedAtRef = useRef<number | null>(null);
-  const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
+  const [timeLogs, setTimeLogs] = useState<TimeLog[]>(INITIAL_TIME_LOGS);
 
   // Modale d'Impression des Rapports d'Activité & Feuilles de Temps (Développeurs & Consultants)
   const [printingReport, setPrintingReport] = useState<{
@@ -6541,10 +6552,40 @@ export default function TicketManagerPage() {
               </div>
 
               {/* Liste Détaillée des Développeurs en Direct */}
-              <div className="divide-y divide-slate-100 max-h-[480px] overflow-y-auto">
+              <div className="divide-y divide-slate-100 max-h-[580px] overflow-y-auto">
                 {(() => {
+                  const getDevLiveAct = (dev: Developer) => {
+                    if (devLiveActivities[dev.id]) return devLiveActivities[dev.id];
+                    if (dev.name.toLowerCase().includes("dicko") || dev.email.toLowerCase().includes("dicko")) {
+                      return (
+                        devLiveActivities["012337d8-fe1a-4c5b-9b01-78b9c9f29529"] ||
+                        devLiveActivities["dev-moha"] ||
+                        devLiveActivities["user-moha"] || {
+                          developerId: dev.id,
+                          status: "AVAILABLE",
+                          currentTaskDescription: "Disponible pour affectation",
+                          elapsedSeconds: 0,
+                        }
+                      );
+                    }
+                    const cleanKey = dev.name.split(" ")[0].toLowerCase();
+                    for (const k in devLiveActivities) {
+                      if (k.toLowerCase().includes(cleanKey) || devLiveActivities[k]?.developerId === dev.id) {
+                        return devLiveActivities[k];
+                      }
+                    }
+                    return (
+                      devLiveActivities[dev.id] || {
+                        developerId: dev.id,
+                        status: "AVAILABLE",
+                        currentTaskDescription: "Disponible pour affectation",
+                        elapsedSeconds: 0,
+                      }
+                    );
+                  };
+
                   const filteredDevs = developers.filter((dev) => {
-                    const act = devLiveActivities[dev.id] || { status: "AVAILABLE" };
+                    const act = getDevLiveAct(dev);
                     if (liveSupervisionFilter !== "ALL" && act.status !== liveSupervisionFilter) {
                       return false;
                     }
@@ -6552,7 +6593,9 @@ export default function TicketManagerPage() {
                       const q = liveSupervisionSearch.toLowerCase();
                       const matchName = dev.name.toLowerCase().includes(q);
                       const matchTitle = (dev.jobTitle || "").toLowerCase().includes(q);
-                      const matchTicket = (act.activeTicketReference || "").toLowerCase().includes(q) || (act.activeTicketTitle || "").toLowerCase().includes(q);
+                      const matchTicket =
+                        (act.activeTicketReference || "").toLowerCase().includes(q) ||
+                        (act.activeTicketTitle || "").toLowerCase().includes(q);
                       const matchClient = (act.clientCompany || "").toLowerCase().includes(q);
                       const matchTask = (act.currentTaskDescription || "").toLowerCase().includes(q);
                       if (!matchName && !matchTitle && !matchTicket && !matchClient && !matchTask) {
@@ -6571,129 +6614,265 @@ export default function TicketManagerPage() {
                   }
 
                   return filteredDevs.map((dev) => {
-                    const activity = devLiveActivities[dev.id] || {
-                      developerId: dev.id,
-                      status: "AVAILABLE",
-                      currentTaskDescription: "Disponible pour affectation",
-                      elapsedSeconds: 0
-                    };
+                    const activity = getDevLiveAct(dev);
+                    const isDickoDev =
+                      dev.name.toLowerCase().includes("dicko") || dev.email.toLowerCase().includes("dicko");
+
+                    // Tickets affectés à ce développeur (direct ou lot)
+                    const devAssignedTickets = tickets.filter((t) => {
+                      const tEmail = t.assignedDeveloper?.email?.toLowerCase() || "";
+                      const tName = t.assignedDeveloper?.name?.toLowerCase() || "";
+                      const tId = t.assignedDeveloper?.id;
+                      if (
+                        isDickoDev &&
+                        (tEmail.includes("dicko") ||
+                          tName.includes("moha") ||
+                          tId === "dev-moha" ||
+                          tId === dev.id)
+                      )
+                        return true;
+                      if (tId === dev.id || (tEmail && tEmail === dev.email.toLowerCase())) return true;
+                      if (
+                        t.contributors &&
+                        t.contributors.some(
+                          (c) => c.developerId === dev.id || (isDickoDev && c.developerId === "dev-moha")
+                        )
+                      )
+                        return true;
+                      return false;
+                    });
+
+                    const blockedTickets = devAssignedTickets.filter((t) => t.status === "BLOCKED");
+                    const activeTickets = devAssignedTickets.filter(
+                      (t) => t.status === "IN_PROGRESS" || t.status === "ASSIGNED"
+                    );
+                    const deliveredTickets = devAssignedTickets.filter((t) => t.status === "DELIVERED");
 
                     return (
                       <div
                         key={dev.id}
-                        className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                        className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col gap-3"
                       >
-                        {/* 1. Développeur & Spécialité */}
-                        <div className="flex items-center gap-3.5 min-w-[250px]">
-                          <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border ${
-                              activity.status === "WORKING"
-                                ? "bg-emerald-100 text-emerald-800 border-emerald-300 ring-2 ring-emerald-400/40"
-                                : activity.status === "BLOCKED"
-                                ? "bg-rose-100 text-rose-800 border-rose-300 ring-2 ring-rose-400/40"
-                                : "bg-slate-100 text-slate-700 border-slate-200"
-                            }`}
-                          >
-                            {dev.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-bold text-slate-900 text-sm leading-tight">{dev.name}</h3>
-                              {activity.status === "WORKING" && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                                  <span>EN DIRECT : {formatTimer(activity.elapsedSeconds)}</span>
-                                </span>
-                              )}
-                              {activity.status === "BLOCKED" && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300">
-                                  <AlertTriangle className="w-3 h-3 text-rose-600" />
-                                  <span>BLOQUÉ ({formatTimer(activity.elapsedSeconds)})</span>
-                                </span>
-                              )}
-                              {activity.status === "AVAILABLE" && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                                  <span>Disponible</span>
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-slate-500 mt-0.5">{dev.jobTitle}</div>
-                          </div>
-                        </div>
-
-                        {/* 2. Ce qu'il fait en temps réel (Projet & Tâche active) */}
-                        <div className="flex-1 min-w-[280px]">
-                          {activity.status === "WORKING" || activity.status === "BLOCKED" ? (
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          {/* 1. Développeur & Spécialité */}
+                          <div className="flex items-center gap-3.5 min-w-[250px]">
                             <div
-                              className={`p-2.5 rounded-xl border text-xs ${
+                              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border ${
                                 activity.status === "WORKING"
-                                  ? "bg-emerald-50/60 border-emerald-200"
-                                  : "bg-rose-50/60 border-rose-200"
+                                  ? "bg-emerald-100 text-emerald-800 border-emerald-300 ring-2 ring-emerald-400/40"
+                                  : activity.status === "BLOCKED" || blockedTickets.length > 0
+                                  ? "bg-rose-100 text-rose-800 border-rose-300 ring-2 ring-rose-400/40"
+                                  : "bg-slate-100 text-slate-700 border-slate-200"
                               }`}
                             >
-                              <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <span className="font-mono font-bold text-sky-900 bg-sky-100 px-1.5 py-0.5 rounded text-[11px]">
-                                  {activity.activeTicketReference || "TICKET"}
-                                </span>
-                                <span className="font-semibold text-slate-900 truncate">
-                                  {activity.activeTicketTitle || "Projet SAP"}
-                                </span>
-                                {activity.clientCompany && (
-                                  <span className="text-[10px] font-medium text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
-                                    {activity.clientCompany}
+                              {dev.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="font-bold text-slate-900 text-sm leading-tight">{dev.name}</h3>
+                                {activity.status === "WORKING" && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                                    <span>EN DIRECT : {formatTimer(activity.elapsedSeconds)}</span>
+                                  </span>
+                                )}
+                                {(activity.status === "BLOCKED" || blockedTickets.length > 0) && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300">
+                                    <AlertTriangle className="w-3 h-3 text-rose-600" />
+                                    <span>
+                                      BLOQUÉ (
+                                      {blockedTickets.length > 0
+                                        ? `${blockedTickets.length} ticket${blockedTickets.length > 1 ? "s" : ""}`
+                                        : formatTimer(activity.elapsedSeconds)}
+                                      )
+                                    </span>
+                                  </span>
+                                )}
+                                {activity.status === "AVAILABLE" && blockedTickets.length === 0 && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                    <span>Disponible</span>
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[11px] text-slate-700 flex items-start gap-1.5">
-                                <span className="font-semibold text-slate-900 shrink-0">Tâche en cours :</span>
-                                <span className="italic">{activity.currentTaskDescription || "Développement actif"}</span>
+                              <div className="text-xs text-slate-500 mt-0.5">{dev.jobTitle}</div>
+                            </div>
+                          </div>
+
+                          {/* 2. Ce qu'il fait en temps réel (Projet & Tâche active) */}
+                          <div className="flex-1 min-w-[280px]">
+                            {activity.status === "WORKING" || activity.status === "BLOCKED" ? (
+                              <div
+                                className={`p-2.5 rounded-xl border text-xs ${
+                                  activity.status === "WORKING"
+                                    ? "bg-emerald-50/60 border-emerald-200"
+                                    : "bg-rose-50/60 border-rose-200"
+                                }`}
+                              >
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                  <span className="font-mono font-bold text-sky-900 bg-sky-100 px-1.5 py-0.5 rounded text-[11px]">
+                                    {activity.activeTicketReference || "TICKET"}
+                                  </span>
+                                  <span className="font-semibold text-slate-900 truncate">
+                                    {activity.activeTicketTitle || "Projet SAP"}
+                                  </span>
+                                  {activity.clientCompany && (
+                                    <span className="text-[10px] font-medium text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                      {activity.clientCompany}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-700 flex items-start gap-1.5">
+                                  <span className="font-semibold text-slate-900 shrink-0">Tâche en cours :</span>
+                                  <span className="italic">
+                                    {activity.currentTaskDescription || "Développement actif"}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs text-slate-500 flex items-center justify-between">
+                                <span>{activity.currentTaskDescription || "Prêt pour affectation de ticket SAP"}</span>
+                                <span className="text-[11px] font-mono font-semibold text-emerald-700">
+                                  {dev.freeHours} h libres cette semaine
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 3. Actions Administrateur : Imprimer son rapport + Suivre le ticket */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPrintingReport({
+                                  targetType: "DEVELOPER",
+                                  targetId: dev.id,
+                                  targetName: dev.name,
+                                  targetEmail: dev.email,
+                                  role: "DEVELOPER",
+                                  jobTitle: dev.jobTitle,
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-50 text-sky-900 hover:bg-sky-100 border border-sky-300 transition-colors shadow-2xs cursor-pointer"
+                              title={`Imprimer le rapport de travail détaillé de ${dev.name}`}
+                            >
+                              <Printer className="w-3.5 h-3.5 text-sky-700" />
+                              <span>Imprimer son rapport</span>
+                            </button>
+
+                            {activity.activeTicketId &&
+                              (() => {
+                                const activeTicket = tickets.find(
+                                  (t) => t.id === activity.activeTicketId || t.reference === activity.activeTicketReference
+                                );
+                                if (!activeTicket) return null;
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSupervisingTicket(activeTicket)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
+                                    title="Superviser la progression de ce ticket"
+                                  >
+                                    <Eye className="w-3.5 h-3.5 text-slate-600" />
+                                    <span>Superviser</span>
+                                  </button>
+                                );
+                              })()}
+                          </div>
+                        </div>
+
+                        {/* 4. VUE EN DIRECT DES TICKETS DE CE DÉVELOPPEUR (En cours, Bloqués, Livrés) */}
+                        {devAssignedTickets.length > 0 && (
+                          <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
+                            <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                              <span>
+                                Portefeuille de travail : <strong>{devAssignedTickets.length} ticket(s) assigné(s)</strong>
+                              </span>
+                              <div className="flex items-center gap-2">
+                                {blockedTickets.length > 0 && (
+                                  <span className="text-rose-700 font-bold">
+                                    🚨 {blockedTickets.length} bloqué{blockedTickets.length > 1 ? "s" : ""}
+                                  </span>
+                                )}
+                                {activeTickets.length > 0 && (
+                                  <span className="text-indigo-700 font-semibold">
+                                    ⚡ {activeTickets.length} en cours
+                                  </span>
+                                )}
+                                {deliveredTickets.length > 0 && (
+                                  <span className="text-teal-700 font-semibold">
+                                    📦 {deliveredTickets.length} en recette
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          ) : (
-                            <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs text-slate-500 flex items-center justify-between">
-                              <span>{activity.currentTaskDescription || "Prêt pour affectation de ticket SAP"}</span>
-                              <span className="text-[11px] font-mono font-semibold text-emerald-700">{dev.freeHours} h libres cette semaine</span>
+
+                            {/* Liste détaillée des tickets avec alertes blocage en rouge */}
+                            <div className="flex flex-wrap gap-2">
+                              {devAssignedTickets.map((t) => {
+                                const isBlocked = t.status === "BLOCKED";
+                                return (
+                                  <div
+                                    key={t.id}
+                                    className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs transition-all ${
+                                      isBlocked
+                                        ? "bg-rose-50 border-rose-300 text-rose-950 ring-1 ring-rose-400"
+                                        : t.status === "IN_PROGRESS"
+                                        ? "bg-indigo-50 border-indigo-200 text-indigo-950"
+                                        : t.status === "DELIVERED"
+                                        ? "bg-teal-50 border-teal-200 text-teal-950"
+                                        : "bg-slate-50 border-slate-200 text-slate-800"
+                                    }`}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => setSupervisingTicket(t)}
+                                      className="font-mono font-bold hover:underline cursor-pointer"
+                                    >
+                                      {t.reference}
+                                    </button>
+                                    <span className="truncate max-w-[180px] font-medium">{t.title}</span>
+
+                                    {isBlocked ? (
+                                      <div className="flex items-center gap-1.5 ml-1">
+                                        <span className="px-1.5 py-0.5 rounded bg-rose-200 text-rose-950 font-bold text-[10px]">
+                                          🛑 BLOQUÉ
+                                        </span>
+                                        {t.blockerReason && (
+                                          <span className="italic text-[10px] text-rose-900 truncate max-w-[150px]" title={t.blockerReason}>
+                                            « {t.blockerReason} »
+                                          </span>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUnblockTicket(t.id)}
+                                          className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer"
+                                          title="Lever le blocage immédiatement"
+                                        >
+                                          Lever
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/80 font-semibold border border-slate-200/80">
+                                        {t.status === "IN_PROGRESS"
+                                          ? "En cours"
+                                          : t.status === "DELIVERED"
+                                          ? "En recette"
+                                          : t.status === "ASSIGNED"
+                                          ? "Affecté"
+                                          : t.status}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                          )}
-                        </div>
-
-                        {/* 3. Actions Administrateur : Imprimer son rapport + Suivre le ticket */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setPrintingReport({
-                                targetType: "DEVELOPER",
-                                targetId: dev.id,
-                                targetName: dev.name,
-                                targetEmail: dev.email,
-                                role: "DEVELOPER",
-                                jobTitle: dev.jobTitle
-                              })
-                            }
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-50 text-sky-900 hover:bg-sky-100 border border-sky-300 transition-colors shadow-2xs cursor-pointer"
-                            title={`Imprimer le rapport de travail détaillé de ${dev.name}`}
-                          >
-                            <Printer className="w-3.5 h-3.5 text-sky-700" />
-                            <span>Imprimer son rapport</span>
-                          </button>
-
-                          {activity.activeTicketId && (() => {
-                            const activeTicket = tickets.find((t) => t.id === activity.activeTicketId);
-                            if (!activeTicket) return null;
-                            return (
-                              <button
-                                type="button"
-                                onClick={() => setSupervisingTicket(activeTicket)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
-                                title="Superviser la progression de ce ticket"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-slate-600" />
-                                <span>Voir projet</span>
-                              </button>
-                            );
-                          })()}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     );
                   });

@@ -146,7 +146,28 @@ export class TimeEntriesService {
     return result;
   }
 
-  async start(developerId: string, ticketId: string) {
+  async start(rawDeveloperId: string, rawTicketId: string) {
+    const developerId = await this.resolveDeveloperId(rawDeveloperId);
+
+    // Résolution robuste du ticket (support UUID, référence ou alias tix-X)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawTicketId);
+    let resolvedTicket = await this.prisma.ticket.findFirst({
+      where: isUuid ? { id: rawTicketId } : { reference: rawTicketId },
+    });
+    if (!resolvedTicket && typeof rawTicketId === "string" && rawTicketId.startsWith("tix-")) {
+      const fallbackRefs: Record<string, string> = {
+        "tix-1": "ADD-2026-0001",
+        "tix-2": "INT-2026-0002",
+        "tix-3": "REP-2026-0003",
+        "tix-4": "BUG-2026-0004",
+        "tix-5": "ADD-2026-0005",
+        "tix-6": "EVO-2026-0006",
+      };
+      const mapped = fallbackRefs[rawTicketId];
+      if (mapped) resolvedTicket = await this.prisma.ticket.findFirst({ where: { reference: mapped } });
+    }
+    const ticketId = resolvedTicket?.id || rawTicketId;
+
     const active = await this.prisma.workSession.findFirst({
       where: {
         developerId,
@@ -168,7 +189,7 @@ export class TimeEntriesService {
       orderBy: { assignedAt: "desc" },
     });
     if (!assignment) {
-      const ticket = await this.prisma.ticket.findUnique({
+      const ticket = resolvedTicket || await this.prisma.ticket.findFirst({
         where: { id: ticketId },
       });
       if (!ticket) {
