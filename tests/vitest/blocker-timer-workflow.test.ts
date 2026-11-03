@@ -173,3 +173,4 @@ describe("Workflow Blocage & Reprise avec Cumul du Temps de Travail", () => {
     expect(ticketSummary?.sessionsCount).toBe(2);
   });
 });
+

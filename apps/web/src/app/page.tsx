@@ -218,7 +218,7 @@ export interface AutomaticEmailDispatch {
   ticketTitle: string;
   subject: string;
   recipients: { name: string; email: string; roleLabel: string }[];
-  eventType: "TICKET_CREATED" | "TICKET_ASSIGNED" | "UAT_REJECTED";
+  eventType: "TICKET_CREATED" | "TICKET_ASSIGNED" | "UAT_REJECTED" | "BLOCKER";
   sentAt: string;
 }
 
@@ -2870,10 +2870,29 @@ export default function TicketManagerPage() {
       title: `🚨 Stop-the-line : Blocage déclaré sur ${blockingTicket.reference}`,
       message: `${currentUser?.name || "Un développeur"} a signalé un blocage : « ${currentReason} »`,
       category: "BLOCKER",
-      targetRoles: ["HEAD", "CONSULTANT"],
+      targetRoles: ["HEAD", "ADMIN", "CONSULTANT"],
       ticketId: currentTicketId,
       ticketReference: blockingTicket.reference,
       actorName: currentUser?.name || "Développeur SAP",
+    });
+
+    // Envoi de la notification e-mail automatique à l'administrateur ET au consultant demandeur concerné
+    const emailRecipients: { name: string; email: string; roleLabel: string }[] = [
+      { name: activeAdminUser.name, email: activeAdminUser.email, roleLabel: "Administrateur BU SME" },
+    ];
+    if (blockingTicket.applicantEmail) {
+      emailRecipients.push({
+        name: blockingTicket.applicantName || "Demandeur / Consultant",
+        email: blockingTicket.applicantEmail,
+        roleLabel: "Consultant Demandeur",
+      });
+    }
+    dispatchAutomaticEmails({
+      ticketReference: blockingTicket.reference,
+      ticketTitle: blockingTicket.title,
+      subject: `🚨 Stop-the-line : Blocage déclaré sur ${blockingTicket.reference} — Explication : « ${currentReason} »`,
+      eventType: "BLOCKER",
+      recipients: emailRecipients,
     });
 
     showToast(`🚨 Blocage signalé sur ${blockingTicket.reference} — compteur arrêté et temps consigné.`);
@@ -3334,8 +3353,8 @@ export default function TicketManagerPage() {
     setSupervisingTicket(null);
   };
 
-  // Action Administrateur (HEAD) : Arbitrer et lever un blocage
-  const handleUnblockTicket = (ticketId: string) => {
+  // Action Arbitrage / Déblocage (HEAD, ADMIN ou CONSULTANT demandeur)
+  const handleUnblockTicket = async (ticketId: string) => {
     const unblockedTicket = tickets.find((t) => t.id === ticketId);
     setTickets((prev) =>
       prev.map((t) =>
@@ -3361,7 +3380,21 @@ export default function TicketManagerPage() {
         return next;
       });
     }
-    showToast(`Arbitrage Administrateur effectué : Point de blocage levé par ${currentUser?.name || activeAdminUser.name}`);
+
+    // Persistance API vers le backend
+    try {
+      await apiFetch(`${API_BASE}/tickets/${ticketId}/unblock`, {
+        method: "POST",
+        body: JSON.stringify({
+          comment: `Point de blocage levé par ${currentUser?.name || "Consultant / Admin"}`
+        })
+      });
+    } catch (err) {
+      console.warn("[handleUnblockTicket] Persistance API levée blocage:", err);
+    }
+
+    const actor = currentUser?.name || (currentUser?.role === "CONSULTANT" ? "Consultant demandeur" : activeAdminUser.name);
+    showToast(`Point de blocage levé avec succès par ${actor} : le ticket ${unblockedTicket?.reference || ""} repasse En cours.`);
     if (supervisingTicket?.id === ticketId) {
       setSupervisingTicket((prev) => prev ? { ...prev, status: "IN_PROGRESS", blockerReason: undefined } : null);
     }
@@ -5639,37 +5672,89 @@ export default function TicketManagerPage() {
               );
             })()}
 
-            {/* Bannière d'Alerte : Précision requise pour débloquer un ticket */}
+            {/* Bannière d'Alerte : Notification et Explication des Blocages en cours pour le Consultant */}
             {myConsultantDemands.some((t) => t.status === "BLOCKED") && (
-              <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amber-100 rounded-lg text-amber-700 shrink-0">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 animate-pulse" />
+              <div
+                data-testid="consultant-blockers-alert-banner"
+                className="bg-rose-50 border-2 border-rose-300 rounded-xl p-4 shadow-sm space-y-3"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 bg-rose-600 text-white rounded-lg shrink-0">
+                    <AlertTriangle className="w-5 h-5 animate-pulse" />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
-                        Point de Vigilance — Précision Métier Attendue par l'Équipe Technique
-                      </span>
-                    </div>
-                    <p className="text-xs text-amber-900 mt-1 leading-relaxed">
-                      L'un de vos développeurs dédiés est actuellement en pause sur un ticket et attend des éléments fonctionnels ou un jeu d'écritures pour reprendre le travail.
+                  <div>
+                    <h3 className="text-sm font-bold text-rose-950 uppercase tracking-wide">
+                      {tr("Points de Blocage Déclarés — Votre intervention est requise", "Declared Blockers — Your intervention is required")}
+                    </h3>
+                    <p className="text-xs text-rose-800">
+                      {tr(
+                        "Des développeurs sont actuellement arrêtés sur vos tickets. Veuillez consulter le motif du blocage et apporter les précisions attendues pour relancer le chronomètre de développement.",
+                        "Developers are currently stopped on your tickets. Please review the blocker explanation and provide the required details to resume the development timer."
+                      )}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {myConsultantDemands
-                        .filter((t) => t.status === "BLOCKED")
-                        .map((t) => (
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5 pt-1">
+                  {myConsultantDemands
+                    .filter((t) => t.status === "BLOCKED")
+                    .map((t) => (
+                      <div
+                        key={t.id}
+                        data-testid={`consultant-blocked-ticket-${t.id}`}
+                        className="bg-white p-3.5 rounded-lg border border-rose-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                              {t.reference}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-900 truncate max-w-md">
+                              {t.title}
+                            </span>
+                            {t.clientCompany && (
+                              <span className="text-[11px] text-slate-500 font-medium">
+                                • {t.clientCompany}
+                              </span>
+                            )}
+                            <span className="text-[11px] font-bold text-rose-700 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-full">
+                              Arrêté : {t.assignedDeveloper?.name || "Développeur assigné"}
+                            </span>
+                          </div>
+
+                          {/* Explication précise du blocage */}
+                          <div className="bg-rose-50/80 border border-rose-200 rounded p-2 text-xs text-rose-900">
+                            <span className="font-bold text-rose-950 flex items-center gap-1 mb-0.5">
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                              Explication du blocage par le développeur :
+                            </span>
+                            <p className="italic font-medium text-rose-900 pl-4">
+                              "{t.blockerReason || "Aucun motif textuel détaillé renseigné — contactez le développeur."}"
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
                           <button
-                            key={t.id}
+                            type="button"
                             onClick={() => setDiscussingTicket(t)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
                           >
                             <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Répondre à {t.assignedDeveloper?.name || "l'équipe"} ({t.reference})</span>
+                            <span>Répondre & Débloquer</span>
                           </button>
-                        ))}
-                    </div>
-                  </div>
+                          <button
+                            type="button"
+                            onClick={() => handleUnblockTicket(t.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                            title="Lever le blocage directement si la précision a déjà été apportée hors plateforme"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <span>Débloquer</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
             )}
@@ -6012,6 +6097,108 @@ export default function TicketManagerPage() {
                 <p className="text-xs text-[#5A7088] mt-1">Demandes In-App soumises à qualifier par l'Administrateur</p>
               </div>
             </div>
+
+            {/* Centre d'Alertes Stop-the-line : Notification & Explication des Blocages en cours pour l'Administrateur */}
+            {stats.blockedTicketsCount > 0 && (
+              <div
+                data-testid="admin-blockers-alert-banner"
+                className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3 animate-in fade-in"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-rose-200 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-rose-600 text-white rounded-xl shadow-xs">
+                      <AlertTriangle className="w-5 h-5 animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-200 text-rose-950 border border-rose-300">
+                          🚨 STOP-THE-LINE ({stats.blockedTicketsCount} TICKET{stats.blockedTicketsCount > 1 ? "S" : ""} BLOQUÉ{stats.blockedTicketsCount > 1 ? "S" : ""})
+                        </span>
+                        <span className="text-xs font-bold text-rose-900">
+                          Arbitrage Requis — Développeur(s) arrêté(s) sur blocage technique ou fonctionnel
+                        </span>
+                      </div>
+                      <p className="text-xs text-rose-700 mt-0.5">
+                        Chronomètres automatiquement mis à l'arrêt. Consultez l'explication précise transmise par le développeur et intervenez.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-mono text-rose-900 bg-white px-2.5 py-1 rounded-lg border border-rose-200 self-start sm:self-auto font-semibold shadow-2xs">
+                    Compteurs stoppés & temps sauvegardés
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  {tickets
+                    .filter((t) => t.status === "BLOCKED")
+                    .map((t) => (
+                      <div
+                        key={t.id}
+                        className="bg-white rounded-xl p-4 border border-rose-200 shadow-2xs space-y-3 flex flex-col justify-between"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-xs bg-rose-100 text-rose-950 px-2 py-0.5 rounded border border-rose-300">
+                              {t.reference}
+                            </span>
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              Client : <strong className="text-slate-800">{t.clientCompany}</strong>
+                            </span>
+                          </div>
+                          <div className="font-bold text-xs text-slate-900 leading-tight">
+                            {t.title}
+                          </div>
+                          <div className="text-[11px] text-slate-600 flex items-center gap-3 flex-wrap">
+                            <span>Développeur : <strong className="text-slate-900">{t.assignedDeveloper?.name || "Équipe Dev"}</strong></span>
+                            <span>Demandeur : <strong className="text-slate-900">{t.applicantName || "Demandeur"}</strong></span>
+                          </div>
+
+                          {/* Encadré d'Explication Détaillée du Blocage */}
+                          <div className="bg-rose-50/90 border-l-4 border-l-rose-600 p-3 rounded-r-lg text-xs text-rose-950 space-y-1">
+                            <div className="font-bold text-[10px] text-rose-800 uppercase tracking-wider flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3 text-rose-600" />
+                              <span>Explication détaillée du blocage :</span>
+                            </div>
+                            <div className="italic font-medium text-slate-800 leading-relaxed bg-white/70 p-2 rounded border border-rose-200/60">
+                              « {t.blockerReason || "Précision technique ou validation fonctionnelle en attente."} »
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleUnblockTicket(t.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                            title="Arbitrer et lever immédiatement le blocage pour relancer le chronomètre du développeur"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <span>Lever le blocage</span>
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSupervisingTicket(t)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#051638] hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                            >
+                              <Shield className="w-3.5 h-3.5 text-[#22F0D2]" />
+                              <span>Superviser & Arbitrer</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDiscussingTicket(t)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 text-rose-700" />
+                              <span>Ouvrir l'échange ({t.messages?.length || 0})</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             {/* Barre de Pilotage Exécutif, Niveau Super Admin & Générateur de Rapport Individuel par Développeur */}
             <div className="bg-[#051638] text-white p-4 rounded-xl shadow-sm border border-[#051638] flex flex-col xl:flex-row xl:items-center justify-between gap-4">
