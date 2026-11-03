@@ -354,7 +354,29 @@ export class TimeEntriesService {
     return { ignored: false, entry: this.formatEntry(completedEntry) };
   }
 
+  async resolveDeveloperId(idOrAlias: string): Promise<string> {
+    if (!idOrAlias) return idOrAlias;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idOrAlias);
+    if (isUuid) return idOrAlias;
+    if (!this.prisma.developerProfile?.findFirst) return idOrAlias;
+    const clean = idOrAlias.replace(/^dev-/, "").replace(/^user-/, "").toLowerCase();
+    const dev = await this.prisma.developerProfile.findFirst({
+      where: {
+        OR: [
+          { id: idOrAlias },
+          { userId: idOrAlias },
+          { user: { email: { contains: clean, mode: "insensitive" } } },
+          { user: { lastName: { contains: clean, mode: "insensitive" } } },
+          { user: { firstName: { contains: clean, mode: "insensitive" } } },
+        ],
+      },
+      select: { id: true },
+    });
+    return dev?.id || idOrAlias;
+  }
+
   async getReport(developerId: string, periodStartValue: string, periodEndValue: string) {
+    const resolvedDevId = await this.resolveDeveloperId(developerId);
     const periodStart = this.parseDate(periodStartValue, "date de début");
     const periodEnd = this.parseDate(periodEndValue, "date de fin");
     this.validateRange(periodStart, periodEnd);
@@ -362,7 +384,7 @@ export class TimeEntriesService {
     const [entries, timesheet] = await Promise.all([
       this.prisma.timeEntry.findMany({
         where: {
-          developerId,
+          developerId: resolvedDevId,
           workDate: { gte: periodStart, lte: periodEnd },
         },
         include: timeEntryInclude,
@@ -371,7 +393,7 @@ export class TimeEntriesService {
       this.prisma.timesheet.findUnique({
         where: {
           developerId_periodStart_periodEnd: {
-            developerId,
+            developerId: resolvedDevId,
             periodStart,
             periodEnd,
           },
@@ -384,8 +406,50 @@ export class TimeEntriesService {
       }),
     ]);
 
+    const formattedEntries = entries.map((entry) => this.formatEntry(entry));
+
+    // Synthèse du travail par ticket sur la période
+    const ticketMap = new Map<string, {
+      ticketId: string;
+      ticketReference: string;
+      ticketTitle: string;
+      clientCompany: string;
+      status: string;
+      totalDurationSeconds: number;
+      totalHours: number;
+      sessionsCount: number;
+    }>();
+
+    for (const entry of entries) {
+      const ticket = entry.assignment?.ticket;
+      if (!ticket) continue;
+      const durationSeconds =
+        entry.durationSeconds || Math.round(Number(entry.durationHours) * 3600);
+      const existing = ticketMap.get(ticket.id) || {
+        ticketId: ticket.id,
+        ticketReference: ticket.reference,
+        ticketTitle: ticket.title,
+        clientCompany: ticket.client?.name || "Safir Consulting",
+        status: ticket.status,
+        totalDurationSeconds: 0,
+        totalHours: 0,
+        sessionsCount: 0,
+      };
+      existing.totalDurationSeconds += durationSeconds;
+      existing.totalHours = Math.round((existing.totalDurationSeconds / 3600) * 100) / 100;
+      existing.sessionsCount += 1;
+      ticketMap.set(ticket.id, existing);
+    }
+
+    const ticketBreakdown = Array.from(ticketMap.values());
+    const totalDurationSeconds = formattedEntries.reduce((sum, e) => sum + e.durationSeconds, 0);
+    const totalHours = Math.round((totalDurationSeconds / 3600) * 100) / 100;
+
     return {
-      entries: entries.map((entry) => this.formatEntry(entry)),
+      entries: formattedEntries,
+      ticketBreakdown,
+      totalHours,
+      totalDurationSeconds,
       timesheet: timesheet
         ? {
             status: timesheet.status,

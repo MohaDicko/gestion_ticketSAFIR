@@ -56,3 +56,4 @@ describe("supervision temps réel des développeurs (Live Activities)", () => {
     expect(live["dev-uuid-2"].elapsedSeconds).toBe(0);
   });
 });
+

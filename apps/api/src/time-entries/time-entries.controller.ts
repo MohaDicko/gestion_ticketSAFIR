@@ -51,15 +51,19 @@ export class TimeEntriesController {
 
     const user = this.getUser(req);
     const isAdmin = user.roles.some((role) => role === Role.HEAD || role === Role.ADMIN);
-    if (isAdmin && requestedDeveloperId) {
-      this.requireUuid(requestedDeveloperId, "identifiant du développeur");
+    let rawDeveloperId = isAdmin
+      ? requestedDeveloperId || user.developerProfile?.id
+      : user.developerProfile?.id || requestedDeveloperId;
+
+    if (!rawDeveloperId && user.id) {
+      rawDeveloperId = await this.timeEntriesService.resolveDeveloperId(user.id);
     }
-    const developerId = isAdmin
-      ? requestedDeveloperId
-      : user.developerProfile?.id;
-    if (!developerId) {
+
+    if (!rawDeveloperId) {
       throw new BadRequestException("Le développeur du rapport est introuvable");
     }
+
+    const developerId = await this.timeEntriesService.resolveDeveloperId(rawDeveloperId);
 
     return this.timeEntriesService.getReport(developerId, from, to);
   }
@@ -144,9 +148,10 @@ export class TimeEntriesController {
         "Le développeur et les dates de la période sont requis",
       );
     }
+    const resolvedDevId = await this.timeEntriesService.resolveDeveloperId(body.developerId);
     return this.timeEntriesService.approveTimesheet(
       this.getUser(req).id,
-      this.requireUuid(body.developerId, "identifiant du développeur"),
+      this.requireUuid(resolvedDevId, "identifiant du développeur"),
       body.from,
       body.to,
     );

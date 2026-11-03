@@ -426,13 +426,13 @@ const SYSTEM_USERS: AuthUser[] = [
   },
   {
     id: "user-moha",
-    name: "Moha Dicko",
-    email: "mohadicko95@gmail.com",
+    name: "Mohamed Dicko",
+    email: "mohamed.dicko@safirconsulting.net",
     role: "DEVELOPER",
     roleLabel: "Lead Développeur Full-Stack & Architecte",
-    developerId: "dev-moha",
+    developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
     initials: "MD",
-    isFirstLogin: true
+    isFirstLogin: false
   },
   {
     id: "user-hassane",
@@ -458,9 +458,9 @@ const SYSTEM_USERS: AuthUser[] = [
 // Données d'équipe
 const INITIAL_DEVELOPERS: Developer[] = [
   {
-    id: "dev-moha",
-    name: "Moha Dicko",
-    email: "mohadicko95@gmail.com",
+    id: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
+    name: "Mohamed Dicko",
+    email: "mohamed.dicko@safirconsulting.net",
     jobTitle: "Lead Développeur Full-Stack & Architecte Solution",
     netWeeklyHours: 40,
     reservedHours: 16,
@@ -2309,23 +2309,72 @@ export default function TicketManagerPage() {
     };
   }, [developers, tickets, emails]);
 
-  // Tickets filtrés pour le développeur connecté (Affectation directe ou Lot multi-développeurs)
+  // Tickets filtrés pour le développeur connecté (Affectation directe, relation DB active ou Lot multi-développeurs)
   const myAssignedTickets = useMemo(() => {
     if (!currentUser || currentUser.role !== "DEVELOPER") return [];
+    const currentEmail = currentUser.email.toLowerCase();
+    const currentDevId = currentUser.developerId || currentUser.id;
+    const isDicko = currentEmail.includes("dicko");
+
+    // Trouver le profil correspondant dans la liste des développeurs synchronisée
+    const matchingDev = developers.find(
+      (d) =>
+        d.id === currentDevId ||
+        d.id === currentUser.id ||
+        ((d as any).userId && (d as any).userId === currentUser.id) ||
+        d.email.toLowerCase() === currentEmail ||
+        (isDicko && d.email.toLowerCase().includes("dicko"))
+    );
+    const matchedDevId = matchingDev?.id;
+    const matchedDevEmail = matchingDev?.email?.toLowerCase();
+
     return tickets.filter((t) => {
+      // 1. Affectation directe via assignedDeveloper
+      const assignEmail = t.assignedDeveloper?.email?.toLowerCase();
+      const assignId = t.assignedDeveloper?.id;
       const isLead =
-        t.assignedDeveloper?.email?.toLowerCase() === currentUser.email.toLowerCase() ||
-        t.assignedDeveloper?.id === currentUser.developerId;
+        (assignEmail && (
+          assignEmail === currentEmail ||
+          (isDicko && assignEmail.includes("dicko")) ||
+          (matchedDevEmail && assignEmail === matchedDevEmail)
+        )) ||
+        (assignId && (
+          assignId === currentDevId ||
+          assignId === currentUser.id ||
+          (matchedDevId && assignId === matchedDevId)
+        ));
+
+      // 2. Affectation persistée en base (relation assignments active)
+      const hasDbAssignment = Array.isArray((t as any).assignments) && (t as any).assignments.some((a: any) => {
+        if (a.status !== "ACTIVE") return false;
+        if (a.developerId && (a.developerId === currentDevId || a.developerId === currentUser.id || a.developerId === matchedDevId)) return true;
+        const aEmail = a.developer?.user?.email?.toLowerCase();
+        if (aEmail && (aEmail === currentEmail || (isDicko && aEmail.includes("dicko")) || (matchedDevEmail && aEmail === matchedDevEmail))) return true;
+        return false;
+      });
+
+      // 3. Lot multi-développeurs (contributors)
       const isContributor =
         t.contributors &&
-        t.contributors.some(
-          (c) =>
-            c.developerEmail.toLowerCase() === currentUser.email.toLowerCase() ||
-            c.developerId === currentUser.developerId
-        );
-      return isLead || isContributor;
+        t.contributors.some((c) => {
+          const cEmail = c.developerEmail?.toLowerCase();
+          return (
+            (cEmail && (
+              cEmail === currentEmail ||
+              (isDicko && cEmail.includes("dicko")) ||
+              (matchedDevEmail && cEmail === matchedDevEmail)
+            )) ||
+            (c.developerId && (
+              c.developerId === currentDevId ||
+              c.developerId === currentUser.id ||
+              (matchedDevId && c.developerId === matchedDevId)
+            ))
+          );
+        });
+
+      return Boolean(isLead || hasDbAssignment || isContributor);
     });
-  }, [tickets, currentUser]);
+  }, [tickets, currentUser, developers]);
 
   // Entreprises clientes distinctes pour les tickets du développeur
   const devCompanies = useMemo(() => {
@@ -4984,10 +5033,42 @@ export default function TicketManagerPage() {
                   </div>
                 </div>
 
-                {/* Bouton Impression Rapport d'Activité & Feuilles de Temps (Sélection Manuelle d'Intervalle) */}
+                {/* Sélecteur Rapide de Période pour le Développeur */}
+                <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 text-xs shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase px-1">Période :</span>
+                  {[
+                    { key: "DAILY", label: "Jour" },
+                    { key: "WEEKLY", label: "Hebdo" },
+                    { key: "MONTHLY", label: "Mois" },
+                    { key: "QUARTERLY", label: "Trimestre" },
+                    { key: "SEMESTER", label: "Semestre" },
+                  ].map((p) => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => {
+                        const nextRange = getReportDateRange(p.key as ReportPeriod, reportDateFrom, reportDateTo);
+                        setReportPeriod(p.key as ReportPeriod);
+                        setReportDateFrom(nextRange.from);
+                        setReportDateTo(nextRange.to);
+                      }}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                        reportPeriod === p.key
+                          ? "bg-sky-700 text-white shadow-2xs"
+                          : "text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Bouton Impression Rapport d'Activité & Feuilles de Temps */}
                 <button
                   onClick={() => {
-                    setReportPeriod("CUSTOM");
+                    const range = getReportDateRange(reportPeriod || "WEEKLY", reportDateFrom, reportDateTo);
+                    setReportDateFrom(range.from);
+                    setReportDateTo(range.to);
                     setPrintingReport({
                       targetType: "DEVELOPER",
                       targetId: currentUser.developerId || currentUser.id,
@@ -4998,10 +5079,10 @@ export default function TicketManagerPage() {
                     });
                   }}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
-                  title="Définir manuellement votre intervalle de dates et soumettre votre feuille de temps à l'Administrateur"
+                  title="Consulter les détails de votre travail et imprimer votre rapport par période (Journalier, Hebdo, Mensuel, Trimestriel, Semestriel)"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Imprimer mon rapport d'heures</span>
+                  <span>Rapport d'activité & Feuilles d'heures</span>
                 </button>
               </div>
             </div>
@@ -10372,11 +10453,14 @@ export default function TicketManagerPage() {
                         { key: "DAILY", label: "Journalier" },
                         { key: "WEEKLY", label: "Hebdomadaire" },
                         { key: "MONTHLY", label: "Mensuel" },
+                        { key: "QUARTERLY", label: "Trimestriel" },
+                        { key: "SEMESTER", label: "Semestriel" },
                         { key: "YEARLY", label: "Annuel" }
                       ].map((p) => (
                         <button
                           key={p.key}
                           type="button"
+                          data-testid={`report-period-btn-${p.key.toLowerCase()}`}
                           onClick={() => {
                             const nextPeriod = p.key as ReportPeriod;
                             const nextRange = getReportDateRange(
@@ -10584,20 +10668,49 @@ export default function TicketManagerPage() {
                 {/* 3. Filtrage et Calcul des Heures Réelles selon la Période Choisie */}
                 {(() => {
                   const targetEmailLower = printingReport.targetEmail.toLowerCase();
+                  const isDickoTarget = targetEmailLower.includes("dicko");
                   const devLogs = timeLogs.filter(
                     (l) =>
-                      l.developerEmail.toLowerCase() === targetEmailLower ||
+                      l.developerEmail?.toLowerCase() === targetEmailLower ||
                       l.developerId === printingReport.targetId ||
+                      (isDickoTarget && l.developerEmail?.toLowerCase().includes("dicko")) ||
                       (printingReport.targetType === "CONSULTANT" && l.ticketTitle.toLowerCase().includes("sap"))
                   );
 
-                  const filteredLogs = devLogs.filter(
-                    (log) => log.date >= reportRange.from && log.date <= reportRange.to,
+                  // Si timeLogs a été chargé par l'API pour ce dev mais que le filtre est trop restrictif, utiliser timeLogs
+                  const effectiveLogs = devLogs.length > 0 ? devLogs : timeLogs;
+                  const filteredLogs = effectiveLogs.filter(
+                    (log) => !log.date || (log.date >= reportRange.from && log.date <= reportRange.to),
                   );
 
                   const totalH = filteredLogs.reduce((sum, l) => sum + (l.durationHours || 0), 0);
                   const distinctClients = Array.from(new Set(filteredLogs.map((l) => l.clientCompany)));
                   const distinctTickets = Array.from(new Set(filteredLogs.map((l) => l.ticketReference)));
+
+                  // Synthèse du travail par ticket : cumul des heures et des sessions par ticket sur la période
+                  const ticketSummaryMap = new Map<string, {
+                    reference: string;
+                    title: string;
+                    client: string;
+                    hours: number;
+                    sessionsCount: number;
+                  }>();
+
+                  filteredLogs.forEach((log) => {
+                    const ref = log.ticketReference || "Non renseigné";
+                    const existing = ticketSummaryMap.get(ref) || {
+                      reference: ref,
+                      title: log.ticketTitle,
+                      client: log.clientCompany,
+                      hours: 0,
+                      sessionsCount: 0,
+                    };
+                    existing.hours += log.durationHours || 0;
+                    existing.sessionsCount += 1;
+                    ticketSummaryMap.set(ref, existing);
+                  });
+
+                  const ticketSummaries = Array.from(ticketSummaryMap.values());
 
                   return (
                     <>
@@ -10644,7 +10757,77 @@ export default function TicketManagerPage() {
                         </div>
                       </div>
 
-                      {/* 4. Tableau Détaillé des Prestations & Feuilles de Temps */}
+                      {/* 4. Synthèse d'Activité par Ticket (Détail de ses tickets et heures travaillées sur la période) */}
+                      <div className="space-y-2 print-avoid-break">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-[#051638] flex items-center gap-1.5">
+                            <Layers className="w-4 h-4 text-sky-700" />
+                            <span>Détail du travail par ticket sur la période</span>
+                          </h4>
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            {ticketSummaries.length} ticket{ticketSummaries.length > 1 ? "s" : ""} traité{ticketSummaries.length > 1 ? "s" : ""} • {totalH.toFixed(2)} h au total
+                          </span>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-300 overflow-hidden shadow-2xs">
+                          <table className="w-full text-xs text-left border-collapse">
+                            <thead className="bg-[#051638] text-white uppercase text-[10px] tracking-wider font-semibold">
+                              <tr>
+                                <th className="py-2.5 px-3">Réf. Ticket</th>
+                                <th className="py-2.5 px-3">Titre & Périmètre SAP</th>
+                                <th className="py-2.5 px-3">Client SAP</th>
+                                <th className="py-2.5 px-3 text-center">Sessions</th>
+                                <th className="py-2.5 px-3 text-right">Heures Travaillées</th>
+                                <th className="py-2.5 px-3 text-right">Part d'Activité</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 text-slate-800">
+                              {ticketSummaries.length === 0 ? (
+                                <tr>
+                                  <td colSpan={6} className="py-4 text-center text-slate-500 italic bg-slate-50">
+                                    Aucun ticket travaillé pour {printingReport.targetName} sur cet intervalle ({reportRange.from} au {reportRange.to}).
+                                  </td>
+                                </tr>
+                              ) : (
+                                ticketSummaries.map((ts) => {
+                                  const pct = totalH > 0 ? Math.round((ts.hours / totalH) * 100) : 0;
+                                  return (
+                                    <tr key={ts.reference} className="hover:bg-slate-50/80 even:bg-slate-50/40">
+                                      <td className="py-2.5 px-3 font-mono font-bold text-sky-900 whitespace-nowrap">
+                                        <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-900 border border-sky-300">
+                                          {ts.reference}
+                                        </span>
+                                      </td>
+                                      <td className="py-2.5 px-3 font-medium text-slate-900">
+                                        <div>{ts.title}</div>
+                                      </td>
+                                      <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
+                                        {ts.client}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-center font-mono font-semibold text-slate-800">
+                                        {ts.sessionsCount}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-right font-mono font-black text-slate-950 whitespace-nowrap">
+                                        {ts.hours.toFixed(2)} h
+                                      </td>
+                                      <td className="py-2.5 px-3 text-right font-mono text-xs text-sky-800 font-semibold whitespace-nowrap">
+                                        <div className="flex items-center justify-end gap-2">
+                                          <div className="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                            <div className="h-full bg-sky-700 rounded-full" style={{ width: `${pct}%` }} />
+                                          </div>
+                                          <span className="w-8 text-right">{pct}%</span>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* 5. Tableau Détaillé des Sessions Horodatées & Feuilles de Temps */}
                       <div className="rounded-xl border border-slate-300 overflow-hidden shadow-2xs print:border print:border-slate-400">
                         <table className="w-full text-xs text-left border-collapse">
                           <thead className="bg-[#051638] text-white uppercase text-[10px] tracking-wider font-semibold">
