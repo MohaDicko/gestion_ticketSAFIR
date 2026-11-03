@@ -86,7 +86,7 @@ export class TicketsService {
 
   async findOne(idOrRef: string) {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrRef);
-    const ticket = await this.prisma.ticket.findFirst({
+    let ticket = await this.prisma.ticket.findFirst({
       where: isUuid ? { id: idOrRef } : { reference: idOrRef },
       include: {
         type: true,
@@ -123,6 +123,46 @@ export class TicketsService {
         },
       },
     });
+
+    // Support des identifiants mock / client (ex: tix-1, tix-2, etc.)
+    if (!ticket && typeof idOrRef === "string" && idOrRef.startsWith("tix-")) {
+      const fallbackRefs: Record<string, string> = {
+        "tix-1": "ADD-2026-0001",
+        "tix-2": "INT-2026-0002",
+        "tix-3": "REP-2026-0003",
+        "tix-4": "BUG-2026-0004",
+        "tix-5": "ADD-2026-0005",
+        "tix-6": "EVO-2026-0006",
+      };
+      const mappedRef = fallbackRefs[idOrRef];
+      if (mappedRef) {
+        ticket = await this.prisma.ticket.findFirst({
+          where: { reference: mappedRef },
+          include: {
+            type: true,
+            priority: true,
+            client: true,
+            project: true,
+            clientContact: true,
+            consultant: true,
+            skillRequirements: { include: { skill: true } },
+            acceptanceCriteria: { orderBy: { sortOrder: "asc" } },
+            statusHistory: { orderBy: { createdAt: "desc" } },
+            blockers: { orderBy: { startedAt: "desc" } },
+            assignments: {
+              include: {
+                developer: {
+                  include: {
+                    user: { select: { firstName: true, lastName: true, email: true } },
+                  },
+                },
+              },
+            },
+            comments: { orderBy: { createdAt: "desc" } },
+          },
+        });
+      }
+    }
 
     if (!ticket) {
       throw new NotFoundException(`Ticket introuvable`);

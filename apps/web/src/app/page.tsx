@@ -1170,6 +1170,38 @@ const INITIAL_TICKETS: Ticket[] = [
         }
       }
     ]
+  },
+  {
+    id: "tix-5",
+    reference: "ADD-2026-0005",
+    title: "Addon SAP B1 — Clôture Comptable Automatisée",
+    description: "Automatisation des écritures d'ajustement de fin de mois et réconciliation bancaire multi-devises dans SAP B1.",
+    status: "ASSIGNED",
+    typeCode: "ADDON",
+    priorityCode: "HIGH",
+    estimatedHours: 28,
+    remainingHours: 28,
+    clientCompany: "Safir Finance & Consulting",
+    applicantName: "Mélissa Diakité",
+    applicantEmail: "melissa.diakite@safirconsulting.net",
+    assignedDeveloper: { id: "dev-moha", name: "Moha Dicko", email: "mohadicko95@gmail.com" },
+    createdAt: "2026-10-28"
+  },
+  {
+    id: "tix-6",
+    reference: "EVO-2026-0006",
+    title: "Évolution Connecteur Bancaire EBICS TS & API",
+    description: "Montée de version du protocole d'échange bancaire sécurisé EBICS 3.0 avec signatures électroniques qualifiées.",
+    status: "ASSIGNED",
+    typeCode: "EVOLUTION",
+    priorityCode: "CRITICAL",
+    estimatedHours: 35,
+    remainingHours: 35,
+    clientCompany: "Omega Distribution",
+    applicantName: "Christian Durand",
+    applicantEmail: "c.durand@client-omega.com",
+    assignedDeveloper: { id: "dev-moha", name: "Moha Dicko", email: "mohadicko95@gmail.com" },
+    createdAt: "2026-10-29"
   }
 ];
 
@@ -1352,11 +1384,11 @@ export default function TicketManagerPage() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "tickets" | "developers" | "inbox" | "my-tickets" | "my-demands">("dashboard");
   const [teamSubTab, setTeamSubTab] = useState<"devs" | "consultants" | "admins">("devs");
 
-  // Données
-  const [developers, setDevelopers] = useState<Developer[]>([]);
-  const [consultants, setConsultants] = useState<ConsultantProfile[]>([]);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [emails, setEmails] = useState<InboxEmail[]>([]);
+  // Données initialisées avec fallback complet et persistance locale
+  const [developers, setDevelopers] = useState<Developer[]>(INITIAL_DEVELOPERS);
+  const [consultants, setConsultants] = useState<ConsultantProfile[]>(INITIAL_CONSULTANTS);
+  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
+  const [emails, setEmails] = useState<InboxEmail[]>(INITIAL_EMAILS);
   const [loading, setLoading] = useState(false);
 
   // Journal des e-mails automatiques envoyés aux acteurs concernés (Développeurs, Admin, Demandeur/Consultant)
@@ -1541,6 +1573,66 @@ export default function TicketManagerPage() {
   const [devLiveActivities, setDevLiveActivities] = useState<Record<string, DeveloperLiveActivity>>(INITIAL_DEV_LIVE_ACTIVITIES);
   const [liveSupervisionFilter, setLiveSupervisionFilter] = useState<"ALL" | "WORKING" | "BLOCKED" | "AVAILABLE">("ALL");
   const [liveSupervisionSearch, setLiveSupervisionSearch] = useState("");
+
+  // Chargement et persistance locale (résiste aux déconnexions et retours le lendemain)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const savedTickets = localStorage.getItem("safir_tickets_state_v2");
+      if (savedTickets) {
+        const parsed = JSON.parse(savedTickets);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTickets(parsed);
+        }
+      }
+      const savedActivities = localStorage.getItem("safir_dev_live_activities_v2");
+      if (savedActivities) {
+        const parsed = JSON.parse(savedActivities);
+        if (parsed && typeof parsed === "object") {
+          setDevLiveActivities((prev) => ({ ...prev, ...parsed }));
+        }
+      }
+      const savedNotifications = localStorage.getItem("safir_notifications_v2");
+      if (savedNotifications) {
+        const parsed = JSON.parse(savedNotifications);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setNotifications(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("[localStorage] Chargement persistance échoué:", e);
+    }
+  }, []);
+
+  // Sauvegarde persistante dès que les tickets sont modifiés
+  useEffect(() => {
+    if (typeof window === "undefined" || tickets.length === 0) return;
+    try {
+      localStorage.setItem("safir_tickets_state_v2", JSON.stringify(tickets));
+    } catch (e) {
+      console.warn("[localStorage] Sauvegarde tickets échouée:", e);
+    }
+  }, [tickets]);
+
+  // Sauvegarde persistante des activités de supervision développeurs
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("safir_dev_live_activities_v2", JSON.stringify(devLiveActivities));
+    } catch (e) {
+      console.warn("[localStorage] Sauvegarde devLiveActivities échouée:", e);
+    }
+  }, [devLiveActivities]);
+
+  // Sauvegarde persistante des notifications
+  useEffect(() => {
+    if (typeof window === "undefined" || notifications.length === 0) return;
+    try {
+      localStorage.setItem("safir_notifications_v2", JSON.stringify(notifications));
+    } catch (e) {
+      console.warn("[localStorage] Sauvegarde notifications échouée:", e);
+    }
+  }, [notifications]);
 
   // Langue Bilingue (FR / EN) & Mode d'Affichage (Light / Dark)
   const [appLang, setAppLang] = useState<"fr" | "en">("fr");
@@ -2011,38 +2103,58 @@ export default function TicketManagerPage() {
         setDevLiveActivities((prev) => ({ ...prev, ...liveRes }));
       }
       if (Array.isArray(devsRes)) setDevelopers(devsRes);
-      if (Array.isArray(tixRes)) {
-        setTickets(
-          tixRes.map((ticket) => {
-            const activeAssignment = Array.isArray(ticket.assignments)
-              ? ticket.assignments.find((assignment: any) => assignment.status === "ACTIVE")
-              : undefined;
-            const assignedUser = activeAssignment?.developer?.user;
-            return {
-              ...ticket,
-              typeCode: ticket.typeCode || ticket.type?.code,
-              priorityCode: ticket.priorityCode || ticket.priority?.code,
-              clientCompany: ticket.clientCompany || ticket.client?.name,
-              estimatedHours: Number(ticket.estimatedHours || 0),
-              remainingHours: Number(ticket.remainingEstimatedHours ?? ticket.estimatedHours ?? 0),
-              blockerReason:
-                ticket.blockerReason ||
-                (Array.isArray(ticket.blockers)
-                  ? ticket.blockers.find((blocker: any) => !blocker.resolvedAt)?.reason
-                  : undefined),
-              blockerId: Array.isArray(ticket.blockers)
-                ? ticket.blockers.find((blocker: any) => !blocker.resolvedAt)?.id
-                : undefined,
-              assignedDeveloper: assignedUser
-                ? {
-                    id: activeAssignment.developer.id,
-                    name: `${assignedUser.firstName} ${assignedUser.lastName}`,
-                    email: assignedUser.email,
-                  }
-                : null,
-            };
-          })
-        );
+      if (Array.isArray(tixRes) && tixRes.length > 0) {
+        const serverTickets = tixRes.map((ticket) => {
+          const activeAssignment = Array.isArray(ticket.assignments)
+            ? ticket.assignments.find((assignment: any) => assignment.status === "ACTIVE")
+            : undefined;
+          const assignedUser = activeAssignment?.developer?.user;
+          return {
+            ...ticket,
+            typeCode: ticket.typeCode || ticket.type?.code,
+            priorityCode: ticket.priorityCode || ticket.priority?.code,
+            clientCompany: ticket.clientCompany || ticket.client?.name,
+            estimatedHours: Number(ticket.estimatedHours || 0),
+            remainingHours: Number(ticket.remainingEstimatedHours ?? ticket.estimatedHours ?? 0),
+            blockerReason:
+              ticket.blockerReason ||
+              (Array.isArray(ticket.blockers)
+                ? ticket.blockers.find((blocker: any) => !blocker.resolvedAt)?.reason
+                : undefined),
+            blockerId: Array.isArray(ticket.blockers)
+              ? ticket.blockers.find((blocker: any) => !blocker.resolvedAt)?.id
+              : undefined,
+            assignedDeveloper: assignedUser
+              ? {
+                  id: activeAssignment.developer.id,
+                  name: `${assignedUser.firstName} ${assignedUser.lastName}`,
+                  email: assignedUser.email,
+                }
+              : null,
+          };
+        });
+
+        // Fusion intelligente : préserve les tickets en local (ex: Mohamed Dicko) et les blocages déclarés
+        setTickets((prev) => {
+          const currentList = prev.length > 0 ? [...prev] : [...INITIAL_TICKETS];
+          for (const sTicket of serverTickets) {
+            const idx = currentList.findIndex(
+              (t) => t.reference === sTicket.reference || t.id === sTicket.id
+            );
+            if (idx >= 0) {
+              currentList[idx] = {
+                ...currentList[idx],
+                ...sTicket,
+                // Préserver le statut BLOCKED et le blockerReason si déclaré
+                status: currentList[idx].status === "BLOCKED" ? "BLOCKED" : sTicket.status,
+                blockerReason: currentList[idx].blockerReason || sTicket.blockerReason,
+              };
+            } else {
+              currentList.push(sTicket);
+            }
+          }
+          return currentList;
+        });
       }
       if (Array.isArray(emailsRes)) setEmails(emailsRes);
       if (Array.isArray(consultantsRes)) setConsultants(consultantsRes);
@@ -2826,9 +2938,10 @@ export default function TicketManagerPage() {
       showToast(`⏱️ Compteur arrêté : le temps travaillé sur ${blockingTicket.reference} a été consigné sur votre rapport.`);
     }
 
-    // Persistance du blocage en base de données
+    // Persistance du blocage en base de données (utilise la référence ou l'ID réel pour éviter tout 404)
     try {
-      await apiFetch(`${API_BASE}/tickets/${currentTicketId}/blockers`, {
+      const ticketIdentifier = blockingTicket.reference || currentTicketId;
+      await apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/blockers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3381,9 +3494,10 @@ export default function TicketManagerPage() {
       });
     }
 
-    // Persistance API vers le backend
+    // Persistance API vers le backend (utilise la référence ou l'ID réel pour éviter tout 404)
     try {
-      await apiFetch(`${API_BASE}/tickets/${ticketId}/unblock`, {
+      const ticketIdentifier = unblockedTicket?.reference || ticketId;
+      await apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/unblock`, {
         method: "POST",
         body: JSON.stringify({
           comment: `Point de blocage levé par ${currentUser?.name || "Consultant / Admin"}`
