@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { AssignmentStatus, TicketStatus, TicketSource } from "@prisma/client";
+import { AssignmentStatus, TicketStatus, TicketSource, Role } from "@prisma/client";
 
 @Injectable()
 export class TicketsService {
@@ -421,5 +421,82 @@ export class TicketsService {
     });
 
     return { success: true, deletedTicketId: ticketId, reference: ticket.reference };
+  }
+
+  async assign(ticketIdOrRef: string, developerId: string, allocatedHours?: number, actorId?: string) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketIdOrRef);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: isUuid ? { id: ticketIdOrRef } : { reference: ticketIdOrRef },
+      include: { assignments: { where: { status: AssignmentStatus.ACTIVE } } },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket introuvable: ${ticketIdOrRef}`);
+    }
+
+    const developer = await this.prisma.developerProfile.findUnique({
+      where: { id: developerId },
+      include: { user: true },
+    });
+    if (!developer) {
+      throw new NotFoundException(`Développeur introuvable: ${developerId}`);
+    }
+
+    const defaultAdmin = await this.prisma.user.findFirst({
+      where: { roles: { has: Role.HEAD } },
+      select: { id: true },
+    });
+    const effectiveActorId = actorId || defaultAdmin?.id || developer.userId;
+
+    const hours = allocatedHours || Number(ticket.remainingEstimatedHours) || Number(ticket.estimatedHours) || 8;
+    const plannedStartDate = new Date();
+    const plannedEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    return this.prisma.$transaction(async (tx) => {
+      // Clôturer les affectations actives précédentes
+      await tx.assignment.updateMany({
+        where: { ticketId: ticket.id, status: AssignmentStatus.ACTIVE },
+        data: {
+          status: AssignmentStatus.RELEASED,
+          releasedAt: new Date(),
+          releaseReason: "Réaffectation par l'Administrateur",
+        },
+      });
+
+      // Créer la nouvelle affectation active
+      const assignment = await tx.assignment.create({
+        data: {
+          ticketId: ticket.id,
+          developerId: developer.id,
+          allocatedHours: hours,
+          remainingHours: hours,
+          status: AssignmentStatus.ACTIVE,
+          assignedById: effectiveActorId,
+          plannedStartDate,
+          plannedEndDate,
+        },
+        include: {
+          developer: {
+            include: {
+              user: {
+                select: { firstName: true, lastName: true, email: true },
+              },
+            },
+          },
+        },
+      });
+
+      // Mettre à jour le statut du ticket à ASSIGNED s'il était RECEIVED
+      const nextStatus = ticket.status === TicketStatus.RECEIVED ? TicketStatus.ASSIGNED : ticket.status;
+      await tx.ticket.update({
+        where: { id: ticket.id },
+        data: {
+          status: nextStatus,
+          plannedStartDate: ticket.plannedStartDate || plannedStartDate,
+        },
+      });
+
+      return assignment;
+    });
   }
 }

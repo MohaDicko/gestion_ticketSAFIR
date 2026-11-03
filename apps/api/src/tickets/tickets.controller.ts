@@ -101,6 +101,15 @@ export class TicketsController {
     return this.ticketsService.resolveBlocker(id, blockerId, body.resolution, body.actorId);
   }
 
+  @Post(":id/assign")
+  @Roles(Role.HEAD, Role.ADMIN)
+  async assignTicket(
+    @Param("id") id: string,
+    @Body() body: { developerId: string; allocatedHours?: number; actorId?: string },
+  ) {
+    return this.ticketsService.assign(id, body.developerId, body.allocatedHours, body.actorId);
+  }
+
   @Delete(":id")
   @Roles(Role.HEAD, Role.ADMIN)
   async removeTicket(@Param("id") id: string) {

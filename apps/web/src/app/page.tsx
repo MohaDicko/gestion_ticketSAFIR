@@ -2001,11 +2001,15 @@ export default function TicketManagerPage() {
         fetchJson(`${API_BASE}/tickets`),
         fetchJson(`${API_BASE}/emails/inbox`),
         fetchJson(`${API_BASE}/consultants`),
+        fetchJson(`${API_BASE}/time-entries/live`),
       ]);
 
-      const [devsRes, tixRes, emailsRes, consultantsRes] = results.map((result) =>
+      const [devsRes, tixRes, emailsRes, consultantsRes, liveRes] = results.map((result) =>
         result.status === "fulfilled" ? result.value : null
       );
+      if (liveRes && typeof liveRes === "object") {
+        setDevLiveActivities((prev) => ({ ...prev, ...liveRes }));
+      }
       if (Array.isArray(devsRes)) setDevelopers(devsRes);
       if (Array.isArray(tixRes)) {
         setTickets(
@@ -2055,6 +2059,35 @@ export default function TicketManagerPage() {
     if (!currentUser) return;
     refreshData();
   }, [currentUser]);
+
+  // Polling temps réel de l'activité des développeurs (toutes les 4 secondes pour la Direction)
+  useEffect(() => {
+    if (!currentUser || (currentUser.role !== "HEAD" && currentUser.role !== "ADMIN")) return;
+    let isCancelled = false;
+
+    const pollLive = async () => {
+      try {
+        const response = await apiFetch(`${API_BASE}/time-entries/live`);
+        if (response.ok && !isCancelled) {
+          const data = await response.json();
+          if (data && typeof data === "object") {
+            setDevLiveActivities((prev) => ({
+              ...prev,
+              ...data,
+            }));
+          }
+        }
+      } catch {
+        // silent polling
+      }
+    };
+
+    const interval = setInterval(pollLive, 4000);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [currentUser?.id, currentUser?.role]);
 
   useEffect(() => {
     if (!printingReport || printingReport.targetType !== "DEVELOPER") return;
@@ -3938,6 +3971,19 @@ export default function TicketManagerPage() {
           : t
       )
     );
+
+    // Persistance de l'affectation sur le serveur API & base de données
+    void apiFetch(`${API_BASE}/tickets/${assigningTicket.id}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        developerId: dev.id,
+        allocatedHours: totalEstHours,
+        actorId: currentUser?.id,
+      }),
+    }).catch((err) => {
+      console.error("[handleAssignSubmit] Échec de l'affectation API:", err);
+    });
 
     // Mettre à jour la capacité réservée des développeurs
     setDevelopers((prev) =>

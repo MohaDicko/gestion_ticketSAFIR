@@ -31,6 +31,12 @@ export class TimeEntriesController {
     return this.timeEntriesService.getActive(this.getDeveloperId(req));
   }
 
+  @Get("live")
+  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER)
+  async getLive() {
+    return this.timeEntriesService.getLiveActivities();
+  }
+
   @Get("report")
   @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER)
   async getReport(

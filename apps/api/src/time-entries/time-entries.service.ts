@@ -9,6 +9,9 @@ import {
   TicketStatus,
   WorkSessionStatus,
   TimesheetStatus,
+  Role,
+  ProfileStatus,
+  AssignmentStatus,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -53,6 +56,96 @@ export class TimeEntriesService {
     return entry ? this.formatWorkSession(entry) : null;
   }
 
+  async getLiveActivities() {
+    const developers = await this.prisma.developerProfile.findMany({
+      where: {
+        profileStatus: ProfileStatus.ACTIVE,
+        user: { isActive: true },
+      },
+      include: {
+        user: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+      },
+    });
+
+    const activeSessions = await this.prisma.workSession.findMany({
+      where: {
+        status: { in: [WorkSessionStatus.RUNNING, WorkSessionStatus.PAUSED] },
+      },
+      include: {
+        developer: {
+          include: {
+            user: {
+              select: { firstName: true, lastName: true, email: true },
+            },
+          },
+        },
+        assignment: {
+          include: {
+            ticket: {
+              include: {
+                client: { select: { name: true } },
+                blockers: {
+                  where: { resolvedAt: null },
+                  select: { id: true, reason: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const sessionByDevId = new Map(activeSessions.map((s) => [s.developerId, s]));
+    const now = Date.now();
+    const result: Record<string, any> = {};
+
+    for (const dev of developers) {
+      const session = sessionByDevId.get(dev.id);
+      if (session) {
+        const ticket = session.assignment.ticket;
+        const activeBlocker = ticket.blockers?.[0];
+        const isBlocked = Boolean(activeBlocker);
+        const isPaused = session.status === WorkSessionStatus.PAUSED;
+
+        const pausedDurationMs = (session.pausedDurationSeconds || 0) * 1000;
+        const pauseSinceMs = isPaused && session.pausedAt ? now - session.pausedAt.getTime() : 0;
+        const elapsedMs = Math.max(
+          0,
+          now - session.startedAt.getTime() - pausedDurationMs - pauseSinceMs,
+        );
+        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+
+        result[dev.id] = {
+          developerId: dev.id,
+          developerName: `${dev.user.firstName} ${dev.user.lastName}`,
+          developerEmail: dev.user.email,
+          status: isBlocked ? "BLOCKED" : isPaused ? "PAUSED" : "WORKING",
+          activeTicketId: ticket.id,
+          activeTicketReference: ticket.reference,
+          activeTicketTitle: ticket.title,
+          clientCompany: ticket.client?.name || "Safir Consulting",
+          currentTaskDescription: session.comment || `Développement en cours sur ${ticket.title}`,
+          startedAtTimestamp: session.startedAt.getTime(),
+          elapsedSeconds,
+          blockerReason: activeBlocker?.reason,
+        };
+      } else {
+        result[dev.id] = {
+          developerId: dev.id,
+          developerName: `${dev.user.firstName} ${dev.user.lastName}`,
+          developerEmail: dev.user.email,
+          status: "AVAILABLE",
+          currentTaskDescription: "Disponible pour affectation",
+          elapsedSeconds: 0,
+        };
+      }
+    }
+
+    return result;
+  }
+
   async start(developerId: string, ticketId: string) {
     const active = await this.prisma.workSession.findFirst({
       where: {
@@ -65,7 +158,7 @@ export class TimeEntriesService {
       throw new ConflictException("Un chronomètre est déjà actif pour ce développeur");
     }
 
-    const assignment = await this.prisma.assignment.findFirst({
+    let assignment = await this.prisma.assignment.findFirst({
       where: {
         developerId,
         ticketId,
@@ -75,7 +168,30 @@ export class TimeEntriesService {
       orderBy: { assignedAt: "desc" },
     });
     if (!assignment) {
-      throw new NotFoundException("Aucune affectation active trouvée pour ce ticket");
+      const ticket = await this.prisma.ticket.findUnique({
+        where: { id: ticketId },
+      });
+      if (!ticket) {
+        throw new NotFoundException("Aucune affectation active trouvée pour ce ticket");
+      }
+      const defaultAdmin = await this.prisma.user.findFirst({
+        where: { roles: { has: Role.HEAD } },
+        select: { id: true },
+      });
+      const hours = Number(ticket.remainingEstimatedHours) || Number(ticket.estimatedHours) || 8;
+      assignment = await this.prisma.assignment.create({
+        data: {
+          ticketId,
+          developerId,
+          allocatedHours: hours,
+          remainingHours: hours,
+          status: AssignmentStatus.ACTIVE,
+          assignedById: defaultAdmin?.id || developerId,
+          plannedStartDate: new Date(),
+          plannedEndDate: new Date(Date.now() + 7 * 86400000),
+        },
+        include: { ticket: true },
+      });
     }
     if (
       assignment.ticket.status !== TicketStatus.ASSIGNED &&
@@ -188,12 +304,12 @@ export class TimeEntriesService {
       Math.floor((endedAt.getTime() - entry.startedAt.getTime()) / 1000) - pausedSeconds,
     );
 
-    if (durationSeconds < 30) {
+    if (durationSeconds < 5) {
       await this.prisma.workSession.delete({ where: { id: entry.id } });
       return { ignored: true, durationSeconds };
     }
 
-    const durationHours = Math.round((durationSeconds / 3600) * 100) / 100;
+    const durationHours = Math.max(0.01, Math.round((durationSeconds / 3600) * 100) / 100);
     const completedEntry = await this.prisma.$transaction(async (tx) => {
       const timeEntry = await tx.timeEntry.create({
         data: {
