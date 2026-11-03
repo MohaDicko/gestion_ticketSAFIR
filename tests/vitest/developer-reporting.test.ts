@@ -144,3 +144,4 @@ describe("Rapports d'Activité Développeur & Détails par Ticket", () => {
     expect(ticket2?.clientCompany).toBe("Client Alpha");
   });
 });
+

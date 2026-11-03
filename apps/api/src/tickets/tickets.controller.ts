@@ -96,9 +96,22 @@ export class TicketsController {
   async resolveBlocker(
     @Param("id") id: string,
     @Param("blockerId") blockerId: string,
-    @Body() body: { resolution: string; actorId: string },
+    @Body() body: { resolution: string; actorId?: string },
   ) {
-    return this.ticketsService.resolveBlocker(id, blockerId, body.resolution, body.actorId);
+    return this.ticketsService.resolveBlocker(id, blockerId, body.resolution, body.actorId || "user-dev");
+  }
+
+  @Post(":id/unblock")
+  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER, Role.CONSULTANT)
+  async unblockTicket(
+    @Param("id") id: string,
+    @Body() body: { resolution?: string; actorId?: string },
+  ) {
+    return this.ticketsService.resolveBlockersForTicket(
+      id,
+      body.resolution || "Blocage levé par le collaborateur",
+      body.actorId,
+    );
   }
 
   @Post(":id/assign")

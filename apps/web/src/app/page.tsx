@@ -2812,52 +2812,71 @@ export default function TicketManagerPage() {
   };
 
   // Actions métier Développeur : Déclarer un blocage
-  const handleDeclareBlocker = (e: React.FormEvent) => {
+  const handleDeclareBlocker = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!blockingTicket || !blockerReasonText.trim()) return;
 
     const currentDevId = currentUser?.developerId || currentUser?.id || "dev-anoop";
+    const currentTicketId = blockingTicket.id;
+    const currentReason = blockerReasonText.trim();
 
-    // Règle d'or : Mise en pause automatique immédiate du compteur de temps en cas de blocage
-    if (activeTimerTicketId === blockingTicket.id) {
-      handleStopTimer(blockingTicket.id, "Mise en pause automatique : Blocage technique signalé");
-      showToast("⏱️ Compteur de temps mis en pause automatiquement : vous ne pouvez pas décompter du temps sur un ticket bloqué.");
+    // Règle d'or : Arrêt immédiat du compteur de temps en cas de blocage et enregistrement du temps travaillé
+    if (activeTimerTicketId === currentTicketId) {
+      await handleStopTimer(currentTicketId, `Arrêt sur blocage : ${currentReason}`);
+      showToast(`⏱️ Compteur arrêté : le temps travaillé sur ${blockingTicket.reference} a été consigné sur votre rapport.`);
+    }
+
+    // Persistance du blocage en base de données
+    try {
+      await apiFetch(`${API_BASE}/tickets/${currentTicketId}/blockers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: currentReason,
+          actorId: currentUser?.id || "user-dev",
+        }),
+      });
+    } catch (err) {
+      console.warn("[declareBlocker] Persistance serveur optionnelle:", err);
     }
 
     setDevLiveActivities((prev) => ({
       ...prev,
       [currentDevId]: {
-        ...(prev[currentDevId] || { developerId: currentDevId, elapsedSeconds: 0 }),
+        ...(prev[currentDevId] || { developerId: currentDevId }),
         status: "BLOCKED",
-        activeTicketId: blockingTicket.id,
+        activeTicketId: currentTicketId,
         activeTicketReference: blockingTicket.reference,
         activeTicketTitle: blockingTicket.title,
         clientCompany: blockingTicket.clientCompany || "Safir Consulting",
-        currentTaskDescription: `Blocage signalé : ${blockerReasonText.trim()}`
-      }
+        currentTaskDescription: `Blocage signalé : ${currentReason}`,
+        elapsedSeconds: 0,
+      },
     }));
 
     setTickets((prev) =>
       prev.map((t) =>
-        t.id === blockingTicket.id
+        t.id === currentTicketId
           ? {
               ...t,
               status: "BLOCKED",
-              blockerReason: blockerReasonText
+              blockerReason: currentReason,
             }
           : t
       )
     );
+
     pushInAppNotification({
       title: `🚨 Stop-the-line : Blocage déclaré sur ${blockingTicket.reference}`,
-      message: `${currentUser?.name || "Un développeur"} a signalé un blocage : « ${blockerReasonText} »`,
+      message: `${currentUser?.name || "Un développeur"} a signalé un blocage : « ${currentReason} »`,
       category: "BLOCKER",
       targetRoles: ["HEAD", "CONSULTANT"],
-      ticketId: blockingTicket.id,
+      ticketId: currentTicketId,
       ticketReference: blockingTicket.reference,
-      actorName: currentUser?.name || "Développeur SAP"
+      actorName: currentUser?.name || "Développeur SAP",
     });
-    showToast(`🚨 Blocage signalé à l'Administrateur sur le ticket ${blockingTicket.reference}`);
+
+    showToast(`🚨 Blocage signalé sur ${blockingTicket.reference} — compteur arrêté et temps consigné.`);
     setBlockingTicket(null);
     setBlockerReasonText("");
   };
@@ -3000,39 +3019,63 @@ export default function TicketManagerPage() {
     showToast(`📄 Relevé d'heures généré : ${totalHours.toFixed(1)}h pour ${targetName}.`);
   };
 
-  // Action Développeur : Débloquer / Reprendre (le déblocage est répercuté en temps réel sur le tableau de bord Administrateur)
-  const handleResumeTicket = (ticketId: string) => {
+  // Action Développeur : Débloquer / Reprendre (le déblocage relance immédiatement le chrono et cumule le temps)
+  const handleResumeTicket = async (ticketId: string) => {
     const target = tickets.find((t) => t.id === ticketId);
+    if (!target) return;
     const currentDevId = currentUser?.developerId || currentUser?.id || "dev-anoop";
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === ticketId
-          ? { ...t, status: "IN_PROGRESS", blockerReason: undefined }
-          : t
-      )
-    );
-    // Lever l'alerte "Bloqué" dans la supervision temps réel visible par l'Administrateur
-    setDevLiveActivities((prev) => ({
-      ...prev,
-      [currentDevId]: {
-        developerId: currentDevId,
-        status: "AVAILABLE",
-        currentTaskDescription: target ? `Blocage levé sur ${target.reference} — prêt à reprendre` : "Disponible pour affectation",
-        elapsedSeconds: 0
+
+    // 1. Lever le blocage côté serveur (API)
+    try {
+      if (target.blockerId) {
+        await apiFetch(`${API_BASE}/tickets/${target.id}/blockers/${target.blockerId}/resolve`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resolution: "Blocage levé par le développeur — Reprise des développements",
+            actorId: currentUser?.id || "user-dev",
+          }),
+        });
+      } else {
+        await apiFetch(`${API_BASE}/tickets/${target.id}/unblock`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resolution: "Blocage levé par le développeur — Reprise des développements",
+            actorId: currentUser?.id || "user-dev",
+          }),
+        });
       }
-    }));
-    if (target) {
-      pushInAppNotification({
-        title: `✅ Blocage levé sur ${target.reference}`,
-        message: `${currentUser?.name || "Le développeur"} a levé le blocage sur « ${target.title} » : le développement reprend.`,
-        category: "BLOCKER",
-        targetRoles: ["HEAD", "CONSULTANT"],
-        ticketId: target.id,
-        ticketReference: target.reference,
-        actorName: currentUser?.name || "Développeur SAP"
-      });
+    } catch (err) {
+      console.warn("[resumeTicket] Persistance serveur unblock:", err);
     }
-    showToast("Ticket débloqué, statut repassé en cours");
+
+    const resumedTicket: Ticket = {
+      ...target,
+      status: "IN_PROGRESS",
+      blockerReason: undefined,
+      blockerId: undefined,
+    };
+
+    setTickets((prev) =>
+      prev.map((t) => (t.id === ticketId ? resumedTicket : t))
+    );
+
+    pushInAppNotification({
+      title: `✅ Blocage levé sur ${target.reference}`,
+      message: `${currentUser?.name || "Le développeur"} a levé le blocage sur « ${target.title} » : le chronomètre redémarre.`,
+      category: "BLOCKER",
+      targetRoles: ["HEAD", "CONSULTANT"],
+      ticketId: target.id,
+      ticketReference: target.reference,
+      actorName: currentUser?.name || "Développeur SAP",
+    });
+
+    showToast(`✅ Blocage levé sur ${target.reference} — Redémarrage automatique du chronomètre...`);
+
+    // 2. REDÉMARRER AUTOMATIQUEMENT LE COMPTEUR SUR CE TICKET
+    // La nouvelle session démarre et s'additionne aux temps précédents
+    await handleStartTimer(resumedTicket);
   };
 
   // Action Développeur : Envoyer en test chez le consultant (Livraison pour recette)
@@ -5263,6 +5306,12 @@ export default function TicketManagerPage() {
                       (c) => c.id !== myContributorLot?.id
                     );
                     const isTimerRunningOnThisTicket = activeTimerTicketId === ticket.id;
+                    const ticketLogs = timeLogs.filter(
+                      (l) => l.ticketId === ticket.id || l.ticketReference === ticket.reference
+                    );
+                    const loggedHours = ticketLogs.reduce((sum, l) => sum + (l.durationHours || 0), 0);
+                    const liveHours = isTimerRunningOnThisTicket ? activeTimerSeconds / 3600 : 0;
+                    const totalCumulativeHours = Math.round((loggedHours + liveHours) * 100) / 100;
                     const devPriorityBorderClass =
                       ticket.status === "BLOCKED" || ticket.priorityCode === "CRITICAL"
                         ? "border-l-4 border-l-rose-600 bg-rose-50/20 hover:bg-rose-50/40"
@@ -5300,7 +5349,9 @@ export default function TicketManagerPage() {
                                 className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-950 border border-emerald-400 animate-pulse flex items-center gap-1"
                               >
                                 <Timer className="w-3 h-3 text-emerald-700" />
-                                <span>COMPTEUR EN COURS ({formatTimer(activeTimerSeconds)})</span>
+                                <span>
+                                  SESSION : {formatTimer(activeTimerSeconds)} • CUMUL : {totalCumulativeHours.toFixed(2)} h
+                                </span>
                               </span>
                             )}
                           </div>
@@ -5340,8 +5391,15 @@ export default function TicketManagerPage() {
                             <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
                               <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                               <div>
-                                <span className="font-semibold">Blocage signalé (Compteur de temps en pause) : </span>
-                                {ticket.blockerReason}
+                                <div className="font-bold text-rose-900">
+                                  Blocage actif — Compteur arrêté et {loggedHours.toFixed(2)} h de travail sauvegardées
+                                </div>
+                                <div className="mt-0.5">
+                                  <span className="font-medium">Motif : </span>{ticket.blockerReason}
+                                </div>
+                                <div className="text-[11px] text-rose-700 mt-1">
+                                  💡 Cliquez sur <strong>« Reprendre & Relancer chrono »</strong> pour lever le blocage et relancer immédiatement le compteur de travail.
+                                </div>
                               </div>
                             </div>
                           )}
@@ -5369,7 +5427,12 @@ export default function TicketManagerPage() {
                             <span>Demandeur : <strong className="text-slate-700">{ticket.applicantName}</strong></span>
                             <span>Client : <strong className="text-slate-700">{ticket.clientCompany}</strong></span>
                             <span>Charge totale : <strong className="text-slate-700">{ticket.estimatedHours} h</strong></span>
-                            <span>RAF global : <strong className="text-sky-700">{ticket.remainingHours ?? ticket.estimatedHours} h</strong></span>
+                            <span className="font-semibold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-sky-600" />
+                              <span>Temps travaillé cumulé : <strong>{totalCumulativeHours.toFixed(2)} h</strong></span>
+                              {ticketLogs.length > 0 && <span className="text-[10px] text-sky-600 font-normal">({ticketLogs.length} session{ticketLogs.length > 1 ? "s" : ""})</span>}
+                            </span>
+                            <span>RAF global : <strong className="text-teal-700">{ticket.remainingHours ?? ticket.estimatedHours} h</strong></span>
                           </div>
                         </div>
 
@@ -5390,7 +5453,7 @@ export default function TicketManagerPage() {
                                     <Square className="w-3.5 h-3.5 fill-current" />
                                     <span>
                                       Chrono : <span data-testid="dev-live-timer-display">{formatTimer(activeTimerSeconds)}</span>
-                                      {isTimerPaused ? " (pause)" : ""}
+                                      {isTimerPaused ? " (pause)" : ""} • Total : {totalCumulativeHours.toFixed(2)} h
                                     </span>
                                   </button>
                                   <button
@@ -5430,10 +5493,13 @@ export default function TicketManagerPage() {
 
                           {ticket.status === "BLOCKED" ? (
                             <button
+                              data-testid="ticket-resume-btn"
                               onClick={() => handleResumeTicket(ticket.id)}
-                              className="px-3 py-1.5 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer"
+                              className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                              title="Lever le blocage et relancer automatiquement le chronomètre"
                             >
-                              Reprendre le ticket
+                              <Play className="w-3.5 h-3.5 fill-current text-emerald-200" />
+                              <span>Reprendre & Relancer chrono</span>
                             </button>
                           ) : (
                             <button

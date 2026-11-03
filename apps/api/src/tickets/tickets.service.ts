@@ -296,38 +296,117 @@ export class TicketsService {
     });
   }
 
-  async declareBlocker(ticketId: string, reason: string, actorId: string) {
+  async declareBlocker(ticketId: string, reason: string, actorId?: string) {
     const ticket = await this.findOne(ticketId);
     if (ticket.status === TicketStatus.BLOCKED) {
       throw new BadRequestException("Ce ticket est déjà bloqué");
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: any) => {
+      // Clôturer toute session de travail active sur ce ticket et consigner le temps travaillé
+      if (tx.workSession?.findMany) {
+        const activeSessions = await tx.workSession.findMany({
+          where: {
+            assignment: { ticketId: ticket.id },
+            endedAt: null,
+          },
+          include: { assignment: true },
+        });
+
+        for (const session of activeSessions) {
+          const endedAt = new Date();
+          const durationSeconds = Math.max(
+            5,
+            Math.round((endedAt.getTime() - session.startedAt.getTime()) / 1000) - (session.pausedDurationSeconds || 0),
+          );
+          const durationHours = Math.max(0.01, Math.round((durationSeconds / 3600) * 100) / 100);
+
+          await tx.workSession.update({
+            where: { id: session.id },
+            data: { endedAt, status: "STOPPED" },
+          });
+
+          if (tx.timeEntry?.create) {
+            await tx.timeEntry.create({
+              data: {
+                assignmentId: session.assignmentId,
+                developerId: session.developerId,
+                startedAt: session.startedAt,
+                endedAt,
+                durationHours,
+                durationSeconds,
+                workDate: new Date(Date.UTC(session.startedAt.getUTCFullYear(), session.startedAt.getUTCMonth(), session.startedAt.getUTCDate())),
+                comment: `Arrêt sur blocage : ${reason}`,
+              },
+            });
+          }
+        }
+      }
+
       await tx.ticketBlocker.create({
         data: {
-          ticketId,
+          ticketId: ticket.id,
           reason,
-          declaredById: actorId,
+          declaredById: actorId || (ticket as any).assignments?.[0]?.developer?.userId || "user-dev",
         },
       });
 
       const updated = await tx.ticket.update({
-        where: { id: ticketId },
+        where: { id: ticket.id },
         data: {
           status: TicketStatus.BLOCKED,
           statusBeforeBlock: ticket.status,
         },
       });
 
-      await tx.ticketStatusHistory.create({
+      if (actorId && tx.ticketStatusHistory?.create) {
+        await tx.ticketStatusHistory.create({
+          data: {
+            ticketId: ticket.id,
+            fromStatus: ticket.status,
+            toStatus: TicketStatus.BLOCKED,
+            actorId,
+            reason: `Blocage déclaré : ${reason}`,
+          },
+        });
+      }
+
+      return updated;
+    });
+  }
+
+  async resolveBlockersForTicket(ticketId: string, resolution: string, actorId?: string) {
+    const ticket = await this.findOne(ticketId);
+    const returnStatus = ticket.statusBeforeBlock || TicketStatus.IN_PROGRESS;
+
+    return this.prisma.$transaction(async (tx: any) => {
+      await tx.ticketBlocker.updateMany({
+        where: { ticketId: ticket.id, resolvedAt: null },
         data: {
-          ticketId,
-          fromStatus: ticket.status,
-          toStatus: TicketStatus.BLOCKED,
-          actorId,
-          reason: `Blocage déclaré : ${reason}`,
+          resolvedAt: new Date(),
+          resolution,
         },
       });
+
+      const updated = await tx.ticket.update({
+        where: { id: ticket.id },
+        data: {
+          status: returnStatus,
+          statusBeforeBlock: null,
+        },
+      });
+
+      if (actorId && tx.ticketStatusHistory?.create) {
+        await tx.ticketStatusHistory.create({
+          data: {
+            ticketId: ticket.id,
+            fromStatus: TicketStatus.BLOCKED,
+            toStatus: returnStatus,
+            actorId,
+            reason: `Blocage levé : ${resolution}`,
+          },
+        });
+      }
 
       return updated;
     });
