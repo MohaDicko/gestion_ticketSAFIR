@@ -20,6 +20,8 @@ import { SapB1Controller } from "./services/sapB1.controller";
 import { APP_GUARD } from "@nestjs/core";
 import { SessionGuard } from "./auth/session.guard";
 import { RolesGuard } from "./auth/roles.guard";
+import { TimeEntriesController } from "./time-entries/time-entries.controller";
+import { TimeEntriesService } from "./time-entries/time-entries.service";
 
 @Module({
   imports: [
@@ -40,6 +42,7 @@ import { RolesGuard } from "./auth/roles.guard";
     EmailsController,
     ConsultantsController,
     SapB1Controller,
+    TimeEntriesController,
   ],
   providers: [
     AuthService,
@@ -49,6 +52,7 @@ import { RolesGuard } from "./auth/roles.guard";
     EmailsService,
     ConsultantsService,
     SapB1Service,
+    TimeEntriesService,
     {
       provide: APP_GUARD,
       useClass: SessionGuard,

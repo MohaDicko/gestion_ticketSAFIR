@@ -59,6 +59,7 @@ import {
 } from "lucide-react";
 import { ChangePasswordModal } from "@/components/modals/ChangePasswordModal";
 import { translateAttribute, translateText } from "@/lib/i18n";
+import { getReportDateRange, ReportPeriod } from "@/lib/report-period";
 
 const API_BASE = "/api/v1";
 
@@ -105,6 +106,9 @@ export interface TimeLog {
   durationHours: number;
   date: string; // Format YYYY-MM-DD
   note?: string;
+  status?: "RUNNING" | "PAUSED" | "COMPLETED";
+  pausedAt?: string;
+  pausedDurationSeconds?: number;
 }
 
 export interface DeveloperLiveActivity {
@@ -333,6 +337,20 @@ interface AuthUser {
   passwordHash?: string;
   passwordChangedAt?: string;
 }
+
+interface TimesheetStatus {
+  status: "SUBMITTED" | "APPROVED";
+  submittedAt?: string;
+  approvedAt?: string;
+  approvedByName?: string | null;
+}
+
+const getApiErrorMessage = async (response: Response) => {
+  const payload = await response.json().catch(() => null);
+  if (typeof payload?.message === "string") return payload.message;
+  if (Array.isArray(payload?.message)) return payload.message.join(", ");
+  return `Erreur API (${response.status})`;
+};
 
 // Rôles et Briques Techniques pour la multi-affectation par lot
 const TECHNICAL_LOT_ROLES = [
@@ -1239,11 +1257,70 @@ export default function TicketManagerPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const response = await apiFetch(`${API_BASE}/auth/me`);
+      if (response.status === 401) return;
+      if (!response.ok) throw new Error(await getApiErrorMessage(response));
+      const user = (await response.json()) as {
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        roles: string[];
+        developerProfile?: { id: string } | null;
+        mustChangePassword?: boolean;
+      };
+      if (cancelled) return;
+      const role = user.roles.includes("HEAD")
+        ? "HEAD"
+        : user.roles.includes("DEVELOPER")
+          ? "DEVELOPER"
+          : user.roles.includes("CONSULTANT")
+            ? "CONSULTANT"
+            : "ADMIN";
+      const restoredUser: AuthUser = {
+        id: user.id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role,
+        developerId: user.developerProfile?.id,
+        adminLevel: user.roles.includes("HEAD")
+          ? "SUPER_ADMIN"
+          : user.roles.includes("ADMIN")
+            ? "ADMIN"
+            : undefined,
+        roleLabel: user.roles.includes("HEAD")
+          ? "Super Administrateur & Responsable CoE DEV"
+          : "Administrateur",
+        initials: `${user.firstName[0] || ""}${user.lastName[0] || ""}`.toUpperCase(),
+        isFirstLogin: Boolean(user.mustChangePassword),
+        mustChangePassword: Boolean(user.mustChangePassword),
+      };
+      setCurrentUser(restoredUser);
+      setShowLoginModal(false);
+      setShowChangePasswordModal(Boolean(restoredUser.mustChangePassword));
+    })().catch((error: unknown) => {
+      if (cancelled) return;
+      console.error("[auth/me] Échec de restauration de la session", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Nom dynamique de l'administrateur actif (ou administrateur par défaut Getheme Aliko)
   const activeAdminUser = useMemo(
-    () => (currentUser?.role === "HEAD" ? currentUser : systemUsers.find((u) => u.role === "HEAD") || SYSTEM_USERS[0]),
+    () => (
+      currentUser?.role === "HEAD" || currentUser?.role === "ADMIN"
+        ? currentUser
+        : systemUsers.find((u) => u.role === "HEAD") || SYSTEM_USERS[0]
+    ),
     [currentUser, systemUsers]
   );
+  const isAdminRole = currentUser?.role === "HEAD" || currentUser?.role === "ADMIN";
 
   // Centre de Notifications Temps Réel In-App & Reporting Direction
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
@@ -1428,7 +1505,7 @@ export default function TicketManagerPage() {
 
   // Chronomètre / Compteur de Temps de Travail Actif (Règle Mono-Tâche Stricte)
   const [activeTimerTicketId, setActiveTimerTicketId] = useState<string | null>(null);
-  const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null);
+  const [activeTimerEntryId, setActiveTimerEntryId] = useState<string | null>(null);
   const [activeTimerSeconds, setActiveTimerSeconds] = useState<number>(0);
   const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false);
   // Socle de calcul du temps (base de la paie) : horodatages absolus, jamais de simple compteur incrémental
@@ -1446,16 +1523,19 @@ export default function TicketManagerPage() {
     role: string;
     jobTitle?: string;
   } | null>(null);
-  const [reportPeriod, setReportPeriod] = useState<"DAILY" | "WEEKLY" | "MONTHLY" | "QUARTERLY" | "SEMESTER" | "YEARLY" | "CUSTOM">("WEEKLY");
+  const [reportPeriod, setReportPeriod] = useState<ReportPeriod>("WEEKLY");
   // Filtre de période personnalisable (ex : intervalle du 14 du mois précédent au 14 du mois en cours)
-  const [reportDateFrom, setReportDateFrom] = useState<string>("2026-09-14");
-  const [reportDateTo, setReportDateTo] = useState<string>("2026-10-14");
+  const initialReportRange = getReportDateRange("WEEKLY", "", "");
+  const [reportDateFrom, setReportDateFrom] = useState<string>(initialReportRange.from);
+  const [reportDateTo, setReportDateTo] = useState<string>(initialReportRange.to);
   // Statuts de validation des feuilles de temps (Validation Développeur -> Visa Admin -> Transmission Compta pour paiement)
-  const [timesheetStatuses, setTimesheetStatuses] = useState<Record<string, {
-    status: "DRAFT" | "SUBMITTED" | "APPROVED_PAYROLL";
-    submittedAt?: string;
-    approvedAt?: string;
-  }>>({});
+  const [timesheetStatuses, setTimesheetStatuses] = useState<Record<string, TimesheetStatus>>({});
+  const reportRange = useMemo(
+    () => getReportDateRange(reportPeriod, reportDateFrom, reportDateTo),
+    [reportPeriod, reportDateFrom, reportDateTo],
+  );
+  const getTimesheetKey = (developerId: string, from = reportRange.from, to = reportRange.to) =>
+    `${developerId}_${from}_${to}`;
 
   // Supervision en Temps Réel de l'Activité des Développeurs (Live Activity Monitor pour Aliko)
   const [devLiveActivities, setDevLiveActivities] = useState<Record<string, DeveloperLiveActivity>>(INITIAL_DEV_LIVE_ACTIVITIES);
@@ -1976,6 +2056,47 @@ export default function TicketManagerPage() {
     refreshData();
   }, [currentUser]);
 
+  useEffect(() => {
+    if (!printingReport || printingReport.targetType !== "DEVELOPER") return;
+    let cancelled = false;
+    const params = new URLSearchParams({
+      from: reportRange.from,
+      to: reportRange.to,
+    });
+    if (currentUser?.role !== "DEVELOPER") {
+      params.set("developerId", printingReport.targetId);
+    }
+
+    void (async () => {
+      const response = await apiFetch(`${API_BASE}/time-entries/report?${params}`);
+      if (!response.ok) {
+        throw new Error(await getApiErrorMessage(response));
+      }
+      const payload = (await response.json()) as {
+        entries?: TimeLog[];
+        timesheet?: TimesheetStatus | null;
+      };
+      if (cancelled) return;
+
+      setTimeLogs(Array.isArray(payload.entries) ? payload.entries : []);
+      const key = getTimesheetKey(printingReport.targetId);
+      setTimesheetStatuses((previous) => {
+        const next = { ...previous };
+        if (payload.timesheet) next[key] = payload.timesheet;
+        else delete next[key];
+        return next;
+      });
+    })().catch((error: unknown) => {
+      if (cancelled) return;
+      console.error("[time-entries/report] Échec du chargement du relevé", error);
+      showToast(error instanceof Error ? error.message : "Impossible de charger le rapport.");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [printingReport, reportRange.from, reportRange.to, currentUser?.role]);
+
   // Cloisonnement strict RBAC : verrouillage automatique et étanche de l'espace selon le rôle connecté
   useEffect(() => {
     if (!currentUser) return;
@@ -2043,6 +2164,7 @@ export default function TicketManagerPage() {
           firstName: string;
           lastName: string;
           roles: string[];
+          developerId?: string;
           mustChangePassword?: boolean;
         };
       };
@@ -2065,6 +2187,7 @@ export default function TicketManagerPage() {
         role,
         adminLevel: user.roles.includes("HEAD") ? "SUPER_ADMIN" : user.roles.includes("ADMIN") ? "ADMIN" : undefined,
         roleLabel: user.roles.includes("HEAD") ? "Super Administrateur & Responsable CoE DEV" : "Administrateur",
+        developerId: user.developerId,
         initials: `${user.firstName[0] || ""}${user.lastName[0] || ""}`.toUpperCase(),
         isFirstLogin: Boolean(payload.user?.mustChangePassword),
         mustChangePassword: Boolean(payload.user?.mustChangePassword),
@@ -2331,6 +2454,48 @@ export default function TicketManagerPage() {
     });
   }, [tickets, searchQuery, statusFilter, projectStartFilter, timeLogs]);
 
+  useEffect(() => {
+    if (currentUser?.role !== "DEVELOPER" || currentUser.mustChangePassword) return;
+    let cancelled = false;
+
+    void (async () => {
+      const response = await apiFetch(`${API_BASE}/time-entries/active`);
+      if (!response.ok) {
+        throw new Error(await getApiErrorMessage(response));
+      }
+      const entry = (await response.json()) as TimeLog | null;
+      if (cancelled || !entry) return;
+
+      const startedAt = Date.parse(entry.startedAt);
+      if (!Number.isFinite(startedAt)) {
+        throw new Error("L'horodatage du chronomètre actif est invalide.");
+      }
+      const pausedAt = entry.pausedAt ? Date.parse(entry.pausedAt) : null;
+      timerStartedAtRef.current = startedAt;
+      timerPausedTotalMsRef.current = (entry.pausedDurationSeconds || 0) * 1000;
+      timerPauseStartRef.current = pausedAt;
+      setActiveTimerEntryId(entry.id);
+      setActiveTimerTicketId(entry.ticketId);
+      setIsTimerPaused(entry.status === "PAUSED");
+      setActiveTimerSeconds(
+        Math.max(
+          0,
+          Math.floor(
+            ((pausedAt ?? Date.now()) - startedAt - timerPausedTotalMsRef.current) / 1000,
+          ),
+        ),
+      );
+    })().catch((error: unknown) => {
+      if (cancelled) return;
+      console.error("[time-entries/active] Échec de restauration du chronomètre", error);
+      showToast(error instanceof Error ? error.message : "Impossible de restaurer le chronomètre.");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id, currentUser?.role, currentUser?.mustChangePassword]);
+
   // Timer en direct pour la session de travail active et la supervision temps réel de l'équipe
   useEffect(() => {
     const interval = setInterval(() => {
@@ -2375,7 +2540,12 @@ export default function TicketManagerPage() {
   };
 
   // Démarrer le chronomètre de travail sur un ticket (Règle mono-tâche stricte)
-  const handleStartTimer = (ticket: Ticket) => {
+  const handleStartTimer = async (ticket: Ticket) => {
+    if (currentUser?.role !== "DEVELOPER" || !currentUser.developerId) {
+      showToast("Seul un développeur connecté peut démarrer un chronomètre.");
+      return;
+    }
+    const developerId = currentUser.developerId;
     if (ticket.status === "BLOCKED") {
       showToast("Impossible de démarrer le compteur sur un ticket bloqué. Vous devez d'abord lever le blocage.");
       return;
@@ -2387,115 +2557,106 @@ export default function TicketManagerPage() {
       return;
     }
 
-    // Règle de non-cumul stricte : si un autre ticket est déjà en cours de chrono, l'arrêter et le consigner
-    if (activeTimerTicketId && activeTimerTicketId !== ticket.id) {
-      const currentActive = tickets.find((t) => t.id === activeTimerTicketId);
-      handleStopTimer(activeTimerTicketId, "Basculement automatique de tâche (règle mono-tâche)");
-      showToast(`Chronomètre précédent clôturé (${currentActive?.reference || "Tâche"}). Démarrage sur ${ticket.reference}.`);
-    }
-
-    const startedNow = Date.now();
-    timerStartedAtRef.current = startedNow;
-    timerPausedTotalMsRef.current = 0;
-    timerPauseStartRef.current = null;
-    setActiveTimerTicketId(ticket.id);
-    setTimerStartedAt(startedNow);
-    setActiveTimerSeconds(0);
-    setIsTimerPaused(false);
-
-    // Basculer le ticket en cours de développement s'il était simplement Assigné
-    if (ticket.status === "ASSIGNED") {
-      setTickets((prev) =>
-        prev.map((t) => (t.id === ticket.id ? { ...t, status: "IN_PROGRESS" } : t))
-      );
-    }
-
-    // Mettre à jour l'activité temps réel du développeur dans la supervision de l'Administration
-    const currentDevId = currentUser?.developerId || currentUser?.id || "dev-anoop";
-    setDevLiveActivities((prev) => ({
-      ...prev,
-      [currentDevId]: {
-        developerId: currentDevId,
-        status: "WORKING",
-        activeTicketId: ticket.id,
-        activeTicketReference: ticket.reference,
-        activeTicketTitle: ticket.title,
-        clientCompany: ticket.clientCompany || "Safir Consulting",
-        currentTaskDescription: `Développement en cours sur ${ticket.title}`,
-        startedAtTimestamp: Date.now(),
-        elapsedSeconds: 0
-      }
-    }));
-
-    showToast(`⏱️ Compteur démarré sur ${ticket.reference} — Règle mono-tâche stricte activée.`);
-  };
-
-  // Mettre en pause temporaire ou reprendre le chronomètre actif sans clôturer la session
-  const handleTogglePauseTimer = () => {
-    if (!activeTimerTicketId) return;
-    const activeT = tickets.find((t) => t.id === activeTimerTicketId);
-    const nextPaused = !isTimerPaused;
-    if (nextPaused) {
-      timerPauseStartRef.current = Date.now();
-    } else if (timerPauseStartRef.current) {
-      timerPausedTotalMsRef.current += Date.now() - timerPauseStartRef.current;
-      timerPauseStartRef.current = null;
-    }
-    setIsTimerPaused(nextPaused);
-    setActiveTimerSeconds(computeElapsedSeconds());
-    showToast(
-      nextPaused
-        ? `⏸️ Chronomètre mis en pause sur ${activeT?.reference || "le ticket"} (${formatTimer(activeTimerSeconds)}).`
-        : `▶️ Chronomètre repris sur ${activeT?.reference || "le ticket"}.`
-    );
-  };
-
-  // Arrêter le compteur de travail et enregistrer la feuille de temps
-  const handleStopTimer = (ticketId: string, note?: string) => {
-    const target = tickets.find((t) => t.id === ticketId);
-    const currentDevId = currentUser?.developerId || currentUser?.id || "dev-anoop";
-
-    if (!target) {
-      setActiveTimerTicketId(null);
-      setTimerStartedAt(null);
-      setActiveTimerSeconds(0);
-      setIsTimerPaused(false);
-      setDevLiveActivities((prev) => ({
-        ...prev,
-        [currentDevId]: {
-          developerId: currentDevId,
-          status: "AVAILABLE",
-          currentTaskDescription: "Disponible pour affectation",
-          elapsedSeconds: 0
-        }
-      }));
+    if (activeTimerTicketId === ticket.id) {
+      showToast(`Le chronomètre est déjà actif sur ${ticket.reference}.`);
       return;
     }
 
-    // Calcul exact et tracable : secondes reelles, minutes arrondies a la plus proche, heures = minutes / 60 (2 decimales)
-    const sec = computeElapsedSeconds();
-    const minutes = Math.round(sec / 60);
-    const hours = Math.round((minutes / 60) * 100) / 100;
-    const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
-    const timeStr = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    if (activeTimerTicketId && activeTimerTicketId !== ticket.id) {
+      const currentActive = tickets.find((t) => t.id === activeTimerTicketId);
+      const stopped = await handleStopTimer(
+        activeTimerTicketId,
+        "Basculement automatique de tâche (règle mono-tâche)",
+      );
+      if (!stopped) return;
+      showToast(`Chronomètre précédent clôturé (${currentActive?.reference || "Tâche"}). Démarrage sur ${ticket.reference}.`);
+    }
 
-    const newLog: TimeLog = {
-      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      ticketId: target.id,
-      ticketReference: target.reference,
-      ticketTitle: target.title,
-      clientCompany: target.clientCompany || "Safir Consulting",
-      developerId: currentDevId,
-      developerName: currentUser?.name || "Anoop Pandimukkula",
-      developerEmail: currentUser?.email || "anoop.pandimukkula@safirconsulting.net",
-      startedAt: `${todayStr} ${timeStr}`,
-      endedAt: `${todayStr} ${timeStr}`,
-      durationMinutes: minutes,
-      durationHours: hours,
-      date: todayStr,
-      note: note || `Session de travail enregistrée sur ${target.reference}`
-    };
+    try {
+      const response = await apiFetch(`${API_BASE}/time-entries/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: ticket.id }),
+      });
+      if (!response.ok) throw new Error(await getApiErrorMessage(response));
+      const entry = (await response.json()) as TimeLog;
+      const startedAt = Date.parse(entry.startedAt);
+      if (!Number.isFinite(startedAt)) {
+        throw new Error("L'horodatage du chronomètre retourné par le serveur est invalide.");
+      }
+
+      timerStartedAtRef.current = startedAt;
+      timerPausedTotalMsRef.current = 0;
+      timerPauseStartRef.current = null;
+      setActiveTimerEntryId(entry.id);
+      setActiveTimerTicketId(ticket.id);
+      setActiveTimerSeconds(0);
+      setIsTimerPaused(false);
+
+      if (ticket.status === "ASSIGNED") {
+        setTickets((prev) =>
+          prev.map((t) => (t.id === ticket.id ? { ...t, status: "IN_PROGRESS" } : t))
+        );
+      }
+
+      setDevLiveActivities((prev) => ({
+        ...prev,
+        [developerId]: {
+          developerId,
+          status: "WORKING",
+          activeTicketId: ticket.id,
+          activeTicketReference: ticket.reference,
+          activeTicketTitle: ticket.title,
+          clientCompany: ticket.clientCompany || "Safir Consulting",
+          currentTaskDescription: `Développement en cours sur ${ticket.title}`,
+          startedAtTimestamp: startedAt,
+          elapsedSeconds: 0,
+        },
+      }));
+
+      showToast(`⏱️ Compteur démarré sur ${ticket.reference} — temps sauvegardé automatiquement.`);
+    } catch (error) {
+      console.error("[time-entries/start] Échec du démarrage du chronomètre", error);
+      showToast(error instanceof Error ? error.message : "Impossible de démarrer le chronomètre.");
+    }
+  };
+
+  // Mettre en pause temporaire ou reprendre le chronomètre actif sans clôturer la session
+  const handleTogglePauseTimer = async () => {
+    if (!activeTimerTicketId || !activeTimerEntryId) return;
+    const activeT = tickets.find((t) => t.id === activeTimerTicketId);
+    const nextPaused = !isTimerPaused;
+    try {
+      const response = await apiFetch(
+        `${API_BASE}/time-entries/${activeTimerEntryId}/${nextPaused ? "pause" : "resume"}`,
+        { method: "POST" },
+      );
+      if (!response.ok) throw new Error(await getApiErrorMessage(response));
+      const entry = (await response.json()) as TimeLog;
+      const pausedAt = entry.pausedAt ? Date.parse(entry.pausedAt) : null;
+      timerPausedTotalMsRef.current = (entry.pausedDurationSeconds || 0) * 1000;
+      timerPauseStartRef.current = pausedAt;
+      setIsTimerPaused(entry.status === "PAUSED");
+      setActiveTimerSeconds(computeElapsedSeconds());
+      showToast(
+        nextPaused
+          ? `⏸️ Chronomètre mis en pause sur ${activeT?.reference || "le ticket"} (${formatTimer(activeTimerSeconds)}).`
+          : `▶️ Chronomètre repris sur ${activeT?.reference || "le ticket"}.`
+      );
+    } catch (error) {
+      console.error("[time-entries/pause] Échec de la mise à jour du chronomètre", error);
+      showToast(error instanceof Error ? error.message : "Impossible de modifier la pause.");
+    }
+  };
+
+  // Arrêter le compteur de travail et enregistrer la feuille de temps
+  const handleStopTimer = async (ticketId: string, note?: string): Promise<boolean> => {
+    const target = tickets.find((t) => t.id === ticketId);
+    if (!activeTimerEntryId || currentUser?.role !== "DEVELOPER" || !currentUser.developerId) {
+      showToast("Aucun chronomètre sauvegardé à arrêter.");
+      return false;
+    }
+    const developerId = currentUser.developerId;
 
     const resetTimerState = () => {
       timerStartedAtRef.current = null;
@@ -2503,61 +2664,69 @@ export default function TicketManagerPage() {
       timerPauseStartRef.current = null;
     };
 
-    // Une session de moins de 30 secondes n'est pas facturable : ignorée (aucune heure fantôme dans la base de paie)
-    if (sec < 30) {
+    try {
+      const response = await apiFetch(`${API_BASE}/time-entries/${activeTimerEntryId}/stop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment: note }),
+      });
+      if (!response.ok) throw new Error(await getApiErrorMessage(response));
+      const result = (await response.json()) as {
+        ignored: boolean;
+        durationSeconds: number;
+        entry?: TimeLog;
+      };
+      const completedEntry = result.entry;
+      if (completedEntry) {
+        setTimeLogs((previous) => [
+          completedEntry,
+          ...previous.filter((log) => log.id !== completedEntry.id),
+        ]);
+        setTickets((previous) =>
+          previous.map((ticket) => {
+            if (ticket.id !== ticketId) return ticket;
+            const currentHours = ticket.remainingHours ?? ticket.estimatedHours;
+            return {
+              ...ticket,
+              remainingHours: Math.max(
+                0,
+                Math.round((currentHours - completedEntry.durationHours) * 100) / 100,
+              ),
+            };
+          }),
+        );
+      }
+
       resetTimerState();
+      setActiveTimerEntryId(null);
       setActiveTimerTicketId(null);
-      setTimerStartedAt(null);
       setActiveTimerSeconds(0);
       setIsTimerPaused(false);
-      setDevLiveActivities((prev) => ({
-        ...prev,
-        [currentDevId]: {
-          developerId: currentDevId,
+      setDevLiveActivities((previous) => ({
+        ...previous,
+        [developerId]: {
+          developerId,
           status: "AVAILABLE",
-          currentTaskDescription: "Disponible pour affectation",
-          elapsedSeconds: 0
-        }
+          currentTaskDescription: completedEntry
+            ? `Dernière tâche terminée : ${completedEntry.ticketReference} (+${completedEntry.durationHours} h)`
+            : "Disponible pour affectation",
+          elapsedSeconds: 0,
+        },
       }));
-      showToast(`Session de moins de 30 secondes ignorée sur ${target.reference} (aucune heure comptabilisée).`);
-      return;
-    }
 
-    setTimeLogs((prev) => [newLog, ...prev]);
-    resetTimerState();
-
-    // Mettre à jour le RAF du ticket
-    setTickets((prev) =>
-      prev.map((t) => {
-        if (t.id === ticketId) {
-          const currentRaf = t.remainingHours ?? t.estimatedHours;
-          const newRaf = Math.max(0, Math.round((currentRaf - hours) * 10) / 10);
-          return {
-            ...t,
-            remainingHours: newRaf
-          };
-        }
-        return t;
-      })
-    );
-
-    setActiveTimerTicketId(null);
-    setTimerStartedAt(null);
-    setActiveTimerSeconds(0);
-    setIsTimerPaused(false);
-
-    // Mettre à jour la supervision temps réel d'Aliko en statut disponible
-    setDevLiveActivities((prev) => ({
-      ...prev,
-      [currentDevId]: {
-        developerId: currentDevId,
-        status: "AVAILABLE",
-        currentTaskDescription: `Dernière tâche terminée : ${target.reference} (+${hours} h)`,
-        elapsedSeconds: 0
+      if (result.ignored) {
+        showToast(`Session de moins de 30 secondes ignorée sur ${target?.reference || "le ticket"}.`);
+      } else {
+        showToast(
+          `⏱️ Session enregistrée sur ${completedEntry?.ticketReference || target?.reference} : ${completedEntry?.durationHours.toFixed(2)} h ajoutées au rapport.`,
+        );
       }
-    }));
-
-    showToast(`⏱️ Session enregistrée sur ${target.reference} : +${hours} h (+${minutes} min) ajoutées à votre relevé d'heures.`);
+      return true;
+    } catch (error) {
+      console.error("[time-entries/stop] Échec de l'enregistrement du temps", error);
+      showToast(error instanceof Error ? error.message : "Impossible d'enregistrer le temps travaillé.");
+      return false;
+    }
   };
 
   // Actions métier Développeur : Déclarer un blocage
@@ -2612,46 +2781,74 @@ export default function TicketManagerPage() {
   };
 
   // Soumission et Validation de la Feuille de Temps (Développeur -> Admin -> Transmission Compta pour Paiement)
-  const handleDevSubmitTimesheet = (devId: string, devName: string) => {
-    const periodLabel = reportPeriod === "CUSTOM" ? `${reportDateFrom}_${reportDateTo}` : reportPeriod;
-    const formattedPeriod = reportPeriod === "CUSTOM" ? `du ${reportDateFrom} au ${reportDateTo}` : reportPeriod;
-    const key = `${devId}_${periodLabel}`;
-    setTimesheetStatuses((prev) => ({
-      ...prev,
-      [key]: {
-        status: "SUBMITTED",
-        submittedAt: new Date().toLocaleDateString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-      }
-    }));
-    pushInAppNotification({
-      title: `📄 Feuille de temps validée par ${devName}`,
-      message: `${devName} a défini manuellement et validé son intervalle (${formattedPeriod}). En attente de visa Administrateur avant transmission comptabilité.`,
-      category: "DELIVERY",
-      targetRoles: ["HEAD"],
-      actorName: devName
-    });
-    showToast(`✅ Relevé d'activité (${formattedPeriod}) validé et transmis à l'Administrateur BU SME pour visa.`);
+  const handleDevSubmitTimesheet = async (devId: string, devName: string) => {
+    if (currentUser?.role !== "DEVELOPER" || currentUser.developerId !== devId) {
+      showToast("Vous ne pouvez transmettre que votre propre relevé.");
+      return;
+    }
+
+    try {
+      const response = await apiFetch(`${API_BASE}/time-entries/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from: reportRange.from, to: reportRange.to }),
+      });
+      if (!response.ok) throw new Error(await getApiErrorMessage(response));
+      const status = (await response.json()) as TimesheetStatus;
+      setTimesheetStatuses((previous) => ({
+        ...previous,
+        [getTimesheetKey(devId)]: status,
+      }));
+      const formattedPeriod = `du ${reportRange.from} au ${reportRange.to}`;
+      pushInAppNotification({
+        title: `📄 Feuille de temps transmise par ${devName}`,
+        message: `${devName} a transmis son relevé (${formattedPeriod}) à l'Administration pour validation.`,
+        category: "DELIVERY",
+        targetRoles: ["HEAD", "ADMIN"],
+        actorName: devName,
+      });
+      showToast(`✅ Relevé d'activité (${formattedPeriod}) transmis à l'Administration.`);
+    } catch (error) {
+      console.error("[time-entries/submit] Échec de la transmission du relevé", error);
+      showToast(error instanceof Error ? error.message : "Impossible de transmettre le relevé.");
+    }
   };
 
-  const handleAdminApproveTimesheetPayroll = (devId: string, devName: string) => {
-    const periodLabel = reportPeriod === "CUSTOM" ? `${reportDateFrom}_${reportDateTo}` : reportPeriod;
-    const key = `${devId}_${periodLabel}`;
-    setTimesheetStatuses((prev) => ({
-      ...prev,
-      [key]: {
-        status: "APPROVED_PAYROLL",
-        submittedAt: prev[key]?.submittedAt || new Date().toLocaleDateString("fr-FR"),
-        approvedAt: new Date().toLocaleDateString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-      }
-    }));
-    pushInAppNotification({
-      title: `✅ Feuille de temps certifiée et envoyée en comptabilité`,
-      message: `La feuille de temps de ${devName} (${reportPeriod === "CUSTOM" ? `du ${reportDateFrom} au ${reportDateTo}` : reportPeriod}) a été validée par l'Administration et transmise à la Comptabilité pour paiement.`,
-      category: "DELIVERY",
-      targetRoles: ["DEVELOPER", "HEAD"],
-      actorName: activeAdminUser.name
-    });
-    showToast(`✅ Feuille de temps de ${devName} validée par la Direction et transmise au service Comptabilité pour signature finale et ordonnancement de paiement.`);
+  const handleAdminApproveTimesheetPayroll = async (devId: string, devName: string) => {
+    if (!isAdminRole) {
+      showToast("Seule l'Administration peut valider un relevé.");
+      return;
+    }
+    const adminName = currentUser?.name || activeAdminUser.name;
+
+    try {
+      const response = await apiFetch(`${API_BASE}/time-entries/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          developerId: devId,
+          from: reportRange.from,
+          to: reportRange.to,
+        }),
+      });
+      if (!response.ok) throw new Error(await getApiErrorMessage(response));
+      const status = (await response.json()) as TimesheetStatus;
+      setTimesheetStatuses((previous) => ({
+        ...previous,
+        [getTimesheetKey(devId)]: status,
+      }));
+      pushInAppNotification({
+        title: "✅ Feuille de temps validée par l'Administration",
+        message: `Le relevé de ${devName} (du ${reportRange.from} au ${reportRange.to}) a été approuvé.`,
+        category: "DELIVERY",
+        targetRoles: ["DEVELOPER", "HEAD", "ADMIN"],
+        actorName: adminName,
+      });
+      showToast(`✅ Relevé de ${devName} validé par ${adminName}.`);
+    } catch (error) {
+      console.error("[time-entries/approve] Échec de la validation du relevé", error);
+      showToast(error instanceof Error ? error.message : "Impossible de valider le relevé.");
+    }
   };
 
   // Export du relevé d'heures certifiées (aucune donnée financière)
@@ -2664,25 +2861,14 @@ export default function TicketManagerPage() {
         l.developerName.toLowerCase() === targetName.toLowerCase()
     );
 
-    const filteredLogs = devLogs.filter((l) => {
-      if (reportPeriod === "CUSTOM") {
-        if (reportDateFrom && l.date < reportDateFrom) return false;
-        if (reportDateTo && l.date > reportDateTo) return false;
-        return true;
-      }
-      if (reportPeriod === "DAILY") return l.date === "2026-10-29";
-      if (reportPeriod === "WEEKLY") return l.date >= "2026-10-26" && l.date <= "2026-10-31";
-      if (reportPeriod === "MONTHLY") return l.date.startsWith("2026-10");
-      if (reportPeriod === "QUARTERLY") return l.date >= "2026-10-01" && l.date <= "2026-12-31";
-      if (reportPeriod === "SEMESTER") return l.date >= "2026-07-01" && l.date <= "2026-12-31";
-      if (reportPeriod === "YEARLY") return l.date.startsWith("2026");
-      return true;
-    });
+    const filteredLogs = devLogs.filter(
+      (log) => log.date >= reportRange.from && log.date <= reportRange.to,
+    );
 
     const totalHours = filteredLogs.reduce((sum, l) => sum + (l.durationHours || 0), 0);
     const releveRef = `REL-SAFIR-${Date.now().toString().slice(-6)}`;
     const todayStr = new Date().toISOString().split("T")[0];
-    const periodStr = reportPeriod === "CUSTOM" ? `du_${reportDateFrom}_au_${reportDateTo}` : reportPeriod;
+    const periodStr = `du_${reportRange.from}_au_${reportRange.to}`;
 
     const csvRows = [
       "RELEVÉ OFFICIEL D'HEURES CERTIFIÉES - SAFIR CONSULTING",
@@ -9975,7 +10161,7 @@ export default function TicketManagerPage() {
       {/* ================================================================= */}
       {printingReport && (() => {
         const isDevRole = currentUser?.role === "DEVELOPER";
-        const currentPeriodKey = `${printingReport.targetId}_${reportPeriod === "CUSTOM" ? `${reportDateFrom}_${reportDateTo}` : reportPeriod}`;
+        const currentPeriodKey = getTimesheetKey(printingReport.targetId);
         const currentTimesheetStatus = timesheetStatuses[currentPeriodKey];
 
         return (
@@ -9998,7 +10184,7 @@ export default function TicketManagerPage() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px]">
                       <span className="text-slate-400">Collaborateur individuel (Changer de développeur) :</span>
-                      {currentUser?.role === "HEAD" && printingReport.targetType === "DEVELOPER" ? (
+                      {isAdminRole && printingReport.targetType === "DEVELOPER" ? (
                         <select
                           data-testid="print-report-dev-switcher"
                           value={printingReport.targetId}
@@ -10032,20 +10218,21 @@ export default function TicketManagerPage() {
 
                 <div className="flex items-center gap-2">
                   {/* Action Admin : Valider et Transmettre à la Comptabilité */}
-                  {!isDevRole && printingReport.targetType === "DEVELOPER" && (
+                  {isAdminRole && printingReport.targetType === "DEVELOPER" && (
                     <button
                       type="button"
                       data-testid="admin-approve-timesheet-payroll-btn"
                       onClick={() => handleAdminApproveTimesheetPayroll(printingReport.targetId, printingReport.targetName)}
+                      disabled={currentTimesheetStatus?.status === "APPROVED"}
                       className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer ${
-                        currentTimesheetStatus?.status === "APPROVED_PAYROLL"
+                        currentTimesheetStatus?.status === "APPROVED"
                           ? "bg-emerald-700 text-emerald-100"
                           : "bg-emerald-600 hover:bg-emerald-500 text-white"
                       }`}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>
-                        {currentTimesheetStatus?.status === "APPROVED_PAYROLL"
+                        {currentTimesheetStatus?.status === "APPROVED"
                           ? "✓ Relevé visé par la Direction"
                           : "Viser le relevé d'heures"}
                       </span>
@@ -10117,12 +10304,15 @@ export default function TicketManagerPage() {
                       type="button"
                       data-testid="report-preset-14-btn"
                       onClick={() => {
-                        setReportDateFrom("2026-09-14");
-                        setReportDateTo("2026-10-14");
+                        const today = new Date();
+                        const from = new Date(today.getFullYear(), today.getMonth() - 1, 14);
+                        const to = new Date(today.getFullYear(), today.getMonth(), 14);
+                        setReportDateFrom(`${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, "0")}-14`);
+                        setReportDateTo(`${to.getFullYear()}-${String(to.getMonth() + 1).padStart(2, "0")}-14`);
                         setReportPeriod("CUSTOM");
                       }}
                       className={`px-2.5 py-1 text-[11px] rounded-lg font-bold border transition-all cursor-pointer ${
-                        reportPeriod === "CUSTOM" && reportDateFrom === "2026-09-14" && reportDateTo === "2026-10-14"
+                        reportPeriod === "CUSTOM" && reportDateFrom.endsWith("-14") && reportDateTo.endsWith("-14")
                           ? "bg-sky-700 text-white border-sky-800 shadow-xs"
                           : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
                       }`}
@@ -10141,7 +10331,17 @@ export default function TicketManagerPage() {
                         <button
                           key={p.key}
                           type="button"
-                          onClick={() => setReportPeriod(p.key as any)}
+                          onClick={() => {
+                            const nextPeriod = p.key as ReportPeriod;
+                            const nextRange = getReportDateRange(
+                              nextPeriod,
+                              reportDateFrom,
+                              reportDateTo,
+                            );
+                            setReportPeriod(nextPeriod);
+                            setReportDateFrom(nextRange.from);
+                            setReportDateTo(nextRange.to);
+                          }}
                           className={`px-2 py-0.5 text-[11px] rounded font-medium transition-all cursor-pointer ${
                             reportPeriod === p.key
                               ? "bg-sky-700 text-white font-bold"
@@ -10158,13 +10358,17 @@ export default function TicketManagerPage() {
                 {/* Actions contextuelles : DÉVELOPPEUR vs ADMINISTRATEUR */}
                 {isDevRole ? (
                   <div className="flex items-center gap-2 flex-wrap">
-                    {currentTimesheetStatus?.status === "SUBMITTED" || currentTimesheetStatus?.status === "APPROVED_PAYROLL" ? (
+                    {currentTimesheetStatus?.status === "SUBMITTED" || currentTimesheetStatus?.status === "APPROVED" ? (
                       <div
                         data-testid="timesheet-validated-badge"
                         className="px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Feuille de temps validée ({reportPeriod === "CUSTOM" ? `${reportDateFrom} au ${reportDateTo}` : reportPeriod})</span>
+                        <span>
+                          {currentTimesheetStatus.status === "APPROVED"
+                            ? "Feuille de temps validée par l'Administration"
+                            : "Feuille de temps transmise à l'Administration"}
+                        </span>
                       </div>
                     ) : (
                       <button
@@ -10201,7 +10405,9 @@ export default function TicketManagerPage() {
                 ) : (
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Actions Direction / Administrateur */}
-                    {currentTimesheetStatus?.status === "SUBMITTED" && (
+                    {isAdminRole &&
+                      printingReport.targetType === "DEVELOPER" &&
+                      currentTimesheetStatus?.status !== "APPROVED" && (
                       <button
                         type="button"
                         data-testid="admin-approve-timesheet-btn"
@@ -10284,16 +10490,7 @@ export default function TicketManagerPage() {
                       Relevé Certifié d'Activité
                     </div>
                     <div className="text-xs font-bold text-slate-800">
-                      Rapport Périodique : {
-                        reportPeriod === "CUSTOM"
-                          ? `Intervalle du ${reportDateFrom} au ${reportDateTo}`
-                          : reportPeriod === "DAILY" ? "Journalier (29 Octobre 2026)"
-                          : reportPeriod === "WEEKLY" ? "Hebdomadaire (Semaine 44 — 2026)"
-                          : reportPeriod === "MONTHLY" ? "Mensuel (Octobre 2026)"
-                          : reportPeriod === "QUARTERLY" ? "Trimestriel (T4 2026)"
-                          : reportPeriod === "SEMESTER" ? "Semestriel (S2 2026)"
-                          : "Annuel (Exercice 2026)"
-                      }
+                      Rapport périodique : du {reportRange.from} au {reportRange.to}
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono">
                       Édité le {new Date().toLocaleDateString("fr-FR")} à {new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} • Réf: CERT-SAP-{printingReport.targetId.toUpperCase()}
@@ -10319,15 +10516,17 @@ export default function TicketManagerPage() {
                       Validation & Conformité Hiérarchique
                     </div>
                     <div className="text-xs font-bold text-[#051638]">
-                      {currentUser?.name
-                        ? `${currentUser.name} — ${currentUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"} BU SME`
-                        : "Direction & Administration BU SME"}
+                      {currentTimesheetStatus?.approvedByName
+                        ? `${currentTimesheetStatus.approvedByName} — Administration BU SME`
+                        : isAdminRole && currentUser?.name
+                          ? `${currentUser.name} — ${currentUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"} BU SME`
+                          : "En attente de validation par l'Administration BU SME"}
                     </div>
                     <div className="text-[11px] text-slate-600">
                       Environnements SAP : SAP Business One & SAP S/4HANA
                     </div>
                     <div className="text-[11px] font-bold text-emerald-800">
-                      {currentTimesheetStatus?.status === "APPROVED_PAYROLL"
+                      {currentTimesheetStatus?.status === "APPROVED"
                         ? "✓ Visa Direction BU SME Validé — Transmis au Service Comptabilité"
                         : currentTimesheetStatus?.status === "SUBMITTED"
                         ? "⏳ Relevé Transmis par le Développeur — En attente visa Direction"
@@ -10346,20 +10545,9 @@ export default function TicketManagerPage() {
                       (printingReport.targetType === "CONSULTANT" && l.ticketTitle.toLowerCase().includes("sap"))
                   );
 
-                  const filteredLogs = devLogs.filter((l) => {
-                    if (reportPeriod === "CUSTOM") {
-                      if (reportDateFrom && l.date < reportDateFrom) return false;
-                      if (reportDateTo && l.date > reportDateTo) return false;
-                      return true;
-                    }
-                    if (reportPeriod === "DAILY") return l.date === "2026-10-29";
-                    if (reportPeriod === "WEEKLY") return l.date >= "2026-10-26" && l.date <= "2026-11-01";
-                    if (reportPeriod === "MONTHLY") return l.date.startsWith("2026-10");
-                    if (reportPeriod === "QUARTERLY") return l.date >= "2026-10-01" && l.date <= "2026-12-31";
-                    if (reportPeriod === "SEMESTER") return l.date >= "2026-07-01" && l.date <= "2026-12-31";
-                    if (reportPeriod === "YEARLY") return l.date.startsWith("2026");
-                    return true;
-                  });
+                  const filteredLogs = devLogs.filter(
+                    (log) => log.date >= reportRange.from && log.date <= reportRange.to,
+                  );
 
                   const totalH = filteredLogs.reduce((sum, l) => sum + (l.durationHours || 0), 0);
                   const distinctClients = Array.from(new Set(filteredLogs.map((l) => l.clientCompany)));

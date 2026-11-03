@@ -51,6 +51,7 @@ export class AuthService {
         roles: user.roles,
         timezone: user.timezone,
         mustChangePassword: user.mustChangePassword,
+        developerId: user.developerProfile?.id,
       },
     };
   }
@@ -123,5 +124,10 @@ export class AuthService {
 async function prismaUser(prisma: PrismaService, email: string) {
   return prisma.user.findUnique({
     where: { email },
+    include: {
+      developerProfile: {
+        select: { id: true },
+      },
+    },
   });
 }

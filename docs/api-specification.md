@@ -78,7 +78,15 @@
 - `GET /capacity/overview` : Vue planning de l'équipe (jours/semaines/mois, capacité nette, charge réservée, surcharges).
 - `GET /capacity/forecast` : Calcul des dates de disponibilité prévisionnelle des développeurs.
 
-### 2.8. Reporting, Audit & Paramètres (`/reports`, `/audit-logs`, `/settings`)
+### 2.8. Chronométrage & relevés (`/time-entries`)
+- `GET /time-entries/active` (`DEVELOPER`) : Reprendre la session active après reconnexion ou rechargement.
+- `POST /time-entries/start` (`DEVELOPER`, `{ ticketId }`) : Démarrer une session sur une affectation active du développeur.
+- `POST /time-entries/:entryId/pause|resume|stop` (`DEVELOPER`) : Gérer la session ; l'arrêt enregistre le temps travaillé et actualise l'affectation ainsi que `Ticket.spentHours` dans une transaction.
+- `GET /time-entries/report?from=YYYY-MM-DD&to=YYYY-MM-DD&developerId=...` (`DEVELOPER`, `ADMIN`, `HEAD`) : Consulter les sessions terminées et le visa de la période. Un développeur ne peut lire que son propre relevé.
+- `POST /time-entries/submit` (`DEVELOPER`, `{ from, to }`) : Transmettre sa feuille de temps.
+- `POST /time-entries/approve` (`ADMIN`, `HEAD`, `{ developerId, from, to }`) : Valider la feuille et conserver l'identité de l'administrateur signataire.
+
+### 2.9. Reporting, Audit & Paramètres (`/reports`, `/audit-logs`, `/settings`)
 - `GET /reports/dashboard` : KPI complets du Head of BU (demandes en attente, tickets en retard, blocages, capacité globale).
 - `GET /reports/export` : Export CSV/Excel des données d'activité par client/projet/développeur.
 - `GET /audit-logs` : Journal d'audit traçant toutes les affectations, dérogations et transitions d'état.

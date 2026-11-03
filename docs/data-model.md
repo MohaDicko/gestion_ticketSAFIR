@@ -33,6 +33,8 @@ erDiagram
     DeveloperProfile ||--o{ Availability : "indisponibilités"
     DeveloperProfile ||--o{ Assignment : "affectations"
     DeveloperProfile ||--o{ TimeEntry : "temps"
+    DeveloperProfile ||--o{ WorkSession : "session active"
+    DeveloperProfile ||--o{ Timesheet : "relevés"
     Client ||--o{ ClientContact : "contacts"
     Client ||--o{ Project : "projets"
     Client ||--o{ Ticket : ""
@@ -50,6 +52,8 @@ erDiagram
     Ticket ||--o{ EstimateRevision : "réestimations"
     Ticket ||--o{ Assignment : ""
     Assignment ||--o{ TimeEntry : ""
+    Assignment ||--o{ WorkSession : ""
+    User ||--o{ Timesheet : "approbateur"
     Ticket ||--o{ Comment : ""
     Ticket ||--o{ Attachment : ""
     Ticket ||--o{ EmailMessage : "messages liés"
@@ -212,6 +216,7 @@ model User {
   auditLogs        AuditLog[]        @relation("AuditActor")
   comments         Comment[]
   assignmentsMade  Assignment[]      @relation("AssignedBy")
+  timesheetsApproved Timesheet[]     @relation("TimesheetApprover")
 }
 
 model Session {
@@ -250,6 +255,8 @@ model DeveloperProfile {
   availabilities Availability[]
   assignments    Assignment[]
   timeEntries    TimeEntry[]
+  workSessions   WorkSession[]
+  timesheets     Timesheet[]
   exclusions     AssignmentExclusion[]
 }
 
@@ -593,6 +600,7 @@ model Assignment {
   developer   DeveloperProfile @relation(fields: [developerId], references: [id])
   assignedBy  User             @relation("AssignedBy", fields: [assignedById], references: [id])
   timeEntries TimeEntry[]
+  workSessions WorkSession[]
 
   @@index([developerId, status, plannedStartDate, plannedEndDate])
   @@index([ticketId, status])
@@ -613,19 +621,48 @@ model AssignmentExclusion {
 }
 
 model TimeEntry {
-  id            String   @id @default(uuid()) @db.Uuid
-  assignmentId  String   @db.Uuid
-  developerId   String   @db.Uuid
-  workDate      DateTime @db.Date
-  durationHours Decimal  @db.Decimal(5, 2) // > 0 et ≤ 24 (CHECK)
-  comment       String?
-  createdAt     DateTime @default(now())
+  id              String   @id @default(uuid()) @db.Uuid
+  assignmentId    String   @db.Uuid
+  developerId     String   @db.Uuid
+  workDate        DateTime @db.Date
+  durationHours   Decimal  @db.Decimal(5, 2) // > 0 et ≤ 24 (CHECK)
+  durationSeconds Int      @default(0)
+  comment         String?
+  startedAt       DateTime @default(now())
+  endedAt         DateTime?
+  createdAt       DateTime @default(now())
 
   assignment Assignment       @relation(fields: [assignmentId], references: [id])
   developer  DeveloperProfile @relation(fields: [developerId], references: [id])
 
   @@index([developerId, workDate])
   @@index([assignmentId])
+}
+
+model WorkSession {
+  id                    String            @id @default(uuid()) @db.Uuid
+  assignmentId          String            @db.Uuid
+  developerId           String            @db.Uuid
+  startedAt             DateTime          @default(now())
+  pausedAt              DateTime?
+  pausedDurationSeconds Int               @default(0)
+  status                WorkSessionStatus @default(RUNNING)
+  comment               String?
+  createdAt             DateTime          @default(now())
+
+  assignment Assignment       @relation(fields: [assignmentId], references: [id])
+  developer  DeveloperProfile @relation(fields: [developerId], references: [id])
+}
+
+model Timesheet {
+  id           String          @id @default(uuid()) @db.Uuid
+  developerId  String          @db.Uuid
+  periodStart  DateTime        @db.Date
+  periodEnd    DateTime        @db.Date
+  status       TimesheetStatus @default(SUBMITTED)
+  submittedAt  DateTime        @default(now())
+  approvedAt   DateTime?
+  approvedById String?         @db.Uuid
 }
 
 // ───────────────────────────── Commentaires et pièces jointes ─────────────────────────────

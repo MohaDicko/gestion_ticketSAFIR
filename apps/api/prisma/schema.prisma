@@ -49,6 +49,16 @@ enum AssignmentStatus {
   RELEASED
 }
 
+enum WorkSessionStatus {
+  RUNNING
+  PAUSED
+}
+
+enum TimesheetStatus {
+  SUBMITTED
+  APPROVED
+}
+
 enum AvailabilityType {
   LEAVE
   SICK_LEAVE
@@ -127,41 +137,42 @@ enum ProfileStatus {
 // ───────────────────────────── Identité et accès ─────────────────────────────
 
 model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  email         String    @unique
-  firstName     String
-  lastName      String
-  roles         Role[]
-  isActive      Boolean   @default(true)
-  mustChangePassword Boolean @default(false)
-  entraObjectId String?   @unique
-  passwordHash  String?
-  locale        String    @default("fr")
-  timezone      String    @default("UTC")
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String    @id @default(uuid()) @db.Uuid
+  email              String    @unique
+  firstName          String
+  lastName           String
+  roles              Role[]
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  entraObjectId      String?   @unique
+  passwordHash       String?
+  locale             String    @default("fr")
+  timezone           String    @default("UTC")
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  developerProfile DeveloperProfile?
-  consultant       Consultant?
-  sessions         Session[]
-  notifications    Notification[]
-  auditLogs        AuditLog[]        @relation("AuditActor")
-  comments         Comment[]
-  assignmentsMade  Assignment[]      @relation("AssignedBy")
+  developerProfile   DeveloperProfile?
+  consultant         Consultant?
+  sessions           Session[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]        @relation("AuditActor")
+  comments           Comment[]
+  assignmentsMade    Assignment[]      @relation("AssignedBy")
+  timesheetsApproved Timesheet[]       @relation("TimesheetApprover")
 }
 
 model Session {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  tokenHash   String   @unique
-  csrfSecret  String
-  expiresAt   DateTime
-  lastSeenAt  DateTime @default(now())
-  ipHash      String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  tokenHash  String   @unique
+  csrfSecret String
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  ipHash     String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -182,11 +193,13 @@ model DeveloperProfile {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  user           User                    @relation(fields: [userId], references: [id])
+  user           User                  @relation(fields: [userId], references: [id])
   skills         DeveloperSkill[]
   availabilities Availability[]
   assignments    Assignment[]
   timeEntries    TimeEntry[]
+  workSessions   WorkSession[]
+  timesheets     Timesheet[]
   exclusions     AssignmentExclusion[]
 }
 
@@ -367,36 +380,36 @@ model Setting {
 // ───────────────────────────── Tickets ─────────────────────────────
 
 model Ticket {
-  id                      String       @id @default(uuid()) @db.Uuid
-  reference               String       @unique
+  id                      String        @id @default(uuid()) @db.Uuid
+  reference               String        @unique
   title                   String
   description             String
-  typeId                  String       @db.Uuid
-  priorityId              String       @db.Uuid
-  status                  TicketStatus @default(RECEIVED)
+  typeId                  String        @db.Uuid
+  priorityId              String        @db.Uuid
+  status                  TicketStatus  @default(RECEIVED)
   statusBeforeBlock       TicketStatus?
   source                  TicketSource
-  clientId                String?      @db.Uuid
-  consultantId            String?      @db.Uuid
-  clientContactId         String?      @db.Uuid
-  projectId               String?      @db.Uuid
+  clientId                String?       @db.Uuid
+  consultantId            String?       @db.Uuid
+  clientContactId         String?       @db.Uuid
+  projectId               String?       @db.Uuid
   externalReference       String?
-  estimatedHours          Decimal?     @db.Decimal(7, 2)
-  remainingEstimatedHours Decimal?     @db.Decimal(7, 2)
-  spentHours              Decimal      @default(0) @db.Decimal(7, 2)
-  progressPercent         Int          @default(0)
-  plannedStartDate        DateTime?    @db.Date
-  requestedDueDate        DateTime?    @db.Date
-  committedDueDate        DateTime?    @db.Date
-  estimatedDeliveryDate   DateTime?    @db.Date
+  estimatedHours          Decimal?      @db.Decimal(7, 2)
+  remainingEstimatedHours Decimal?      @db.Decimal(7, 2)
+  spentHours              Decimal       @default(0) @db.Decimal(7, 2)
+  progressPercent         Int           @default(0)
+  plannedStartDate        DateTime?     @db.Date
+  requestedDueDate        DateTime?     @db.Date
+  committedDueDate        DateTime?     @db.Date
+  estimatedDeliveryDate   DateTime?     @db.Date
   lastProgressAt          DateTime?
   startedAt               DateTime?
   deliveredAt             DateTime?
   closedAt                DateTime?
   rejectionReason         String?
-  createdById             String?      @db.Uuid
-  createdAt               DateTime     @default(now())
-  updatedAt               DateTime     @updatedAt
+  createdById             String?       @db.Uuid
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
 
   type               TicketType               @relation(fields: [typeId], references: [id])
   priority           Priority                 @relation(fields: [priorityId], references: [id])
@@ -449,13 +462,13 @@ model AcceptanceCriterion {
 }
 
 model TicketDependency {
-  id                String   @id @default(uuid()) @db.Uuid
-  ticketId          String   @db.Uuid
-  dependsOnTicketId String?  @db.Uuid
+  id                String    @id @default(uuid()) @db.Uuid
+  ticketId          String    @db.Uuid
+  dependsOnTicketId String?   @db.Uuid
   externalLabel     String?
-  isBlocking        Boolean  @default(true)
+  isBlocking        Boolean   @default(true)
   resolvedAt        DateTime?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
 
   ticket    Ticket  @relation("DependentTicket", fields: [ticketId], references: [id], onDelete: Cascade)
   dependsOn Ticket? @relation("BlockingTicket", fields: [dependsOnTicketId], references: [id])
@@ -526,10 +539,11 @@ model Assignment {
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
 
-  ticket      Ticket           @relation(fields: [ticketId], references: [id])
-  developer   DeveloperProfile @relation(fields: [developerId], references: [id])
-  assignedBy  User             @relation("AssignedBy", fields: [assignedById], references: [id])
-  timeEntries TimeEntry[]
+  ticket       Ticket           @relation(fields: [ticketId], references: [id])
+  developer    DeveloperProfile @relation(fields: [developerId], references: [id])
+  assignedBy   User             @relation("AssignedBy", fields: [assignedById], references: [id])
+  timeEntries  TimeEntry[]
+  workSessions WorkSession[]
 
   @@index([developerId, status, plannedStartDate, plannedEndDate])
   @@index([ticketId, status])
@@ -550,19 +564,59 @@ model AssignmentExclusion {
 }
 
 model TimeEntry {
-  id            String   @id @default(uuid()) @db.Uuid
-  assignmentId  String   @db.Uuid
-  developerId   String   @db.Uuid
-  workDate      DateTime @db.Date
-  durationHours Decimal  @db.Decimal(5, 2)
-  comment       String?
-  createdAt     DateTime @default(now())
+  id              String    @id @default(uuid()) @db.Uuid
+  assignmentId    String    @db.Uuid
+  developerId     String    @db.Uuid
+  workDate        DateTime  @db.Date
+  durationHours   Decimal   @db.Decimal(5, 2)
+  durationSeconds Int       @default(0)
+  comment         String?
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  createdAt       DateTime  @default(now())
 
   assignment Assignment       @relation(fields: [assignmentId], references: [id])
   developer  DeveloperProfile @relation(fields: [developerId], references: [id])
 
   @@index([developerId, workDate])
   @@index([assignmentId])
+}
+
+model WorkSession {
+  id                    String            @id @default(uuid()) @db.Uuid
+  assignmentId          String            @db.Uuid
+  developerId           String            @db.Uuid
+  startedAt             DateTime          @default(now())
+  pausedAt              DateTime?
+  pausedDurationSeconds Int               @default(0)
+  status                WorkSessionStatus @default(RUNNING)
+  comment               String?
+  createdAt             DateTime          @default(now())
+
+  assignment Assignment       @relation(fields: [assignmentId], references: [id])
+  developer  DeveloperProfile @relation(fields: [developerId], references: [id])
+
+  @@index([developerId, status])
+  @@index([assignmentId])
+}
+
+model Timesheet {
+  id           String          @id @default(uuid()) @db.Uuid
+  developerId  String          @db.Uuid
+  periodStart  DateTime        @db.Date
+  periodEnd    DateTime        @db.Date
+  status       TimesheetStatus @default(SUBMITTED)
+  submittedAt  DateTime        @default(now())
+  approvedAt   DateTime?
+  approvedById String?         @db.Uuid
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  developer  DeveloperProfile @relation(fields: [developerId], references: [id])
+  approvedBy User?            @relation("TimesheetApprover", fields: [approvedById], references: [id])
+
+  @@unique([developerId, periodStart, periodEnd])
+  @@index([developerId, status])
 }
 
 // ───────────────────────────── Commentaires et pièces jointes ─────────────────────────────

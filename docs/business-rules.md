@@ -132,6 +132,9 @@ Répartition (V1) : `remaining(a)` est **réparti au prorata de la capacité net
 
 - Si `plannedEnd` est dépassée et `remaining > 0` : la charge est reportée sur les jours suivants en mode « au plus tôt » et l'affectation est signalée **en retard**.
 - Le pourcentage d'avancement n'est **pas** utilisé pour calculer la charge (§10 du cahier).
+- Une seule session `WorkSession` active (en cours ou en pause) est autorisée par développeur. La pause est exclue du temps travaillé ; l'arrêt crée une `TimeEntry` et met à jour, dans une même transaction, `Ticket.spentHours` et les heures restantes de l'affectation.
+- Les sessions de moins de 30 secondes ne sont pas comptabilisées. Un relevé n'est soumis ou approuvé que s'il contient au moins une session terminée dans la période.
+- L'approbation d'un relevé est liée au développeur, à ses dates de période et à l'identifiant de l'administrateur signataire.
 
 ### 2.5. Surcharge et conflits
 
