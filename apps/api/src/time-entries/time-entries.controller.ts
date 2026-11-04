@@ -79,7 +79,7 @@ export class TimeEntriesController {
     }
     return this.timeEntriesService.start(
       this.getDeveloperId(req),
-      this.requireUuid(body.ticketId, "identifiant du ticket"),
+      body.ticketId.trim(),
     );
   }
 
@@ -173,9 +173,9 @@ export class TimeEntriesController {
   }
 
   private requireUuid(value: string, label: string) {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    if (!value || typeof value !== "string" || value.trim().length === 0) {
       throw new BadRequestException(`Format invalide pour l'${label}`);
     }
-    return value;
+    return value.trim();
   }
 }

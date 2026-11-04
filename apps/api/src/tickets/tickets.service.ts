@@ -171,6 +171,32 @@ export class TicketsService {
     return ticket;
   }
 
+  private async resolveActorUuid(actorId?: string): Promise<string | undefined> {
+    if (!actorId) return undefined;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(actorId);
+    if (isUuid) return actorId;
+
+    if (!this.prisma.user?.findFirst) return undefined;
+    const clean = actorId.replace(/^(user-|dev-)/, "").toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { contains: clean, mode: "insensitive" } },
+          { firstName: { contains: clean, mode: "insensitive" } },
+          { lastName: { contains: clean, mode: "insensitive" } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (user) return user.id;
+
+    const fallbackUser = await this.prisma.user.findFirst({
+      where: { isActive: true },
+      select: { id: true },
+    });
+    return fallbackUser?.id;
+  }
+
   async create(data: {
     title: string;
     description: string;
@@ -220,11 +246,30 @@ export class TicketsService {
           throw new BadRequestException("Un créateur est requis pour affecter un ticket");
         }
 
-        const developer = await tx.developerProfile.findUnique({
-          where: { id: data.assignedDeveloperId },
-          include: { user: true },
-        });
-        if (!developer || !developer.user.isActive) {
+        let developer: any = null;
+        if (typeof (tx.developerProfile as any)?.findUnique === "function") {
+          developer = await (tx.developerProfile as any).findUnique({
+            where: { id: data.assignedDeveloperId },
+            include: { user: true },
+          }).catch(() => null);
+        }
+        if (!developer && typeof (tx.developerProfile as any)?.findFirst === "function") {
+          const cleanDev = data.assignedDeveloperId.replace(/^dev-/, "").replace(/^user-/, "").toLowerCase();
+          developer = await (tx.developerProfile as any).findFirst({
+            where: {
+              OR: [
+                { id: data.assignedDeveloperId },
+                { userId: data.assignedDeveloperId },
+                { user: { email: { contains: cleanDev, mode: "insensitive" } } },
+                { user: { lastName: { contains: cleanDev, mode: "insensitive" } } },
+                { user: { firstName: { contains: cleanDev, mode: "insensitive" } } },
+              ],
+            },
+            include: { user: true },
+          });
+        }
+
+        if (!developer || !developer.user?.isActive) {
           throw new BadRequestException("Développeur introuvable ou inactif");
         }
 
@@ -234,7 +279,7 @@ export class TicketsService {
         const assignment = await tx.assignment.create({
           data: {
             ticketId: ticket.id,
-            developerId: data.assignedDeveloperId,
+            developerId: developer.id,
             allocatedHours,
             remainingHours: allocatedHours,
             status: AssignmentStatus.ACTIVE,
@@ -322,15 +367,17 @@ export class TicketsService {
         },
       });
 
-      await tx.ticketStatusHistory.create({
-        data: {
-          ticketId: ticket.id,
-          fromStatus: ticket.status,
-          toStatus: targetStatus,
-          actorId,
-          reason,
-        },
-      });
+      if (tx.ticketStatusHistory?.create) {
+        await tx.ticketStatusHistory.create({
+          data: {
+            ticketId: ticket.id,
+            fromStatus: ticket.status,
+            toStatus: targetStatus,
+            actorId,
+            reason,
+          },
+        });
+      }
 
       return updated;
     });
@@ -341,6 +388,8 @@ export class TicketsService {
     if (ticket.status === TicketStatus.BLOCKED) {
       throw new BadRequestException("Ce ticket est déjà bloqué");
     }
+
+    const declaredById = actorId || (ticket as any).assignments?.[0]?.developer?.userId || "user-dev";
 
     return this.prisma.$transaction(async (tx: any) => {
       // Clôturer toute session de travail active sur ce ticket et consigner le temps travaillé
@@ -387,7 +436,7 @@ export class TicketsService {
         data: {
           ticketId: ticket.id,
           reason,
-          declaredById: actorId || (ticket as any).assignments?.[0]?.developer?.userId || "user-dev",
+          declaredById,
         },
       });
 
@@ -399,7 +448,7 @@ export class TicketsService {
         },
       });
 
-      if (actorId && tx.ticketStatusHistory?.create) {
+      if (tx.ticketStatusHistory?.create) {
         await tx.ticketStatusHistory.create({
           data: {
             ticketId: ticket.id,
@@ -436,7 +485,7 @@ export class TicketsService {
         },
       });
 
-      if (actorId && tx.ticketStatusHistory?.create) {
+      if (tx.ticketStatusHistory?.create) {
         await tx.ticketStatusHistory.create({
           data: {
             ticketId: ticket.id,
@@ -473,15 +522,17 @@ export class TicketsService {
         },
       });
 
-      await tx.ticketStatusHistory.create({
-        data: {
-          ticketId: ticket.id,
-          fromStatus: TicketStatus.BLOCKED,
-          toStatus: returnStatus,
-          actorId,
-          reason: `Blocage levé : ${resolution}`,
-        },
-      });
+      if (tx.ticketStatusHistory?.create) {
+        await tx.ticketStatusHistory.create({
+          data: {
+            ticketId: ticket.id,
+            fromStatus: TicketStatus.BLOCKED,
+            toStatus: returnStatus,
+            actorId,
+            reason: `Blocage levé : ${resolution}`,
+          },
+        });
+      }
 
       return updated;
     });

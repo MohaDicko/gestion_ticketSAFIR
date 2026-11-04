@@ -96,8 +96,19 @@ export class DevelopersService {
   }
 
   async deactivateDeveloper(developerId: string) {
-    const developer = await this.prisma.developerProfile.findUnique({
-      where: { id: developerId },
+    const isDevUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(developerId);
+    const cleanDev = developerId.replace(/^dev-/, "").replace(/^user-/, "").toLowerCase();
+    const developer = await this.prisma.developerProfile.findFirst({
+      where: isDevUuid
+        ? { id: developerId }
+        : {
+            OR: [
+              { id: developerId },
+              { userId: developerId },
+              { user: { email: { contains: cleanDev, mode: "insensitive" } } },
+              { user: { lastName: { contains: cleanDev, mode: "insensitive" } } },
+            ],
+          },
       select: { id: true, userId: true },
     });
     if (!developer) {

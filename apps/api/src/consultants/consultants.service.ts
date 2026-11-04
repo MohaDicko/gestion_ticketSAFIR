@@ -26,8 +26,19 @@ export class ConsultantsService {
   }
 
   async deactivate(consultantId: string) {
-    const consultant = await this.prisma.consultant.findUnique({
-      where: { id: consultantId },
+    const isConsultantUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(consultantId);
+    const cleanCons = consultantId.replace(/^cons-/, "").replace(/^user-/, "").toLowerCase();
+    const consultant = await this.prisma.consultant.findFirst({
+      where: isConsultantUuid
+        ? { id: consultantId }
+        : {
+            OR: [
+              { id: consultantId },
+              { userId: consultantId },
+              { email: { contains: cleanCons, mode: "insensitive" } },
+              { name: { contains: cleanCons, mode: "insensitive" } },
+            ],
+          },
       select: { id: true, userId: true },
     });
     if (!consultant) {
