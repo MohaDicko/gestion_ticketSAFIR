@@ -3404,16 +3404,16 @@ export default function TicketManagerPage() {
   };
 
   // Action Développeur : Envoyer en test chez le consultant (Livraison pour recette)
-  const handleDeliverTicket = (ticketId: string) => {
+  const handleDeliverTicket = async (ticketId: string) => {
     // Si le compteur était actif sur ce ticket, l'arrêter et consigner le temps
     if (activeTimerTicketId === ticketId) {
-      handleStopTimer(ticketId, "Clôture de session lors de l'envoi en test");
+      await handleStopTimer(ticketId, "Clôture de session lors de l'envoi en test");
     }
 
-    const target = tickets.find((t) => t.id === ticketId);
+    const target = tickets.find((t) => t.id === ticketId || t.reference === ticketId);
     setTickets((prev) =>
       prev.map((t) =>
-        t.id === ticketId
+        t.id === ticketId || t.reference === target?.reference
           ? {
               ...t,
               status: "DELIVERED",
@@ -3423,6 +3423,34 @@ export default function TicketManagerPage() {
           : t
       )
     );
+
+    // Persistance API vers le serveur PostgreSQL
+    try {
+      const ticketIdentifier = target?.reference || ticketId;
+      void apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "DELIVERED",
+          actorId: currentUser?.id,
+          reason: "Développements finalisés — Ticket envoyé en recette chez le consultant",
+        }),
+      });
+      void apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: `📦 Solution développée et livrée pour recette par ${currentUser?.name || "le développeur"}. Prête pour test fonctionnel.`,
+          authorId: currentUser?.id,
+          authorName: currentUser?.name || "Développeur",
+          authorEmail: currentUser?.email || "",
+          authorRole: "DEVELOPER",
+        }),
+      });
+    } catch (err) {
+      console.warn("[handleDeliverTicket] Persistance API:", err);
+    }
+
     if (target) {
       pushInAppNotification({
         title: `📦 Ticket ${target.reference} envoyé en test chez le consultant`,
@@ -3438,8 +3466,8 @@ export default function TicketManagerPage() {
   };
 
   // Action Demandeur : Tester & Approuver la recette (Solution conforme & validée)
-  const handleApproveTicketByConsultant = (ticketId: string) => {
-    const target = tickets.find((t) => t.id === ticketId);
+  const handleApproveTicketByConsultant = async (ticketId: string) => {
+    const target = tickets.find((t) => t.id === ticketId || t.reference === ticketId);
     if (!target) return;
 
     const approvalDate = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -3456,7 +3484,7 @@ export default function TicketManagerPage() {
 
     setTickets((prev) =>
       prev.map((t) =>
-        t.id === ticketId
+        t.id === ticketId || t.reference === target.reference
           ? {
               ...t,
               consultantReviewStatus: "APPROVED",
@@ -3466,6 +3494,24 @@ export default function TicketManagerPage() {
           : t
       )
     );
+
+    // Persistance API vers le serveur PostgreSQL
+    try {
+      const ticketIdentifier = target.reference || ticketId;
+      void apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: autoMessage.message,
+          authorId: currentUser?.id,
+          authorName: currentUser?.name || "Demandeur",
+          authorEmail: currentUser?.email || "demandeur@safirconsulting.net",
+          authorRole: "CONSULTANT",
+        }),
+      });
+    } catch (err) {
+      console.warn("[handleApproveTicketByConsultant] Persistance API:", err);
+    }
 
     pushInAppNotification({
       title: `✅ Recette Approuvée par le Demandeur (${target.reference})`,
@@ -3509,7 +3555,7 @@ export default function TicketManagerPage() {
 
     setTickets((prev) =>
       prev.map((t) =>
-        t.id === targetId
+        t.id === targetId || t.reference === targetRef
           ? {
               ...t,
               status: "IN_PROGRESS",
@@ -3521,6 +3567,34 @@ export default function TicketManagerPage() {
           : t
       )
     );
+
+    // Persistance API vers le serveur PostgreSQL
+    try {
+      const ticketIdentifier = targetRef || targetId;
+      void apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "IN_PROGRESS",
+          actorId: currentUser?.id,
+          reason: `Recette rejetée par le consultant : ${reason}`,
+        }),
+      });
+      void apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: autoMessage.message,
+          authorId: currentUser?.id,
+          authorName: demandeurName,
+          authorEmail: demandeurEmail,
+          authorRole: "CONSULTANT",
+          isBlockerQuestion: true,
+        }),
+      });
+    } catch (err) {
+      console.warn("[handleRejectTicketByConsultant] Persistance API:", err);
+    }
 
     // Notification automatique par E-mail à l'Administrateur, au(x) Développeur(s) et au Demandeur
     const recipientsList: { name: string; email: string; roleLabel: string }[] = [
@@ -3629,7 +3703,7 @@ export default function TicketManagerPage() {
 
   // Action Administrateur (HEAD) : Clôture définitive du ticket — EXCLUSIVEMENT après approbation par le demandeur
   const handleCloseTicket = (ticketId: string) => {
-    const target = tickets.find((t) => t.id === ticketId);
+    const target = tickets.find((t) => t.id === ticketId || t.reference === ticketId);
     if (!target) return;
 
     if (target.consultantReviewStatus !== "APPROVED") {
@@ -3639,11 +3713,38 @@ export default function TicketManagerPage() {
 
     setTickets((prev) =>
       prev.map((t) =>
-        t.id === ticketId
+        t.id === ticketId || t.reference === target.reference
           ? { ...t, status: "CLOSED", remainingHours: 0 }
           : t
       )
     );
+
+    // Persistance API vers le serveur PostgreSQL
+    try {
+      const ticketIdentifier = target.reference || ticketId;
+      void apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "CLOSED",
+          actorId: currentUser?.id,
+          reason: "Clôture définitive validée par l'Administrateur suite à l'approbation de la recette par le demandeur",
+        }),
+      });
+      void apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: `✓ Ticket validé et clôturé définitivement par l'Administrateur (${currentUser?.name || activeAdminUser.name}). Statut : Réglé / Archivé.`,
+          authorId: currentUser?.id,
+          authorName: currentUser?.name || activeAdminUser.name,
+          authorEmail: currentUser?.email || activeAdminUser.email,
+          authorRole: "HEAD",
+        }),
+      });
+    } catch (err) {
+      console.warn("[handleCloseTicket] Persistance API:", err);
+    }
 
     pushInAppNotification({
       title: `✓ Clôture Définitive validée (${target.reference})`,
