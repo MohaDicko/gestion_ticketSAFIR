@@ -141,3 +141,4 @@ Ce document recense exhaustivement chaque remarque, détaille la cause racine te
 - **Dépôt Git** : Synchronisé avec GitHub
 - **Hébergement Web** : Vercel (`https://gestionticketsafir.vercel.app/`)
 - **Backend API & Base de données** : NestJS / PostgreSQL Neon
+
