@@ -123,6 +123,24 @@ export class TicketsController {
     return this.ticketsService.assign(id, body.developerId, body.allocatedHours, body.actorId);
   }
 
+  @Post(":id/comments")
+  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER, Role.CONSULTANT)
+  async addComment(
+    @Param("id") id: string,
+    @Body()
+    body: {
+      content: string;
+      authorId?: string;
+      authorEmail?: string;
+      authorRole?: string;
+      authorName?: string;
+      isBlockerQuestion?: boolean;
+      attachment?: any;
+    },
+  ) {
+    return this.ticketsService.addComment(id, body);
+  }
+
   @Delete(":id")
   @Roles(Role.HEAD, Role.ADMIN)
   async removeTicket(@Param("id") id: string) {

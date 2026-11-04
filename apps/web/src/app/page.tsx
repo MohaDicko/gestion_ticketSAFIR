@@ -2120,6 +2120,36 @@ export default function TicketManagerPage() {
             ? ticket.assignments.find((assignment: any) => assignment.status === "ACTIVE")
             : undefined;
           const assignedUser = activeAssignment?.developer?.user;
+          const activeBlocker = Array.isArray(ticket.blockers)
+            ? ticket.blockers.find((blocker: any) => !blocker.resolvedAt)
+            : undefined;
+          const serverMessages: TicketMessage[] = Array.isArray(ticket.comments)
+            ? ticket.comments.map((c: any) => {
+                const authorRole = c.author?.roles?.includes("HEAD")
+                  ? "HEAD"
+                  : c.author?.roles?.includes("DEVELOPER")
+                  ? "DEVELOPER"
+                  : c.author?.roles?.includes("CONSULTANT")
+                  ? "CONSULTANT"
+                  : (c.authorRole || "DEVELOPER");
+                const authorName = c.author
+                  ? `${c.author.firstName} ${c.author.lastName}`
+                  : (c.authorName || c.authorEmail || "Collaborateur");
+                return {
+                  id: c.id,
+                  authorName,
+                  authorRole,
+                  authorEmail: c.author?.email || c.authorEmail || "",
+                  message: c.content,
+                  timestamp: c.createdAt
+                    ? new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : "À l'instant",
+                  attachment: c.attachment || undefined,
+                  isBlockerQuestion: c.isBlockerQuestion || false,
+                };
+              })
+            : [];
+
           return {
             ...ticket,
             typeCode: ticket.typeCode || ticket.type?.code,
@@ -2127,14 +2157,8 @@ export default function TicketManagerPage() {
             clientCompany: ticket.clientCompany || ticket.client?.name,
             estimatedHours: Number(ticket.estimatedHours || 0),
             remainingHours: Number(ticket.remainingEstimatedHours ?? ticket.estimatedHours ?? 0),
-            blockerReason:
-              ticket.blockerReason ||
-              (Array.isArray(ticket.blockers)
-                ? ticket.blockers.find((blocker: any) => !blocker.resolvedAt)?.reason
-                : undefined),
-            blockerId: Array.isArray(ticket.blockers)
-              ? ticket.blockers.find((blocker: any) => !blocker.resolvedAt)?.id
-              : undefined,
+            blockerReason: activeBlocker?.reason || ticket.blockerReason,
+            blockerId: activeBlocker?.id || ticket.blockerId,
             assignedDeveloper: assignedUser
               ? {
                   id: activeAssignment.developer.id,
@@ -2142,10 +2166,11 @@ export default function TicketManagerPage() {
                   email: assignedUser.email,
                 }
               : null,
+            messages: serverMessages,
           };
         });
 
-        // Fusion intelligente : préserve les tickets en local (ex: Mohamed Dicko) et les blocages déclarés
+        // Fusion intelligente : préserve les tickets en local, les blocages et fusionne les conversations
         setTickets((prev) => {
           const currentList = prev.length > 0 ? [...prev] : [...INITIAL_TICKETS];
           for (const sTicket of serverTickets) {
@@ -2153,18 +2178,50 @@ export default function TicketManagerPage() {
               (t) => t.reference === sTicket.reference || t.id === sTicket.id
             );
             if (idx >= 0) {
+              const localMessages = currentList[idx].messages || [];
+              const combinedMessages = [...(sTicket.messages || [])];
+              for (const lm of localMessages) {
+                if (!combinedMessages.some((sm) => sm.id === lm.id || (sm.message === lm.message && sm.authorEmail === lm.authorEmail))) {
+                  combinedMessages.push(lm);
+                }
+              }
+
               currentList[idx] = {
                 ...currentList[idx],
                 ...sTicket,
-                // Préserver le statut BLOCKED et le blockerReason si déclaré
-                status: currentList[idx].status === "BLOCKED" ? "BLOCKED" : sTicket.status,
-                blockerReason: currentList[idx].blockerReason || sTicket.blockerReason,
+                status: sTicket.status === "BLOCKED" || currentList[idx].status === "BLOCKED" ? "BLOCKED" : sTicket.status,
+                blockerReason: sTicket.blockerReason || currentList[idx].blockerReason,
+                blockerId: sTicket.blockerId || currentList[idx].blockerId,
+                messages: combinedMessages,
               };
             } else {
               currentList.push(sTicket);
             }
           }
           return currentList;
+        });
+
+        // Mettre à jour la modale de discussion en temps réel si elle est ouverte
+        setDiscussingTicket((currentDiscuss) => {
+          if (!currentDiscuss) return null;
+          const matchingTicket = serverTickets.find(
+            (t) => t.reference === currentDiscuss.reference || t.id === currentDiscuss.id
+          );
+          if (matchingTicket) {
+            const localMessages = currentDiscuss.messages || [];
+            const combined = [...(matchingTicket.messages || [])];
+            for (const lm of localMessages) {
+              if (!combined.some((sm) => sm.id === lm.id || (sm.message === lm.message && sm.authorEmail === lm.authorEmail))) {
+                combined.push(lm);
+              }
+            }
+            return {
+              ...currentDiscuss,
+              ...matchingTicket,
+              messages: combined,
+            };
+          }
+          return currentDiscuss;
         });
       }
       if (Array.isArray(emailsRes)) setEmails(emailsRes);
@@ -2183,22 +2240,147 @@ export default function TicketManagerPage() {
     refreshData();
   }, [currentUser]);
 
-  // Polling temps réel de l'activité des développeurs (toutes les 4 secondes pour la Direction)
+  // Polling temps réel bi-directionnel de l'activité, des blocages et des messages (toutes les 4 secondes)
   useEffect(() => {
-    if (!currentUser || (currentUser.role !== "HEAD" && currentUser.role !== "ADMIN")) return;
+    if (!currentUser) return;
     let isCancelled = false;
 
     const pollLive = async () => {
       try {
-        const response = await apiFetch(`${API_BASE}/time-entries/live`);
-        if (response.ok && !isCancelled) {
-          const data = await response.json();
-          if (data && typeof data === "object") {
-            setDevLiveActivities((prev) => ({
-              ...prev,
-              ...data,
-            }));
-          }
+        const fetchTickets = async () => {
+          const res = await apiFetch(`${API_BASE}/tickets`);
+          if (!res.ok) return null;
+          return res.json();
+        };
+
+        const fetchLive = async () => {
+          if (currentUser.role !== "HEAD" && currentUser.role !== "ADMIN") return null;
+          const res = await apiFetch(`${API_BASE}/time-entries/live`);
+          if (!res.ok) return null;
+          return res.json();
+        };
+
+        const [tixData, liveData] = await Promise.all([fetchTickets(), fetchLive()]);
+        if (isCancelled) return;
+
+        if (liveData && typeof liveData === "object") {
+          setDevLiveActivities((prev) => ({
+            ...prev,
+            ...liveData,
+          }));
+        }
+
+        if (Array.isArray(tixData) && tixData.length > 0) {
+          setTickets((prev) => {
+            const currentList = prev.length > 0 ? [...prev] : [...INITIAL_TICKETS];
+            for (const serverT of tixData) {
+              const idx = currentList.findIndex(
+                (t) => t.reference === serverT.reference || t.id === serverT.id
+              );
+              const activeBlocker = Array.isArray(serverT.blockers)
+                ? serverT.blockers.find((b: any) => !b.resolvedAt)
+                : undefined;
+              const serverMessages: TicketMessage[] = Array.isArray(serverT.comments)
+                ? serverT.comments.map((c: any) => {
+                    const authorRole = c.author?.roles?.includes("HEAD")
+                      ? "HEAD"
+                      : c.author?.roles?.includes("DEVELOPER")
+                      ? "DEVELOPER"
+                      : c.author?.roles?.includes("CONSULTANT")
+                      ? "CONSULTANT"
+                      : (c.authorRole || "DEVELOPER");
+                    const authorName = c.author
+                      ? `${c.author.firstName} ${c.author.lastName}`
+                      : (c.authorName || c.authorEmail || "Collaborateur");
+                    return {
+                      id: c.id,
+                      authorName,
+                      authorRole,
+                      authorEmail: c.author?.email || c.authorEmail || "",
+                      message: c.content,
+                      timestamp: c.createdAt
+                        ? new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : "À l'instant",
+                      attachment: c.attachment || undefined,
+                      isBlockerQuestion: c.isBlockerQuestion || false,
+                    };
+                  })
+                : [];
+
+              if (idx >= 0) {
+                const localMsgs = currentList[idx].messages || [];
+                const mergedMsgs = [...serverMessages];
+                for (const lm of localMsgs) {
+                  if (!mergedMsgs.some((sm) => sm.id === lm.id || (sm.message === lm.message && sm.authorEmail === lm.authorEmail))) {
+                    mergedMsgs.push(lm);
+                  }
+                }
+                currentList[idx] = {
+                  ...currentList[idx],
+                  status: serverT.status,
+                  blockerReason: activeBlocker?.reason || (serverT.status === "BLOCKED" ? currentList[idx].blockerReason : undefined),
+                  blockerId: activeBlocker?.id || currentList[idx].blockerId,
+                  messages: mergedMsgs,
+                };
+              }
+            }
+            return currentList;
+          });
+
+          // Rafraîchir les messages de la conversation ouverte en direct
+          setDiscussingTicket((currentDiscuss) => {
+            if (!currentDiscuss) return null;
+            const updated = tixData.find(
+              (t: any) => t.reference === currentDiscuss.reference || t.id === currentDiscuss.id
+            );
+            if (updated) {
+              const activeBlocker = Array.isArray(updated.blockers)
+                ? updated.blockers.find((b: any) => !b.resolvedAt)
+                : undefined;
+              const newServerMsgs: TicketMessage[] = Array.isArray(updated.comments)
+                ? updated.comments.map((c: any) => {
+                    const authorRole = c.author?.roles?.includes("HEAD")
+                      ? "HEAD"
+                      : c.author?.roles?.includes("DEVELOPER")
+                      ? "DEVELOPER"
+                      : c.author?.roles?.includes("CONSULTANT")
+                      ? "CONSULTANT"
+                      : (c.authorRole || "DEVELOPER");
+                    const authorName = c.author
+                      ? `${c.author.firstName} ${c.author.lastName}`
+                      : (c.authorName || c.authorEmail || "Collaborateur");
+                    return {
+                      id: c.id,
+                      authorName,
+                      authorRole,
+                      authorEmail: c.author?.email || c.authorEmail || "",
+                      message: c.content,
+                      timestamp: c.createdAt
+                        ? new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : "À l'instant",
+                      attachment: c.attachment || undefined,
+                      isBlockerQuestion: c.isBlockerQuestion || false,
+                    };
+                  })
+                : [];
+
+              const localMsgs = currentDiscuss.messages || [];
+              const combined = [...newServerMsgs];
+              for (const lm of localMsgs) {
+                if (!combined.some((sm) => sm.id === lm.id || (sm.message === lm.message && sm.authorEmail === lm.authorEmail))) {
+                  combined.push(lm);
+                }
+              }
+
+              return {
+                ...currentDiscuss,
+                status: updated.status,
+                blockerReason: activeBlocker?.reason || updated.blockerReason,
+                messages: combined,
+              };
+            }
+            return currentDiscuss;
+          });
         }
       } catch {
         // silent polling
@@ -2980,7 +3162,7 @@ export default function TicketManagerPage() {
 
     setTickets((prev) =>
       prev.map((t) =>
-        t.id === currentTicketId
+        t.id === currentTicketId || t.reference === blockingTicket.reference
           ? {
               ...t,
               status: "BLOCKED",
@@ -3479,11 +3661,11 @@ export default function TicketManagerPage() {
 
   // Action Arbitrage / Déblocage (HEAD, ADMIN ou CONSULTANT demandeur)
   const handleUnblockTicket = async (ticketId: string) => {
-    const unblockedTicket = tickets.find((t) => t.id === ticketId);
+    const unblockedTicket = tickets.find((t) => t.id === ticketId || t.reference === ticketId);
     setTickets((prev) =>
       prev.map((t) =>
-        t.id === ticketId
-          ? { ...t, status: "IN_PROGRESS", blockerReason: undefined }
+        t.id === ticketId || t.reference === unblockedTicket?.reference
+          ? { ...t, status: "IN_PROGRESS", blockerReason: undefined, blockerId: undefined }
           : t
       )
     );
@@ -3492,7 +3674,7 @@ export default function TicketManagerPage() {
       setDevLiveActivities((prev) => {
         const next = { ...prev };
         for (const devId in next) {
-          if (next[devId]?.status === "BLOCKED" && next[devId]?.activeTicketId === unblockedTicket.id) {
+          if (next[devId]?.status === "BLOCKED" && (next[devId]?.activeTicketId === unblockedTicket.id || next[devId]?.activeTicketReference === unblockedTicket.reference)) {
             next[devId] = {
               developerId: devId,
               status: "AVAILABLE",
@@ -3510,8 +3692,10 @@ export default function TicketManagerPage() {
       const ticketIdentifier = unblockedTicket?.reference || ticketId;
       await apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/unblock`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          comment: `Point de blocage levé par ${currentUser?.name || "Consultant / Admin"}`
+          resolution: `Point de blocage levé par ${currentUser?.name || "Consultant / Admin"}`,
+          actorId: currentUser?.id,
         })
       });
     } catch (err) {
@@ -3668,6 +3852,32 @@ export default function TicketManagerPage() {
       isConsultantReply: isReply,
       attachment: msgAttachment
     };
+
+    // Persistance immédiate du message en base de données pour synchronisation multi-utilisateurs
+    try {
+      const ticketIdentifier = discussingTicket.reference || discussingTicket.id;
+      const commentRes = await apiFetch(`${API_BASE}/tickets/${ticketIdentifier}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: ticketMessageText.trim() || `Pièce jointe transmise : ${msgAttachment?.fileName}`,
+          authorId: currentUser.id,
+          authorName: currentUser.name,
+          authorEmail: currentUser.email,
+          authorRole: currentUser.role,
+          isBlockerQuestion: isQuestion,
+          attachment: msgAttachment,
+        }),
+      });
+      if (commentRes.ok) {
+        const saved = await commentRes.json();
+        if (saved?.id) {
+          newMsg.id = saved.id;
+        }
+      }
+    } catch (err) {
+      console.warn("[handleSendMessage] Enregistrement commentaire API échoué:", err);
+    }
 
     setTickets((prev) =>
       prev.map((t) => {
@@ -10188,8 +10398,10 @@ export default function TicketManagerPage() {
                           isCurrentAuthor
                             ? "bg-purple-700 text-white rounded-br-none"
                             : m.authorRole === "DEVELOPER"
-                            ? "bg-white border border-sky-200 text-slate-800 rounded-bl-none"
-                            : "bg-white border border-purple-200 text-slate-800 rounded-bl-none"
+                            ? "bg-sky-50 border border-sky-300 text-slate-900 rounded-bl-none"
+                            : m.authorRole === "CONSULTANT"
+                            ? "bg-purple-50 border border-purple-300 text-slate-900 rounded-bl-none"
+                            : "bg-amber-50 border border-amber-300 text-slate-900 rounded-bl-none"
                         }`}
                       >
                         <p className="whitespace-pre-wrap">{m.message}</p>

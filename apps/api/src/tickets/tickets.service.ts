@@ -76,6 +76,17 @@ export class TicketsService {
             },
           },
         },
+        blockers: {
+          orderBy: { startedAt: "desc" },
+        },
+        comments: {
+          include: {
+            author: {
+              select: { firstName: true, lastName: true, email: true, roles: true },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
       orderBy: [
         { priority: { rank: "asc" } },
@@ -119,7 +130,12 @@ export class TicketsService {
           },
         },
         comments: {
-          orderBy: { createdAt: "desc" },
+          include: {
+            author: {
+              select: { firstName: true, lastName: true, email: true, roles: true },
+            },
+          },
+          orderBy: { createdAt: "asc" },
         },
       },
     });
@@ -158,7 +174,14 @@ export class TicketsService {
                 },
               },
             },
-            comments: { orderBy: { createdAt: "desc" } },
+            comments: {
+              include: {
+                author: {
+                  select: { firstName: true, lastName: true, email: true, roles: true },
+                },
+              },
+              orderBy: { createdAt: "asc" },
+            },
           },
         });
       }
@@ -673,5 +696,57 @@ export class TicketsService {
 
       return assignment;
     });
+  }
+
+  async addComment(
+    ticketIdOrRef: string,
+    data: {
+      content: string;
+      authorId?: string;
+      authorEmail?: string;
+      authorRole?: string;
+      authorName?: string;
+      isBlockerQuestion?: boolean;
+      attachment?: any;
+    },
+  ) {
+    const ticket = await this.findOne(ticketIdOrRef);
+    if (!data.content?.trim()) {
+      throw new BadRequestException("Le contenu du message ne peut pas être vide");
+    }
+
+    const safeAuthorId = await this.resolveActorUuid(data.authorId);
+
+    const comment = await this.prisma.comment.create({
+      data: {
+        ticketId: ticket.id,
+        authorId: safeAuthorId,
+        authorEmail: data.authorEmail || undefined,
+        content: data.content.trim(),
+        visibility: "INTERNAL",
+        source: "APP",
+      },
+      include: {
+        author: {
+          select: { firstName: true, lastName: true, email: true, roles: true },
+        },
+      },
+    });
+
+    return {
+      id: comment.id,
+      ticketId: ticket.id,
+      content: comment.content,
+      createdAt: comment.createdAt,
+      authorEmail: comment.authorEmail,
+      author: comment.author
+        ? {
+            firstName: comment.author.firstName,
+            lastName: comment.author.lastName,
+            email: comment.author.email,
+            roles: comment.author.roles,
+          }
+        : undefined,
+    };
   }
 }
