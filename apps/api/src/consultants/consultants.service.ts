@@ -75,27 +75,43 @@ export class ConsultantsService {
     const normalizedEmail = data.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({
       where: { email: normalizedEmail },
+      include: { consultant: true },
     });
-    if (existing) {
-      throw new BadRequestException(`Un utilisateur avec l'adresse e-mail '${normalizedEmail}' existe déjà`);
+    if (existing?.consultant) {
+      throw new BadRequestException(`Un consultant avec l'adresse e-mail '${normalizedEmail}' existe déjà sur la plateforme`);
     }
 
     const passwordToHash = data.passwordPlain || "Safir2026!Consultant";
     const passwordHash = await argon2.hash(passwordToHash);
 
     return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          email: normalizedEmail,
-          firstName: data.firstName.trim(),
-          lastName: data.lastName.trim(),
-          roles: [Role.CONSULTANT],
-          isActive: true,
-          passwordHash,
-          mustChangePassword: true,
-          timezone: "Europe/Paris",
-        },
-      });
+      let user = existing;
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            email: normalizedEmail,
+            firstName: data.firstName.trim(),
+            lastName: data.lastName.trim(),
+            roles: [Role.CONSULTANT],
+            isActive: true,
+            passwordHash,
+            mustChangePassword: true,
+            timezone: "Europe/Paris",
+          },
+          include: { consultant: true },
+        });
+      } else {
+        const updatedRoles = Array.from(new Set([...user.roles, Role.CONSULTANT]));
+        user = await tx.user.update({
+          where: { id: user.id },
+          data: {
+            roles: updatedRoles,
+            isActive: true,
+            ...(data.passwordPlain ? { passwordHash } : {}),
+          },
+          include: { consultant: true },
+        });
+      }
 
       const consultant = await tx.consultant.create({
         data: {

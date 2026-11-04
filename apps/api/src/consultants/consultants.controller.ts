@@ -14,7 +14,7 @@ export class ConsultantsController {
   }
 
   @Post()
-  @Roles(Role.HEAD)
+  @Roles(Role.HEAD, Role.ADMIN)
   async createConsultant(
     @Body()
     body: {

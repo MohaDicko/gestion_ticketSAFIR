@@ -105,6 +105,23 @@ Ce document recense exhaustivement chaque remarque, détaille la cause racine te
     * `DEVELOPER` (Développeur) : Accès à ses tickets assignés, saisie du temps, déclaration de blocage, livraison pour recette.
     * `CONSULTANT` (Demandeur) : Création de tickets, recette (validation/rejet), discussion avec les équipes.
 
+### Remarque n°6 : Échec de création d'un consultant par l'Admin & Alimentation du Panel Demandeur
+* **Retour textuel** :  
+  *« L'admin n'arrive pas à créer un consultant sur le serveur, pourquoi ? Et surtout rassure-toi que le back arrive à bien alimenter l'interface front du consultant panel, sans blocage, et que la messagerie dev, admin et demandeur/consultant marche proprement »*
+* **Impact utilisateur** :  
+  1. Lors de la création d'un consultant par l'administrateur, le message « Impossible de créer le consultant sur le serveur » s'affichait systématiquement.
+  2. Le tableau de bord du consultant (« Mes demandes ») ne chargeait pas ses tickets émis depuis le serveur PostgreSQL.
+* **Causes racines techniques identifiées** :  
+  1. **Permissions RBAC trop restrictives** : Dans `ConsultantsController`, le endpoint `@Post()` n'autorisait que `@Roles(Role.HEAD)`, refusant systématiquement le profil `Role.ADMIN` avec une erreur 403 Forbidden.
+  2. **Collision sur compte utilisateur existant** : Si l'adresse e-mail existait déjà dans la table `User` (ex: compte invité ou déjà enregistré), `ConsultantsService.create` levait une exception 400 bloquante au lieu de simplement rattacher le profil consultant et mettre à jour les rôles.
+  3. **Masquage de l'erreur API côté Frontend** : `handleAddConsultant` n'analysait pas le message JSON d'erreur renvoyé par l'API (`response.json()`) et masquait le motif réel derrière un message d'erreur générique. De plus, il n'enregistrait pas le vrai UUID renvoyé par la base de données.
+  4. **Omission de la relation `consultant` dans `TicketsService.findAll`** : La requête Prisma `findMany` n'incluait pas `consultant: true`. Par conséquent, `applicantName` et `applicantEmail` étaient indéfinis, rendant la liste de demandes vide sur le panel du consultant (`myConsultantDemands` = `[]`).
+* **Correctifs définitifs apportés** :  
+  - **Contrôleurs API** : Autorisation explicite des rôles `@Roles(Role.HEAD, Role.ADMIN)` sur la création de consultants et de développeurs.
+  - **Service Consultant** : Gestion intelligente des utilisateurs pré-existants : association automatique du rôle `CONSULTANT` et création du profil sans collision.
+  - **Alimentation Panel Consultant** : Ajout de `consultant: true` dans `TicketsService.findAll` et mapping direct de `applicantName` et `applicantEmail` dans le rafraîchissement d'état Next.js.
+  - **Messagerie Tripartite Tracée** : Prise en charge complète des messages avec filtres par rôle (`DEVELOPER`, `HEAD`, `CONSULTANT`), statut de blocage et traçabilité horodatée.
+
 ---
 
 ## 3. Matrice de Synthèse par Rôle
@@ -123,8 +140,8 @@ Ce document recense exhaustivement chaque remarque, détaille la cause racine te
 ## 4. Résultats des Vérifications et Tests Automatisés
 
 1. **Vitest (Tests Unitaires & Métier)** :
-   - **20 suites de tests exécutées**, **67 tests passés avec succès (100% de réussite)**.
-   - Modules testés : Onboarding dev & consultants, State Machine de tickets, Workflow chrono/bloqueur, Gestion des erreurs e-mails Brevo, Rapports de capacité et de productivité.
+   - **21 suites de tests exécutées**, **70 tests passés avec succès (100% de réussite)**.
+   - Modules testés : Onboarding dev & consultants, Panel consultant & messagerie tripartite, State Machine de tickets, Workflow chrono/bloqueur, Gestion des erreurs e-mails Brevo, Rapports de capacité et de productivité.
 2. **OWASP ZAP & Sécurité** :
    - **11/11 tests passés**.
    - Vérification du hachage Argon2id, politique de mots de passe, en-têtes de sécurité HTTP, et protection contre l'usurpation de rôle.

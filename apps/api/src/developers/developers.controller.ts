@@ -14,7 +14,7 @@ export class DevelopersController {
   }
 
   @Post()
-  @Roles(Role.HEAD)
+  @Roles(Role.HEAD, Role.ADMIN)
   async createDeveloper(
     @Body()
     body: {
@@ -30,7 +30,7 @@ export class DevelopersController {
   }
 
   @Post(":id/skills")
-  @Roles(Role.HEAD)
+  @Roles(Role.HEAD, Role.ADMIN)
   async updateSkill(
     @Param("id") developerId: string,
     @Body() body: { skillId: string; level: number },

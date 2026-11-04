@@ -2155,6 +2155,8 @@ export default function TicketManagerPage() {
             typeCode: ticket.typeCode || ticket.type?.code,
             priorityCode: ticket.priorityCode || ticket.priority?.code,
             clientCompany: ticket.clientCompany || ticket.client?.name,
+            applicantName: ticket.applicantName || ticket.consultant?.name,
+            applicantEmail: ticket.applicantEmail || ticket.consultant?.email,
             estimatedHours: Number(ticket.estimatedHours || 0),
             remainingHours: Number(ticket.remainingEstimatedHours ?? ticket.estimatedHours ?? 0),
             blockerReason: activeBlocker?.reason || ticket.blockerReason,
@@ -2318,6 +2320,8 @@ export default function TicketManagerPage() {
                 currentList[idx] = {
                   ...currentList[idx],
                   status: serverT.status,
+                  applicantName: currentList[idx].applicantName || serverT.consultant?.name,
+                  applicantEmail: currentList[idx].applicantEmail || serverT.consultant?.email,
                   blockerReason: activeBlocker?.reason || (serverT.status === "BLOCKED" ? currentList[idx].blockerReason : undefined),
                   blockerId: activeBlocker?.id || currentList[idx].blockerId,
                   messages: mergedMsgs,
@@ -4334,11 +4338,16 @@ export default function TicketManagerPage() {
         }),
       });
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Échec de création (${response.status})`);
+      }
+      const created = await response.json();
+      if (created?.id) {
+        newDevObj.id = created.id;
       }
     } catch (error) {
       console.error("[handleAddDeveloper] Échec de création API", error);
-      showToast("Impossible de créer le développeur sur le serveur.");
+      showToast(error instanceof Error ? error.message : "Impossible de créer le développeur sur le serveur.");
       return;
     }
 
@@ -4425,16 +4434,24 @@ export default function TicketManagerPage() {
           firstName: newConsultantFirstName.trim(),
           lastName: newConsultantLastName.trim(),
           email: emailLower,
-          organization: newConsultantOrg.trim(),
+          organization: newConsultantOrg.trim() || "Safir Consulting",
           passwordPlain: initialPass,
         }),
       });
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Échec de création (${response.status})`);
+      }
+      const created = await response.json();
+      if (created?.id) {
+        newConsultantObj.id = created.id;
+      }
+      if (created?.userId) {
+        newAuthUser.id = created.userId;
       }
     } catch (error) {
       console.error("[handleAddConsultant] Échec de création API", error);
-      showToast("Impossible de créer le consultant sur le serveur.");
+      showToast(error instanceof Error ? error.message : "Impossible de créer le consultant sur le serveur.");
       return;
     }
 
@@ -9310,7 +9327,7 @@ export default function TicketManagerPage() {
       {/* ================================================================= */}
       {/* MODALE 5 : INTÉGRATION D'UN NOUVEAU DÉVELOPPEUR PAR L'ADMIN (HEAD) */}
       {/* ================================================================= */}
-      {showAddDevModal && currentUser?.role === "HEAD" && (
+      {showAddDevModal && (currentUser?.role === "HEAD" || currentUser?.role === "ADMIN") && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
@@ -9511,7 +9528,7 @@ export default function TicketManagerPage() {
       {/* ================================================================= */}
       {/* MODALE 6 : CRÉATION D'UN PROFIL CONSULTANT PAR L'ADMINISTRATION (HEAD EXCLUSIF) */}
       {/* ================================================================= */}
-      {showAddConsultantModal && currentUser?.role === "HEAD" && (
+      {showAddConsultantModal && (currentUser?.role === "HEAD" || currentUser?.role === "ADMIN") && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-purple-50/50">

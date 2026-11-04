@@ -61,6 +61,7 @@ export class TicketsService {
         priority: true,
         client: true,
         project: true,
+        consultant: true,
         skillRequirements: {
           include: { skill: true },
         },
