@@ -14,11 +14,11 @@ async function seed() {
 
   const defaultDevHash = await argon2.hash("Safir2026!Dev", { type: argon2.argon2id });
   const defaultConsultantHash = await argon2.hash("Safir2026!Consultant", { type: argon2.argon2id });
-  const adminHash = await argon2.hash("Tamden2026", { type: argon2.argon2id });
+  const adminHash = await argon2.hash("Ev@ngel10n", { type: argon2.argon2id });
 
   const users = [
     {
-      id: "user-superadmin",
+      id: "00000000-0000-4000-8000-000000000001",
       email: "superadmin@safirconsulting.net",
       firstName: "Aliko",
       lastName: "Getheme",
@@ -29,7 +29,7 @@ async function seed() {
       mustChangePassword: false,
     },
     {
-      id: "user-admin",
+      id: "00000000-0000-4000-8000-000000000002",
       email: "aliko.getheme@safirconsulting.net",
       firstName: "Aliko",
       lastName: "Getheme",

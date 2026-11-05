@@ -8,8 +8,31 @@ const apiBackendUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../../"),
+  serverExternalPackages: [
+    "firebase-admin",
+    "@google-cloud/firestore",
+    "argon2",
+    "@prisma/client",
+    "prisma",
+    "nodemailer",
+  ],
   experimental: {
     externalDir: true,
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : [config.externals].filter(Boolean)),
+        "firebase-admin",
+        "firebase-admin/app",
+        "firebase-admin/firestore",
+        "firebase-admin/auth",
+        "@google-cloud/firestore",
+        "argon2",
+        "@prisma/client",
+      ];
+    }
+    return config;
   },
   async rewrites() {
     if (!apiBackendUrl) return [];
