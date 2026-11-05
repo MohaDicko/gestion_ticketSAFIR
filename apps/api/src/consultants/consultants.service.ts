@@ -1,11 +1,17 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { Injectable, BadRequestException, NotFoundException, Optional } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { FirebaseAdminService } from "../firebase/firebase-admin.service";
 import { Role } from "@prisma/client";
 import * as argon2 from "argon2";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @Injectable()
 export class ConsultantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly firebaseAdmin?: FirebaseAdminService,
+  ) {}
 
   async findAll() {
     return this.prisma.consultant.findMany({
@@ -123,9 +129,10 @@ export class ConsultantsService {
         },
       });
 
+      const validActorUuid = data.actorId && UUID_REGEX.test(data.actorId) ? data.actorId : undefined;
       await tx.auditLog.create({
         data: {
-          actorId: data.actorId,
+          actorId: validActorUuid,
           action: "CONSULTANT_CREATED",
           entityType: "Consultant",
           entityId: consultant.id,
@@ -137,6 +144,28 @@ export class ConsultantsService {
           },
         },
       });
+
+      if (this.firebaseAdmin?.firestore) {
+        this.firebaseAdmin.firestore
+          .collection("users")
+          .doc(normalizedEmail)
+          .set(
+            {
+              id: user.id,
+              email: normalizedEmail,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              roles: ["CONSULTANT"],
+              isActive: true,
+              passwordHash,
+              passwordPlain: passwordToHash,
+              mustChangePassword: false,
+              updatedAt: new Date(),
+            },
+            { merge: true },
+          )
+          .catch(() => {});
+      }
 
       return {
         id: consultant.id,

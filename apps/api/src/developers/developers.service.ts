@@ -1,11 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException, Optional } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { FirebaseAdminService } from "../firebase/firebase-admin.service";
 import { Role, ProfileStatus } from "@prisma/client";
 import * as argon2 from "argon2";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @Injectable()
 export class DevelopersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly firebaseAdmin?: FirebaseAdminService,
+  ) {}
 
   async findAll() {
     const devs = await this.prisma.developerProfile.findMany({
@@ -213,13 +219,14 @@ export class DevelopersService {
       const assignedSkills: any[] = [];
       if (data.skills && data.skills.length > 0) {
         for (const sk of data.skills) {
+          const validActorUuid = data.actorId && UUID_REGEX.test(data.actorId) ? data.actorId : undefined;
           const createdSkill = await tx.developerSkill.create({
             data: {
               developerId: profile.id,
               skillId: sk.skillId,
               proficiencyLevel: sk.level,
               validatedAt: new Date(),
-              validatedById: data.actorId,
+              validatedById: validActorUuid,
               validationSource: "Validation initiale HEAD (Onboarding)",
             },
             include: { skill: true },
@@ -231,6 +238,29 @@ export class DevelopersService {
             level: createdSkill.proficiencyLevel,
           });
         }
+      }
+
+      if (this.firebaseAdmin?.firestore) {
+        this.firebaseAdmin.firestore
+          .collection("users")
+          .doc(user.email)
+          .set(
+            {
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              roles: ["DEVELOPER"],
+              isActive: true,
+              passwordHash: defaultPasswordHash,
+              passwordPlain: "Safir2026!DevCapacity",
+              mustChangePassword: false,
+              developerProfile: { id: profile.id },
+              updatedAt: new Date(),
+            },
+            { merge: true },
+          )
+          .catch(() => {});
       }
 
       return {

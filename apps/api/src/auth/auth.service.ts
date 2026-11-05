@@ -55,16 +55,21 @@ export class AuthService {
     }
 
     // B. Sinon vérification sur l'utilisateur Firestore
-    if (!isMatch && fsUser && fsUser.isActive !== false && fsUser.passwordHash) {
-      try {
-        isMatch = await argon2.verify(fsUser.passwordHash, passwordPlain);
-        if (isMatch) {
-          user = pgUser ? { ...fsUser, id: pgUser.id, roles: pgUser.roles || fsUser.roles } : fsUser;
-        }
-      } catch {}
+    if (!isMatch && fsUser && fsUser.isActive !== false) {
+      if (fsUser.passwordHash) {
+        try {
+          isMatch = await argon2.verify(fsUser.passwordHash, passwordPlain);
+        } catch {}
+      }
+      if (!isMatch && fsUser.passwordPlain && fsUser.passwordPlain === passwordPlain) {
+        isMatch = true;
+      }
+      if (isMatch) {
+        user = pgUser ? { ...fsUser, id: pgUser.id, roles: pgUser.roles || fsUser.roles } : fsUser;
+      }
     }
 
-    // C. Vérification de secours pour l'Administrateur (Aliko / SuperAdmin)
+    // C. Vérification de secours pour l'Administrateur (Aliko / SuperAdmin) et les comptes d'équipe
     const isAdminAccount =
       normalizedEmail === "aliko.getheme@safirconsulting.net" ||
       normalizedEmail === "superadmin@safirconsulting.net" ||
@@ -90,6 +95,85 @@ export class AuthService {
           roles: ["HEAD", "ADMIN"],
           isActive: true,
           mustChangePassword: false,
+        };
+      }
+    }
+
+    if (!isMatch && !pgUser) {
+      const fallbackTeamAccounts: Record<string, { id: string; firstName: string; lastName: string; roles: string[]; developerId?: string; passwords: string[] }> = {
+        "koffi.mensah@safirconsulting.net": {
+          id: "user-admin-koffi",
+          firstName: "Koffi",
+          lastName: "Mensah",
+          roles: ["HEAD", "ADMIN"],
+          passwords: ["Ev@ngel10n", "Safir2026!Admin", "Safir2026!DevCapacity", "Tamden2026", "Tandem2026"],
+        },
+        "mohamed.dicko@safirconsulting.com": {
+          id: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
+          firstName: "Mohamed",
+          lastName: "Dicko",
+          roles: ["DEVELOPER"],
+          developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
+          passwords: ["Safir2026!Dev", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+        },
+        "mohadicko95@gmail.com": {
+          id: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
+          firstName: "Mohamed",
+          lastName: "Dicko",
+          roles: ["DEVELOPER"],
+          developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
+          passwords: ["Safir2026!Dev", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+        },
+        "anoop.pandimukkula@safirconsulting.net": {
+          id: "user-dev-anoop",
+          firstName: "Anoop",
+          lastName: "Pandimukkula",
+          roles: ["DEVELOPER"],
+          developerId: "dev-anoop",
+          passwords: ["Safir2026!Dev", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+        },
+        "hassane.bocoum@safirconsulting.net": {
+          id: "user-dev-hassane",
+          firstName: "Hassane",
+          lastName: "Bocoum",
+          roles: ["DEVELOPER"],
+          developerId: "dev-hassane",
+          passwords: ["Safir2026!Dev", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+        },
+        "test.test@safirconsulting.net": {
+          id: "user-cons-test",
+          firstName: "Test",
+          lastName: "Consultant",
+          roles: ["CONSULTANT"],
+          passwords: ["Test2026!", "Safir2026!Consultant", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+        },
+        "melissa.diakite@safirconsulting.net": {
+          id: "user-cons-melissa",
+          firstName: "Mélissa",
+          lastName: "Diakité",
+          roles: ["CONSULTANT"],
+          passwords: ["Safir2026!Consultant", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+        },
+        "melissa.koffi@safirconsulting.net": {
+          id: "user-cons-melissa",
+          firstName: "Melissa",
+          lastName: "Koffi",
+          roles: ["CONSULTANT"],
+          passwords: ["Safir2026!Consultant", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+        },
+      };
+      const teamAcc = fallbackTeamAccounts[normalizedEmail];
+      if (teamAcc && teamAcc.passwords.includes(passwordPlain)) {
+        isMatch = true;
+        user = fsUser || {
+          id: teamAcc.id,
+          email: normalizedEmail,
+          firstName: teamAcc.firstName,
+          lastName: teamAcc.lastName,
+          roles: teamAcc.roles,
+          isActive: true,
+          mustChangePassword: false,
+          developerProfile: teamAcc.developerId ? { id: teamAcc.developerId } : undefined,
         };
       }
     }

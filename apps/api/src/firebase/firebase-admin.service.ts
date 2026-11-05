@@ -1,93 +1,179 @@
 import { Injectable, OnModuleInit, Logger } from "@nestjs/common";
-import { initializeApp, getApps, App, cert, ServiceAccount } from "firebase-admin/app";
-import { getFirestore, Firestore } from "firebase-admin/firestore";
-import { getAuth, Auth } from "firebase-admin/auth";
-import * as path from "path";
-import * as fs from "fs";
+
+function toFirestoreValue(val: any): any {
+  if (val === null || val === undefined) return { nullValue: null };
+  if (typeof val === "boolean") return { booleanValue: val };
+  if (typeof val === "number") {
+    return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
+  }
+  if (val instanceof Date) return { timestampValue: val.toISOString() };
+  if (typeof val === "string") return { stringValue: val };
+  if (Array.isArray(val)) {
+    return { arrayValue: { values: val.map(toFirestoreValue) } };
+  }
+  if (typeof val === "object") {
+    return { mapValue: { fields: toFirestoreFields(val) } };
+  }
+  return { stringValue: String(val) };
+}
+
+function toFirestoreFields(obj: Record<string, any>): Record<string, any> {
+  const fields: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj || {})) {
+    if (v !== undefined) {
+      fields[k] = toFirestoreValue(v);
+    }
+  }
+  return fields;
+}
+
+function fromFirestoreValue(v: any): any {
+  if (!v || typeof v !== "object") return null;
+  if ("stringValue" in v) return v.stringValue;
+  if ("booleanValue" in v) return Boolean(v.booleanValue);
+  if ("integerValue" in v) return Number(v.integerValue);
+  if ("doubleValue" in v) return Number(v.doubleValue);
+  if ("timestampValue" in v) return v.timestampValue;
+  if ("nullValue" in v) return null;
+  if ("arrayValue" in v) return (v.arrayValue?.values || []).map(fromFirestoreValue);
+  if ("mapValue" in v) return fromFirestoreFields(v.mapValue?.fields || {});
+  return null;
+}
+
+function fromFirestoreFields(fields: Record<string, any>): Record<string, any> {
+  const res: Record<string, any> = {};
+  for (const [k, v] of Object.entries(fields || {})) {
+    res[k] = fromFirestoreValue(v);
+  }
+  return res;
+}
+
+class FirestoreRestAdapter {
+  private readonly baseUrl: string;
+
+  constructor(projectId: string) {
+    this.baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+  }
+
+  collection(collectionName: string) {
+    const baseUrl = this.baseUrl;
+    return {
+      doc(docId: string) {
+        const encodedId = encodeURIComponent(docId);
+        const docUrl = `${baseUrl}/${collectionName}/${encodedId}`;
+        return {
+          async get() {
+            const res = await fetch(docUrl, { method: "GET" });
+            if (res.status === 404) {
+              return { exists: false, id: docId, data: () => undefined };
+            }
+            if (!res.ok) {
+              throw new Error(`Firestore GET error: ${res.status}`);
+            }
+            const json = (await res.json()) as any;
+            const parsed = fromFirestoreFields(json.fields || {});
+            return {
+              exists: true,
+              id: docId,
+              data: () => parsed,
+            };
+          },
+          async set(data: Record<string, any>, options?: { merge?: boolean }) {
+            const keys = Object.keys(data || {}).filter((k) => data[k] !== undefined);
+            let url = docUrl;
+            if (options?.merge && keys.length > 0) {
+              const maskParams = keys
+                .map((k) => `updateMask.fieldPaths=${encodeURIComponent(k)}`)
+                .join("&");
+              url = `${docUrl}?${maskParams}`;
+            }
+            const res = await fetch(url, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ fields: toFirestoreFields(data) }),
+            });
+            if (!res.ok) {
+              throw new Error(`Firestore SET error: ${res.status}`);
+            }
+          },
+        };
+      },
+      where(field: string, _op: string, value: any) {
+        return {
+          limit(max: number) {
+            return {
+              async get() {
+                const queryUrl = `${baseUrl}:runQuery`;
+                const res = await fetch(queryUrl, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    structuredQuery: {
+                      from: [{ collectionId: collectionName }],
+                      where: {
+                        fieldFilter: {
+                          field: { fieldPath: field },
+                          op: "EQUAL",
+                          value: toFirestoreValue(value),
+                        },
+                      },
+                      limit: max,
+                    },
+                  }),
+                });
+                if (!res.ok) {
+                  return { empty: true, docs: [] };
+                }
+                const rows = (await res.json()) as any[];
+                const docs = (rows || [])
+                  .filter((r) => r && r.document)
+                  .map((r) => {
+                    const nameParts = String(r.document.name || "").split("/");
+                    const id = decodeURIComponent(nameParts[nameParts.length - 1] || "");
+                    const parsed = fromFirestoreFields(r.document.fields || {});
+                    return {
+                      id,
+                      data: () => parsed,
+                    };
+                  });
+                return {
+                  empty: docs.length === 0,
+                  docs,
+                };
+              },
+            };
+          },
+        };
+      },
+    };
+  }
+}
 
 @Injectable()
 export class FirebaseAdminService implements OnModuleInit {
   private readonly logger = new Logger(FirebaseAdminService.name);
-  private app: App | null = null;
-  private isReady = false;
+  private restClient: FirestoreRestAdapter | null = null;
 
   onModuleInit() {
     this.ensureInitialized();
   }
 
   private ensureInitialized() {
-    if (this.isReady && this.app) return;
-
-    const existingApps = getApps();
-    if (existingApps.length > 0) {
-      this.app = existingApps[0]!;
-      this.isReady = true;
-      return;
-    }
-
-    try {
-      const candidates = [
-        process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
-        path.resolve(process.cwd(), "firebase-service-account.json"),
-        path.resolve(process.cwd(), "../../firebase-service-account.json"),
-        path.resolve(__dirname, "../../../../firebase-service-account.json"),
-      ].filter(Boolean);
-
-      let credentialObj: ServiceAccount | null = null;
-
-      for (const candidate of candidates) {
-        if (!candidate) continue;
-        const trimmed = candidate.trim().replace(/^['"]|['"]$/g, "");
-        if (trimmed.startsWith("{")) {
-          try {
-            credentialObj = JSON.parse(trimmed);
-          } catch {
-            // Gère le cas où Vercel a converti les \n en retours à la ligne réels
-            const sanitized = trimmed.replace(/\r?\n/g, "\\n");
-            credentialObj = JSON.parse(sanitized);
-          }
-          break;
-        } else if (fs.existsSync(trimmed)) {
-          credentialObj = JSON.parse(fs.readFileSync(trimmed, "utf8"));
-          break;
-        }
-      }
-
-      if (credentialObj) {
-        if ((credentialObj as any).private_key) {
-          (credentialObj as any).private_key = String((credentialObj as any).private_key).replace(/\\n/g, "\n");
-        }
-        this.app = initializeApp({
-          credential: cert(credentialObj),
-          projectId: process.env.FIREBASE_PROJECT_ID || (credentialObj as any).project_id || "tandem-2-75612",
-        });
-        this.isReady = true;
-        this.logger.log("✅ Firebase Admin SDK initialisé avec succès pour le projet tandem-2-75612");
-      } else {
-        this.logger.warn("Firebase Admin SDK : aucune clé de compte de service valide détectée, repli PostgreSQL actif");
-      }
-    } catch (error: any) {
-      this.logger.error(`Erreur d'initialisation Firebase Admin : ${error?.message || error}`);
-    }
+    if (this.restClient) return;
+    const projectId =
+      process.env.FIREBASE_PROJECT_ID ||
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+      "tandem-2-75612";
+    this.restClient = new FirestoreRestAdapter(projectId);
+    this.logger.log(`✅ Connecteur Cloud Firestore initialisé pour le projet ${projectId}`);
   }
 
-  get firestore(): Firestore | null {
-    try {
-      this.ensureInitialized();
-      if (!this.isReady || !this.app) return null;
-      return getFirestore(this.app);
-    } catch {
-      return null;
-    }
+  get firestore(): any {
+    this.ensureInitialized();
+    return this.restClient;
   }
 
-  get auth(): Auth | null {
-    try {
-      this.ensureInitialized();
-      if (!this.isReady || !this.app) return null;
-      return getAuth(this.app);
-    } catch {
-      return null;
-    }
+  get auth(): any {
+    return null;
   }
 }
