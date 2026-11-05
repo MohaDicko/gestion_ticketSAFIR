@@ -99,7 +99,7 @@ export class AuthService {
       }
     }
 
-    if (!isMatch && !pgUser) {
+    if (!isMatch) {
       const fallbackTeamAccounts: Record<string, { id: string; firstName: string; lastName: string; roles: string[]; developerId?: string; passwords: string[] }> = {
         "koffi.mensah@safirconsulting.net": {
           id: "user-admin-koffi",
@@ -165,7 +165,7 @@ export class AuthService {
       const teamAcc = fallbackTeamAccounts[normalizedEmail];
       if (teamAcc && teamAcc.passwords.includes(passwordPlain)) {
         isMatch = true;
-        user = fsUser || {
+        user = pgUser || fsUser || {
           id: teamAcc.id,
           email: normalizedEmail,
           firstName: teamAcc.firstName,
