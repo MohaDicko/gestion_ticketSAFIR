@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus, Req, ForbiddenException } from "@nestjs/common";
 import { TicketsService } from "./tickets.service";
 import { TicketStatus } from "@prisma/client";
 import { Role } from "@prisma/client";
@@ -113,11 +113,24 @@ export class TicketsController {
   }
 
   @Patch(":id/status")
-  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER)
+  @Roles(Role.HEAD, Role.ADMIN, Role.DEVELOPER, Role.CONSULTANT)
   async updateStatus(
     @Param("id") id: string,
     @Body() body: { status: TicketStatus; reason?: string; actorId?: string },
+    @Req() req?: { user?: { roles?: string[] } },
   ) {
+    const roles = req?.user?.roles || [];
+    const isConsultantOnly =
+      roles.includes(Role.CONSULTANT) &&
+      !roles.some((r) => r === Role.HEAD || r === Role.ADMIN || r === Role.DEVELOPER);
+    if (isConsultantOnly) {
+      // Le demandeur ne peut que valider (CLOSED) ou rejeter (IN_PROGRESS) une livraison en recette.
+      const ticket = await this.ticketsService.findOne(id);
+      const allowedTarget = body.status === TicketStatus.CLOSED || body.status === TicketStatus.IN_PROGRESS;
+      if (ticket.status !== TicketStatus.DELIVERED || !allowedTarget) {
+        throw new ForbiddenException("Le demandeur ne peut que valider ou rejeter un ticket livré en recette");
+      }
+    }
     return this.ticketsService.updateStatus(id, body.status, body.actorId, body.reason);
   }
 

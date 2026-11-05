@@ -17,7 +17,7 @@ describe("Workflow Blocage & Reprise avec Cumul du Temps de Travail", () => {
             assignment: { ticketId: "ticket-1" },
           },
         ]),
-        update: vi.fn().mockResolvedValue({ id: "session-active-1", status: "STOPPED" }),
+        delete: vi.fn().mockResolvedValue({ id: "session-active-1" }),
       },
       timeEntry: {
         create: vi.fn().mockResolvedValue({ id: "entry-saved-1" }),
@@ -47,12 +47,7 @@ describe("Workflow Blocage & Reprise avec Cumul du Temps de Travail", () => {
     );
 
     // 1. La session a été clôturée
-    expect(tx.workSession.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "session-active-1" },
-        data: expect.objectContaining({ status: "STOPPED" }),
-      }),
-    );
+    expect(tx.workSession.delete).toHaveBeenCalledWith({ where: { id: "session-active-1" } });
 
     // 2. Le temps travaillé a été consigné dans TimeEntry (~30 min = 0.5h)
     expect(tx.timeEntry.create).toHaveBeenCalledWith(

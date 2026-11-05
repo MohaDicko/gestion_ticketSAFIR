@@ -532,33 +532,35 @@ export class TicketsService {
       throw new BadRequestException("Ce ticket est déjà bloqué");
     }
 
-    const declaredById = actorId || (ticket as any).assignments?.[0]?.developer?.userId || "user-dev";
+    const resolvedActorId = await this.resolveActorUuid(actorId);
+    const declaredById =
+      resolvedActorId || actorId || (ticket as any).assignments?.[0]?.developer?.userId;
 
     return this.prisma.$transaction(async (tx: any) => {
-      // Clôturer toute session de travail active sur ce ticket et consigner le temps travaillé
+      // Clôturer toute session de travail active (en cours ou en pause) et consigner le temps travaillé
       if (tx.workSession?.findMany) {
         const activeSessions = await tx.workSession.findMany({
           where: {
             assignment: { ticketId: ticket.id },
-            endedAt: null,
+            status: { in: ["RUNNING", "PAUSED"] },
           },
           include: { assignment: true },
         });
 
         for (const session of activeSessions) {
           const endedAt = new Date();
+          const currentPauseSeconds = session.pausedAt
+            ? Math.max(0, Math.round((endedAt.getTime() - new Date(session.pausedAt).getTime()) / 1000))
+            : 0;
           const durationSeconds = Math.max(
-            5,
-            Math.round((endedAt.getTime() - session.startedAt.getTime()) / 1000) - (session.pausedDurationSeconds || 0),
+            0,
+            Math.round((endedAt.getTime() - session.startedAt.getTime()) / 1000) -
+              (session.pausedDurationSeconds || 0) -
+              currentPauseSeconds,
           );
-          const durationHours = Math.max(0.01, Math.round((durationSeconds / 3600) * 100) / 100);
 
-          await tx.workSession.update({
-            where: { id: session.id },
-            data: { endedAt, status: "STOPPED" },
-          });
-
-          if (tx.timeEntry?.create) {
+          if (durationSeconds >= 5 && tx.timeEntry?.create) {
+            const durationHours = Math.max(0.01, Math.round((durationSeconds / 3600) * 100) / 100);
             await tx.timeEntry.create({
               data: {
                 assignmentId: session.assignmentId,
@@ -571,10 +573,21 @@ export class TicketsService {
                 comment: `Arrêt sur blocage : ${reason}`,
               },
             });
+            if (tx.assignment?.update) {
+              const remaining = session.assignment?.remainingHours ?? session.assignment?.allocatedHours ?? 0;
+              await tx.assignment.update({
+                where: { id: session.assignmentId },
+                data: {
+                  remainingHours: Math.max(0, Number(remaining) - durationHours),
+                  remainingUpdatedAt: endedAt,
+                },
+              });
+            }
           }
+
+          await tx.workSession.delete({ where: { id: session.id } });
         }
       }
-
       await tx.ticketBlocker.create({
         data: {
           ticketId: ticket.id,
@@ -813,8 +826,9 @@ export class TicketsService {
         },
       });
 
-      // Mettre à jour le statut du ticket à ASSIGNED s'il était RECEIVED
-      const nextStatus = ticket.status === TicketStatus.RECEIVED ? TicketStatus.ASSIGNED : ticket.status;
+      // Passer le ticket en ASSIGNED tant qu'il n'est pas encore en cours de développement
+      const preAssignStatuses: TicketStatus[] = [TicketStatus.RECEIVED, TicketStatus.TO_QUALIFY, TicketStatus.READY];
+      const nextStatus = preAssignStatuses.includes(ticket.status) ? TicketStatus.ASSIGNED : ticket.status;
       await tx.ticket.update({
         where: { id: ticket.id },
         data: {
