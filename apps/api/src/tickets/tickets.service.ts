@@ -718,6 +718,9 @@ export class TicketsService {
     const ticketId = ticket.id;
 
     await this.prisma.$transaction(async (tx) => {
+      await tx.timeEntry.deleteMany({ where: { assignment: { ticketId } } });
+      await tx.workSession.deleteMany({ where: { assignment: { ticketId } } });
+      await tx.assignmentExclusion.deleteMany({ where: { ticketId } });
       await tx.assignment.deleteMany({ where: { ticketId } });
       await tx.ticketStatusHistory.deleteMany({ where: { ticketId } });
       await tx.ticketDependency.deleteMany({ where: { OR: [{ ticketId }, { dependsOnTicketId: ticketId }] } });
