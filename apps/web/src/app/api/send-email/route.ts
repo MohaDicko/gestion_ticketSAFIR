@@ -245,7 +245,7 @@ export async function POST(req: Request) {
       </p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">Safir Consulting BU SME &bull; Suivi des Capacités SAP Tandem</p>
+      <p style="margin: 0;">Safir Consulting CoE DEV &bull; Suivi des Capacités SAP Tandem</p>
       <p style="margin: 4px 0 0;">Notification générée automatiquement lors de la création du ticket.</p>
     </div>
   </div>

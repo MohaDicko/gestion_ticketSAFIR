@@ -1,7 +1,7 @@
 {
   "name": "@devcapacity/web",
   "version": "1.0.0",
-  "description": "Frontend Next.js (App Router) pour DevCapacity Manager",
+  "description": "Frontend Next.js (App Router) pour Tandem",
   "scripts": {
     "dev": "next dev -p 3000",
     "prebuild": "npm run build --workspace=@devcapacity/shared --if-present",

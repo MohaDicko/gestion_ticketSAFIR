@@ -4,7 +4,7 @@ import * as argon2 from "argon2";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Début du seed initial complet DevCapacity Manager...");
+  console.log("🌱 Début du seed initial complet Tandem...");
 
   // 1. Types de tickets
   const ticketTypes = [
@@ -84,7 +84,7 @@ async function main() {
     },
     {
       key: "product.info",
-      value: { name: "DevCapacity Manager", company: "Safir Consulting", unit: "SME Business Unit" },
+      value: { name: "Tandem", company: "Safir Consulting", unit: "SME Business Unit" },
       scope: "technical",
     },
   ];

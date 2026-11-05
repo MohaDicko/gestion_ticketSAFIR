@@ -32,7 +32,7 @@ export class TicketsController {
     const ticket = await this.ticketsService.create(body);
 
     // 2. Détermination exhaustive de TOUS les acteurs concernés :
-    // - L'Administrateur (Direction BU SME)
+    // - L'Administrateur (Direction CoE DEV)
     // - Le Demandeur / Consultant
     // - Le ou les Développeurs assignés ou ciblés
     const adminEmail = process.env.ALIKO_EMAIL || "aliko.getheme@safirconsulting.net";
@@ -48,7 +48,7 @@ export class TicketsController {
       });
     } else {
       // Sinon diffusion automatique exhaustive à tous les acteurs :
-      // 1. Administrateurs (Direction BU SME & Admin opérationnel)
+      // 1. Administrateurs (Direction CoE DEV & Admin opérationnel)
       allRecipients.add(adminEmail);
       allRecipients.add(superAdminEmail);
 

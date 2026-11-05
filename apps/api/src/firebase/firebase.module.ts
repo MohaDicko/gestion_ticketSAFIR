@@ -1,10 +1,9 @@
 import { Global, Module } from "@nestjs/common";
 import { FirebaseAdminService } from "./firebase-admin.service";
-import { FirebaseSyncService } from "./firebase-sync.service";
 
 @Global()
 @Module({
-  providers: [FirebaseAdminService, FirebaseSyncService],
-  exports: [FirebaseAdminService, FirebaseSyncService],
+  providers: [FirebaseAdminService],
+  exports: [FirebaseAdminService],
 })
 export class FirebaseModule {}

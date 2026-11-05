@@ -114,7 +114,7 @@ export class AuthService {
           lastName: "Dicko",
           roles: ["DEVELOPER"],
           developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-          passwords: ["Safir2026!Dev", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+          passwords: ["Safir2026!Dev", "Safir@2026", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
         },
         "mohadicko95@gmail.com": {
           id: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
@@ -122,7 +122,7 @@ export class AuthService {
           lastName: "Dicko",
           roles: ["DEVELOPER"],
           developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-          passwords: ["Safir2026!Dev", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+          passwords: ["Safir2026!Dev", "Safir@2026", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
         },
         "anoop.pandimukkula@safirconsulting.net": {
           id: "user-dev-anoop",
@@ -130,7 +130,7 @@ export class AuthService {
           lastName: "Pandimukkula",
           roles: ["DEVELOPER"],
           developerId: "dev-anoop",
-          passwords: ["Safir2026!Dev", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+          passwords: ["Safir2026!Dev", "Safir@2026", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
         },
         "hassane.bocoum@safirconsulting.net": {
           id: "user-dev-hassane",
@@ -138,7 +138,7 @@ export class AuthService {
           lastName: "Bocoum",
           roles: ["DEVELOPER"],
           developerId: "dev-hassane",
-          passwords: ["Safir2026!Dev", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
+          passwords: ["Safir2026!Dev", "Safir@2026", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
         },
         "test.test@safirconsulting.net": {
           id: "user-cons-test",

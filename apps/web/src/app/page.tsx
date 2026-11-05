@@ -3423,7 +3423,7 @@ export default function TicketManagerPage() {
 
     // Envoi de la notification e-mail automatique à l'administrateur ET au consultant demandeur concerné
     const emailRecipients: { name: string; email: string; roleLabel: string }[] = [
-      { name: activeAdminUser.name, email: activeAdminUser.email, roleLabel: "Administrateur BU SME" },
+      { name: activeAdminUser.name, email: activeAdminUser.email, roleLabel: "Administrateur CoE DEV" },
     ];
     if (blockingTicket.applicantEmail) {
       emailRecipients.push({
@@ -3540,7 +3540,7 @@ export default function TicketManagerPage() {
       `Relevé N°;${releveRef};Date d'émission;${todayStr}`,
       `Bénéficiaire;${targetName} <${targetEmail}>;Intitulé Poste;${jobTitle || "Développeur Solutions SAP"}`,
       `Période validée;${periodStr}`,
-      `Validation hiérarchique;Visa Direction BU SME (${activeAdminUser.name})`,
+      `Validation hiérarchique;Visa Direction CoE DEV (${activeAdminUser.name})`,
       "",
       "Ticket Réf;Titre du Projet SAP;Client / Entreprise;Date de Session;Durée Heures;Note d'intervention",
       ...filteredLogs.map((l) =>
@@ -4415,7 +4415,7 @@ export default function TicketManagerPage() {
     };
 
     // Notification automatique par E-mail de TOUS les acteurs concernés :
-    // 1. Les Administrateurs (Direction BU SME & Admin opérationnel)
+    // 1. Les Administrateurs (Direction CoE DEV & Admin opérationnel)
     // 2. Le Demandeur / Consultant (créateur ou demandeur concerné)
     // 3. TOUS les Développeurs concernés (le développeur assigné ou tous les développeurs compétents de l'équipe)
     const matchingDevs = developers.filter((d) => checkDeveloperSkillMatch(d, newType));
@@ -4433,7 +4433,7 @@ export default function TicketManagerPage() {
         roleLabel: activeAdminUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur",
       },
       {
-        name: "Direction BU SME",
+        name: "Direction CoE DEV",
         email: "superadmin@safirconsulting.net",
         roleLabel: "Super Administrateur Direction",
       },
@@ -5106,7 +5106,7 @@ export default function TicketManagerPage() {
         {/* ================================================================= */}
         <header className="relative z-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-5 pb-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            {/* Badge impersonnel Centre de Compétences DEV (mention "BU SME" retirée) */}
+            {/* Badge impersonnel Centre de Compétences DEV (mention "CoE DEV" retirée) */}
             <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-slate-100 shadow-sm">
               <Shield className="w-4 h-4 text-[#00B89C]" />
               <span>Centre de Compétences DEV — CoE DEV</span>
@@ -7853,7 +7853,7 @@ export default function TicketManagerPage() {
           <div className="space-y-4">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Ressources & Gouvernance BU SME</h2>
+                <h2 className="text-sm font-semibold text-slate-900">Ressources & Gouvernance CoE DEV</h2>
                 <p className="text-xs text-slate-500">Pilotage de la capacité Développeurs, des accès Demandeurs et des Administrateurs / Super Admin</p>
                 
                 {/* Sélecteur de sous-vue : Développeurs vs Consultants vs Administrateurs */}
@@ -8389,7 +8389,7 @@ export default function TicketManagerPage() {
                 className="h-11 w-auto object-contain mx-auto mb-2"
               />
               <h3 className="font-bold text-[#051638] text-base">Connexion — Tandem</h3>
-              <p className="text-xs text-[#5A7088]">Du besoin à la solution. — Safir Consulting (BU SME)</p>
+              <p className="text-xs text-[#5A7088]">Du besoin à la solution. — Safir Consulting (CoE DEV)</p>
             </div>
 
             <form onSubmit={handleLoginSubmit} className="p-5 space-y-3.5">
@@ -8611,7 +8611,7 @@ export default function TicketManagerPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-[#051638] text-base">Nouveau Ticket de Développement SAP</h3>
                     <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[10px] font-mono font-bold uppercase">
-                      {currentUser?.role === "HEAD" ? "Administration BU SME" : "Portail Demandeur"}
+                      {currentUser?.role === "HEAD" ? "Administration CoE DEV" : "Portail Demandeur"}
                     </span>
                   </div>
                   <p className="text-xs text-[#5A7088] mt-0.5">
@@ -9986,7 +9986,7 @@ export default function TicketManagerPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-white text-sm">Créer un Compte Administrateur / Super Admin</h3>
-                  <p className="text-[11px] text-slate-300">Architecture multi-administrateurs — Gouvernance BU SME</p>
+                  <p className="text-[11px] text-slate-300">Architecture multi-administrateurs — Gouvernance CoE DEV</p>
                 </div>
               </div>
               <button onClick={() => setShowAddAdminModal(false)} className="text-slate-300 hover:text-white cursor-pointer">
@@ -10640,7 +10640,7 @@ export default function TicketManagerPage() {
                     Projet clôturé et archivé par l'Administrateur — Non réaffectable (créer un nouveau ticket en cas de modification).
                   </span>
                 ) : (
-                  <span>Gouvernance BU SME — Validation et clôture réservées à l'Administrateur ({currentUser?.name || activeAdminUser.name}).</span>
+                  <span>Gouvernance CoE DEV — Validation et clôture réservées à l'Administrateur ({currentUser?.name || activeAdminUser.name}).</span>
                 )}
               </div>
 
@@ -10960,7 +10960,7 @@ export default function TicketManagerPage() {
                       ? `Répondre à ${discussingTicket.assignedDeveloper ? discussingTicket.assignedDeveloper.name : "l'équipe"} avec vos précisions fonctionnelles...`
                       : currentUser?.role === "DEVELOPER"
                       ? `Poser une question fonctionnelle à ${discussingTicket.applicantName || "le demandeur"}...`
-                      : "Saisir une directive ou arbitrage d'Administrateur BU SME..."
+                      : "Saisir une directive ou arbitrage d'Administrateur CoE DEV..."
                   }
                   value={ticketMessageText}
                   onChange={(e) => setTicketMessageText(e.target.value)}
@@ -11236,7 +11236,7 @@ export default function TicketManagerPage() {
                       subject: "[Test Opérationnel] Vérification du serveur d'envoi d'e-mails Tandem",
                       eventType: "TICKET_CREATED",
                       recipients: [
-                        { name: activeAdminUser.name, email: activeAdminUser.email, roleLabel: "Direction BU SME" },
+                        { name: activeAdminUser.name, email: activeAdminUser.email, roleLabel: "Direction CoE DEV" },
                         { name: "Moha Dicko", email: "mohadicko95@gmail.com", roleLabel: "Lead Développeur SAP" },
                         { name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net", roleLabel: "Développeur SAP" },
                         { name: "Demandeur SAP", email: "demandeur@safirconsulting.net", roleLabel: "Demandeur" }
@@ -11310,7 +11310,7 @@ export default function TicketManagerPage() {
                     Tandem — Reporting Comité de Direction — Safir Consulting
                   </span>
                   <h3 className="font-bold text-base sm:text-lg text-white mt-1">
-                    Synthèse Hebdomadaire d'Activité BU SME
+                    Synthèse Hebdomadaire d'Activité CoE DEV
                   </h3>
                   <p className="text-xs text-slate-300">
                     Pilotage centralisé par {currentUser?.name || activeAdminUser.name}
@@ -11366,7 +11366,7 @@ export default function TicketManagerPage() {
                     État Consolidé du Portefeuille Tickets
                   </span>
                   <span className="text-[11px] text-slate-500">
-                    Généré pour {currentUser?.name || activeAdminUser.name} (Administrateur BU SME)
+                    Généré pour {currentUser?.name || activeAdminUser.name} (Administrateur CoE DEV)
                   </span>
                 </div>
                 <div className="overflow-x-auto">
@@ -11419,7 +11419,7 @@ export default function TicketManagerPage() {
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
               <div className="text-xs text-slate-500 flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Données certifiées conformes au référentiel central BU SME — Safir Consulting.</span>
+                <span>Données certifiées conformes au référentiel central CoE DEV — Safir Consulting.</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -11770,7 +11770,7 @@ export default function TicketManagerPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-black tracking-tight text-[#051638]">Safir Consulting</span>
                         <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-900 text-[10px] font-bold uppercase tracking-wider">
-                          Direction BU SME
+                          Direction CoE DEV
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 font-medium mt-0.5">
@@ -11792,7 +11792,7 @@ export default function TicketManagerPage() {
                   </div>
                 </div>
 
-                {/* 2. Cartouche Collaborateur & Cadre de Supervision BU SME */}
+                {/* 2. Cartouche Collaborateur & Cadre de Supervision CoE DEV */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-300 text-xs print:bg-slate-50">
                   <div className="space-y-1">
                     <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
@@ -11811,17 +11811,17 @@ export default function TicketManagerPage() {
                     </div>
                     <div className="text-xs font-bold text-[#051638]">
                       {currentTimesheetStatus?.approvedByName
-                        ? `${currentTimesheetStatus.approvedByName} — Administration BU SME`
+                        ? `${currentTimesheetStatus.approvedByName} — Administration CoE DEV`
                         : isAdminRole && currentUser?.name
-                          ? `${currentUser.name} — ${currentUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"} BU SME`
-                          : "En attente de validation par l'Administration BU SME"}
+                          ? `${currentUser.name} — ${currentUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"} CoE DEV`
+                          : "En attente de validation par l'Administration CoE DEV"}
                     </div>
                     <div className="text-[11px] text-slate-600">
                       Environnements SAP : SAP Business One & SAP S/4HANA
                     </div>
                     <div className="text-[11px] font-bold text-emerald-800">
                       {currentTimesheetStatus?.status === "APPROVED"
-                        ? "✓ Visa Direction BU SME Validé — Transmis au Service Comptabilité"
+                        ? "✓ Visa Direction CoE DEV Validé — Transmis au Service Comptabilité"
                         : currentTimesheetStatus?.status === "SUBMITTED"
                         ? "⏳ Relevé Transmis par le Développeur — En attente visa Direction"
                         : "✓ Traçabilité continue conforme au référentiel central"}
@@ -12074,20 +12074,20 @@ export default function TicketManagerPage() {
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-10 text-right">
                     <div>
                       <span className="font-bold text-[#051638] uppercase tracking-wider text-[11px]">
-                        Approbation & Visa Direction BU SME
+                        Approbation & Visa Direction CoE DEV
                       </span>
                       <p className="text-[11px] text-slate-600 mt-0.5">
                         {currentUser?.name
-                          ? `${currentUser.name} — ${currentUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"} BU SME`
-                          : "Direction & Administration BU SME"}
+                          ? `${currentUser.name} — ${currentUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"} CoE DEV`
+                          : "Direction & Administration CoE DEV"}
                       </p>
                       <p className="text-[10px] text-slate-500 italic mt-1">
                         « Validé pour ordonnancement comptable, archivage et clôture de période. »
                       </p>
                     </div>
                     <div className="border-t border-dashed border-slate-400 pt-1.5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                      <span>Cachet BU SME</span>
-                      <span>Signature Direction BU SME</span>
+                      <span>Cachet CoE DEV</span>
+                      <span>Signature Direction CoE DEV</span>
                     </div>
                   </div>
                 </div>
@@ -12098,7 +12098,7 @@ export default function TicketManagerPage() {
                     <strong>Gouvernance Safir Consulting :</strong> Ce relevé fait foi pour la clôture des sprints et l'ordonnancement par le service Comptabilité. Traçabilité inviolable gérée par la plateforme Tandem.
                   </span>
                   <span className="font-mono shrink-0">
-                    Safir Consulting © 2026 • BU SME
+                    Safir Consulting © 2026 • CoE DEV
                   </span>
                 </div>
               </div>

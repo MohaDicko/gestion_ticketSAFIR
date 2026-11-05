@@ -1,7 +1,7 @@
 {
   "name": "@devcapacity/api",
   "version": "1.0.0",
-  "description": "Backend NestJS pour DevCapacity Manager",
+  "description": "Backend NestJS pour Tandem",
   "scripts": {
     "build": "nest build",
     "start": "nest start",

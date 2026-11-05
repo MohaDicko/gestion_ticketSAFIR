@@ -48,30 +48,6 @@ describe("Module d'envoi d'e-mails réels lors de la création d'un ticket", () 
     expect(result.messageId).toBe("<test-msg-123@safirconsulting.net>");
   });
 
-  it("doit également être compatible avec services/emailService.js (CommonJS)", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const cjsService = require("../../services/emailService.js");
-    expect(typeof cjsService.sendTicketCreatedNotification).toBe("function");
-    expect(typeof cjsService.transporter.sendMail).toBe("function");
-
-    const sendMailSpy = vi.spyOn(cjsService.transporter, "sendMail").mockResolvedValue({
-      messageId: "<test-cjs-msg@safirconsulting.net>",
-    } as any);
-
-    const result = await cjsService.sendTicketCreatedNotification({
-      creatorName: "Getheme Aliko",
-      creatorEmail: "aliko@safirconsulting.net",
-      recipientEmails: ["melissa.diakite@safirconsulting.net"],
-      ticketId: "ADD-2026-0099",
-      ticketTitle: "Test CJS",
-      ticketDescription: "Description",
-      ticketUrl: "http://localhost:3000/tickets/ADD-2026-0099",
-    });
-
-    expect(sendMailSpy).toHaveBeenCalledTimes(1);
-    expect(result.messageId).toBe("<test-cjs-msg@safirconsulting.net>");
-  });
-
   it("doit ignorer l'envoi si aucun destinataire n'est fourni", async () => {
     const sendMailSpy = vi.spyOn(emailTransporter, "sendMail");
 

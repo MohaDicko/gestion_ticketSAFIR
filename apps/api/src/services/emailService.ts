@@ -160,7 +160,7 @@ function generateTicketEmailHtml(data: TicketCreatedNotificationData): string {
       </p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">Safir Consulting BU SME &bull; Système interne de suivi des capacités SAP</p>
+      <p style="margin: 0;">Safir Consulting CoE DEV &bull; Système interne de suivi des capacités SAP</p>
       <p style="margin: 4px 0 0;">Cet e-mail est généré automatiquement par le gestionnaire de tickets SAP Tandem.</p>
     </div>
   </div>

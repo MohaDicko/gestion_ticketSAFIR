@@ -1,7 +1,7 @@
 {
   "name": "@devcapacity/shared",
   "version": "1.0.0",
-  "description": "Modèles, types et énumérations partagés pour DevCapacity Manager",
+  "description": "Modèles, types et énumérations partagés pour Tandem",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
