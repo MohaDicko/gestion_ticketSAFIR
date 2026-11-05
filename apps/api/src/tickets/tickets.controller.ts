@@ -58,14 +58,12 @@ export class TicketsController {
       // 3. Développeur(s) assigné(s) ou concerné(s)
       if (body.assignedDeveloperEmail) {
         allRecipients.add(body.assignedDeveloperEmail);
-      } else if (body.assignedDeveloperId) {
-        const devIdLower = String(body.assignedDeveloperId).toLowerCase();
-        if (devIdLower.includes("dicko") || devIdLower.includes("moha") || devIdLower === "012337d8-fe1a-4c5b-9b01-78b9c9f29529") {
-          allRecipients.add("mohamed.dicko@safirconsulting.com");
-        } else if (devIdLower.includes("anoop")) {
-          allRecipients.add("anoop.pandimukkula@safirconsulting.net");
-        } else if (devIdLower.includes("hassane")) {
-          allRecipients.add("hassane.bocoum@safirconsulting.net");
+      }
+      const createdAssignments = (ticket as any)?.assignments;
+      if (Array.isArray(createdAssignments)) {
+        for (const a of createdAssignments) {
+          const devEmail = a?.developer?.user?.email;
+          if (devEmail) allRecipients.add(devEmail);
         }
       }
     }

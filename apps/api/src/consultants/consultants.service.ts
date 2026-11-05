@@ -32,7 +32,7 @@ export class ConsultantsService {
   }
 
   async deactivate(consultantId: string) {
-    const isConsultantUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(consultantId);
+    const isConsultantUuid = UUID_REGEX.test(consultantId);
     const cleanCons = consultantId.replace(/^cons-/, "").replace(/^user-/, "").toLowerCase();
     const consultant = await this.prisma.consultant.findFirst({
       where: isConsultantUuid
@@ -83,13 +83,12 @@ export class ConsultantsService {
       where: { email: normalizedEmail },
       include: { consultant: true },
     });
-    if (existing?.consultant) {
+    if (existing?.consultant && existing.isActive && existing.consultant.status === "ACTIVE") {
       throw new BadRequestException(`Un consultant avec l'adresse e-mail '${normalizedEmail}' existe déjà sur la plateforme`);
     }
 
     const passwordToHash = data.passwordPlain || "Safir2026!Consultant";
-    const passwordHash = await argon2.hash(passwordToHash);
-    const mustChangeAtFirstLogin = normalizedEmail !== "test.test@safirconsulting.net";
+    const passwordHash = await argon2.hash(passwordToHash, { type: argon2.argon2id });
 
     return this.prisma.$transaction(async (tx) => {
       let user = existing;
@@ -102,7 +101,7 @@ export class ConsultantsService {
             roles: [Role.CONSULTANT],
             isActive: true,
             passwordHash,
-            mustChangePassword: mustChangeAtFirstLogin,
+            mustChangePassword: true,
             timezone: "Europe/Paris",
           },
           include: { consultant: true },
@@ -112,23 +111,38 @@ export class ConsultantsService {
         user = await tx.user.update({
           where: { id: user.id },
           data: {
+            firstName: data.firstName.trim(),
+            lastName: data.lastName.trim(),
             roles: updatedRoles,
             isActive: true,
-            ...(data.passwordPlain ? { passwordHash } : {}),
+            passwordHash,
+            mustChangePassword: true,
           },
           include: { consultant: true },
         });
       }
 
-      const consultant = await tx.consultant.create({
-        data: {
-          userId: user.id,
-          email: normalizedEmail,
-          name: `${user.firstName} ${user.lastName}`,
-          organization: data.organization?.trim() || "Safir Consulting",
-          isInternal: data.isInternal ?? true,
-        },
-      });
+      const consultant = existing?.consultant
+        ? await tx.consultant.update({
+            where: { id: existing.consultant.id },
+            data: {
+              userId: user.id,
+              name: `${user.firstName} ${user.lastName}`,
+              organization: data.organization?.trim() || "Safir Consulting",
+              isInternal: data.isInternal ?? true,
+              status: "ACTIVE",
+            },
+          })
+        : await tx.consultant.create({
+            data: {
+              userId: user.id,
+              email: normalizedEmail,
+              name: `${user.firstName} ${user.lastName}`,
+              organization: data.organization?.trim() || "Safir Consulting",
+              isInternal: data.isInternal ?? true,
+              status: "ACTIVE",
+            },
+          });
 
       const validActorUuid = data.actorId && UUID_REGEX.test(data.actorId) ? data.actorId : undefined;
       await tx.auditLog.create({
@@ -159,8 +173,7 @@ export class ConsultantsService {
               roles: ["CONSULTANT"],
               isActive: true,
               passwordHash,
-              passwordPlain: passwordToHash,
-              mustChangePassword: mustChangeAtFirstLogin,
+              mustChangePassword: true,
               updatedAt: new Date(),
             },
             { merge: true },

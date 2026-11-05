@@ -32,17 +32,16 @@ async function login(email, password) {
   const stamp = Date.now();
   const created = { tickets: [], devId: null, consId: null };
   const admin = await login("aliko.getheme@safirconsulting.net", "Ev@ngel10n");
-  ok("Admin login", admin.status === 201);
+  ok("Admin Aliko login (201)", admin.status === 201);
 
-  // ---- Profils existants
+  // ---- Vérification sécurité : aucun compte de secours codé en dur ne doit passer
   for (const [e, p] of [
-    ["superadmin@safirconsulting.net", "Ev@ngel10n"],
+    ["koffi.mensah@safirconsulting.net", "Ev@ngel10n"],
     ["anoop.pandimukkula@safirconsulting.net", "Safir2026!Dev"],
-    ["mohamed.dicko@safirconsulting.com", "Safir@2026"],
-    ["melissa.diakite@safirconsulting.net", "Safir2026!Consultant"],
+    ["hassane.bocoum@safirconsulting.net", "Safir2026!Dev"],
   ]) {
     const l = await login(e, p);
-    ok(`Login ${e}`, l.status === 201, `status ${l.status}`);
+    ok(`Compte fictif désactivé refusé (${e} => 401)`, l.status === 401, `status ${l.status}`);
   }
   ok("Login mauvais mot de passe => 401", (await login("aliko.getheme@safirconsulting.net", "wrong")).status === 401);
 
@@ -174,4 +173,3 @@ async function login(email, password) {
   console.log(`\nRESULTAT: ${results.length - failed.length}/${results.length} OK`);
   if (failed.length) console.log("ECHECS:\n- " + failed.map((f) => f.name).join("\n- "));
 })().catch((e) => { console.error("CRASH", e); process.exit(1); });
-

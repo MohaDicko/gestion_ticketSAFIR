@@ -4,8 +4,10 @@ import { FirebaseAdminService } from "../firebase/firebase-admin.service";
 import * as argon2 from "argon2";
 import * as crypto from "crypto";
 
-// Sessions en mémoire / cache pour assurer une continuité totale même hors réseau PostgreSQL
+// Cache mémoire des sessions actives (complété par Firestore et PostgreSQL pour Vercel Serverless)
 const memorySessions = new Map<string, { user: any; expiresAt: Date }>();
+
+const ADMIN_EMAIL = "aliko.getheme@safirconsulting.net";
 
 @Injectable()
 export class AuthService {
@@ -19,7 +21,7 @@ export class AuthService {
     let fsUser: any = null;
     let pgUser: any = null;
 
-    // 1. Essai de récupération via Cloud Firestore
+    // 1. Lecture Cloud Firestore
     try {
       const db = this.firebaseAdmin?.firestore;
       if (db) {
@@ -32,7 +34,7 @@ export class AuthService {
       console.warn(`[AuthService] Lecture Firestore utilisateurs échouée : ${err?.message || err}`);
     }
 
-    // 2. Essai de récupération via PostgreSQL Prisma
+    // 2. Lecture PostgreSQL Prisma
     if ((this.prisma as any)?.user) {
       try {
         pgUser = await prismaUser(this.prisma, normalizedEmail);
@@ -44,7 +46,7 @@ export class AuthService {
     let user: any = null;
     let isMatch = false;
 
-    // A. Vérification sur l'utilisateur PostgreSQL en priorité s'il existe et que le mot de passe correspond
+    // A. Vérification sur l'utilisateur PostgreSQL en priorité (hachage Argon2id uniquement)
     if (pgUser && pgUser.isActive !== false && pgUser.passwordHash) {
       try {
         isMatch = await argon2.verify(pgUser.passwordHash, passwordPlain);
@@ -54,35 +56,23 @@ export class AuthService {
       } catch {}
     }
 
-    // B. Sinon vérification sur l'utilisateur Firestore
-    if (!isMatch && fsUser && fsUser.isActive !== false) {
-      if (fsUser.passwordHash) {
-        try {
-          isMatch = await argon2.verify(fsUser.passwordHash, passwordPlain);
-        } catch {}
-      }
-      if (!isMatch && fsUser.passwordPlain && fsUser.passwordPlain === passwordPlain) {
-        isMatch = true;
-      }
-      if (isMatch) {
-        user = pgUser ? { ...fsUser, id: pgUser.id, roles: pgUser.roles || fsUser.roles } : fsUser;
-      }
+    // B. Sinon vérification sur l'utilisateur Firestore (hachage Argon2id uniquement)
+    if (!isMatch && fsUser && fsUser.isActive !== false && fsUser.passwordHash) {
+      try {
+        isMatch = await argon2.verify(fsUser.passwordHash, passwordPlain);
+        if (isMatch) {
+          user = pgUser ? { ...fsUser, id: pgUser.id, roles: pgUser.roles || fsUser.roles } : fsUser;
+        }
+      } catch {}
     }
 
-    // C. Vérification de secours pour l'Administrateur (Aliko / SuperAdmin) et les comptes d'équipe
-    const isAdminAccount =
-      normalizedEmail === "aliko.getheme@safirconsulting.net" ||
-      normalizedEmail === "superadmin@safirconsulting.net" ||
-      normalizedEmail === "aliko@safirconsulting.net";
+    // C. Compte Administrateur principal (Aliko Getheme uniquement)
+    const isAdminAccount = normalizedEmail === ADMIN_EMAIL;
 
     if (!isMatch && isAdminAccount) {
       const allowedAdminPasswords = [
         process.env.INITIAL_ADMIN_PASSWORD,
         "Ev@ngel10n",
-        "Tamden2026",
-        "Tandem2026",
-        "Safir2026!Admin",
-        "Safir2026!DevCapacity",
       ].filter(Boolean);
 
       if (allowedAdminPasswords.includes(passwordPlain)) {
@@ -95,85 +85,6 @@ export class AuthService {
           roles: ["HEAD", "ADMIN"],
           isActive: true,
           mustChangePassword: false,
-        };
-      }
-    }
-
-    if (!isMatch) {
-      const fallbackTeamAccounts: Record<string, { id: string; firstName: string; lastName: string; roles: string[]; developerId?: string; passwords: string[] }> = {
-        "koffi.mensah@safirconsulting.net": {
-          id: "user-admin-koffi",
-          firstName: "Koffi",
-          lastName: "Mensah",
-          roles: ["HEAD", "ADMIN"],
-          passwords: ["Ev@ngel10n", "Safir2026!Admin", "Safir2026!DevCapacity", "Tamden2026", "Tandem2026"],
-        },
-        "mohamed.dicko@safirconsulting.com": {
-          id: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-          firstName: "Mohamed",
-          lastName: "Dicko",
-          roles: ["DEVELOPER"],
-          developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-          passwords: ["Safir2026!Dev", "Safir@2026", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
-        },
-        "mohadicko95@gmail.com": {
-          id: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-          firstName: "Mohamed",
-          lastName: "Dicko",
-          roles: ["DEVELOPER"],
-          developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-          passwords: ["Safir2026!Dev", "Safir@2026", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
-        },
-        "anoop.pandimukkula@safirconsulting.net": {
-          id: "user-dev-anoop",
-          firstName: "Anoop",
-          lastName: "Pandimukkula",
-          roles: ["DEVELOPER"],
-          developerId: "dev-anoop",
-          passwords: ["Safir2026!Dev", "Safir@2026", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
-        },
-        "hassane.bocoum@safirconsulting.net": {
-          id: "user-dev-hassane",
-          firstName: "Hassane",
-          lastName: "Bocoum",
-          roles: ["DEVELOPER"],
-          developerId: "dev-hassane",
-          passwords: ["Safir2026!Dev", "Safir@2026", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
-        },
-        "test.test@safirconsulting.net": {
-          id: "user-cons-test",
-          firstName: "Test",
-          lastName: "Consultant",
-          roles: ["CONSULTANT"],
-          passwords: ["Test2026!", "Safir2026!Consultant", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
-        },
-        "melissa.diakite@safirconsulting.net": {
-          id: "user-cons-melissa",
-          firstName: "Mélissa",
-          lastName: "Diakité",
-          roles: ["CONSULTANT"],
-          passwords: ["Safir2026!Consultant", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
-        },
-        "melissa.koffi@safirconsulting.net": {
-          id: "user-cons-melissa",
-          firstName: "Melissa",
-          lastName: "Koffi",
-          roles: ["CONSULTANT"],
-          passwords: ["Safir2026!Consultant", "Safir2026!DevCapacity", "Ev@ngel10n", "Tamden2026", "Tandem2026"],
-        },
-      };
-      const teamAcc = fallbackTeamAccounts[normalizedEmail];
-      if (teamAcc && teamAcc.passwords.includes(passwordPlain)) {
-        isMatch = true;
-        user = pgUser || fsUser || {
-          id: teamAcc.id,
-          email: normalizedEmail,
-          firstName: teamAcc.firstName,
-          lastName: teamAcc.lastName,
-          roles: teamAcc.roles,
-          isActive: true,
-          mustChangePassword: false,
-          developerProfile: teamAcc.developerId ? { id: teamAcc.developerId } : undefined,
         };
       }
     }
@@ -390,21 +301,9 @@ export class AuthService {
         isMatch = await argon2.verify(user.passwordHash, currentPassword);
       } catch {}
     }
-    if (!isMatch && user.passwordPlain && user.passwordPlain === currentPassword) {
-      isMatch = true;
-    }
-    if (!isMatch && user.email) {
-      const initialPasswords = [
-        "Ev@ngel10n",
-        "Safir2026!Admin",
-        "Safir2026!Dev",
-        "Safir2026!DevCapacity",
-        "Safir2026!Consultant",
-        "Test2026!",
-        "Tamden2026",
-        "Tandem2026",
-      ];
-      if (initialPasswords.includes(currentPassword)) {
+    if (!isMatch && user.email?.toLowerCase() === ADMIN_EMAIL) {
+      const allowedAdminPasswords = [process.env.INITIAL_ADMIN_PASSWORD, "Ev@ngel10n"].filter(Boolean);
+      if (allowedAdminPasswords.includes(currentPassword)) {
         isMatch = true;
       }
     }
@@ -426,7 +325,6 @@ export class AuthService {
           roles: user.roles || sessionUserRef?.roles || ["CONSULTANT"],
           isActive: true,
           passwordHash: newHash,
-          passwordPlain: newPassword,
           mustChangePassword: false,
           updatedAt: new Date(),
         }, { merge: true });

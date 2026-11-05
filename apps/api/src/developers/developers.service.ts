@@ -68,7 +68,6 @@ export class DevelopersService {
     });
 
     return devs.map((d) => {
-      // Calcul des heures réservées
       const reservedHours = d.assignments.reduce((sum, a) => {
         const remaining = a.remainingHours ? Number(a.remainingHours) : Number(a.allocatedHours);
         return sum + remaining;
@@ -102,7 +101,7 @@ export class DevelopersService {
   }
 
   async deactivateDeveloper(developerId: string) {
-    const isDevUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(developerId);
+    const isDevUuid = UUID_REGEX.test(developerId);
     const cleanDev = developerId.replace(/^dev-/, "").replace(/^user-/, "").toLowerCase();
     const developer = await this.prisma.developerProfile.findFirst({
       where: isDevUuid
@@ -180,48 +179,82 @@ export class DevelopersService {
     skills?: { skillId: string; level: number }[];
     actorId?: string;
   }) {
+    const normalizedEmail = data.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({
-      where: { email: data.email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
+      include: { developerProfile: true },
     });
-    if (existing) {
+    if (existing && existing.isActive && existing.developerProfile?.profileStatus === ProfileStatus.ACTIVE) {
       throw new BadRequestException(`Un utilisateur avec l'adresse e-mail '${data.email}' existe déjà`);
     }
 
-    const defaultPasswordHash = await argon2.hash("Safir2026!DevCapacity");
+    const defaultPasswordHash = await argon2.hash("Safir2026!DevCapacity", { type: argon2.argon2id });
     const weeklyHours = data.weeklyCapacityHours || 40;
 
     return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          email: data.email.toLowerCase().trim(),
-          firstName: data.firstName.trim(),
-          lastName: data.lastName.trim(),
-          roles: [Role.DEVELOPER],
-          isActive: true,
-          passwordHash: defaultPasswordHash,
-          mustChangePassword: true,
-          timezone: "Europe/Paris",
-        },
-      });
+      const user = existing
+        ? await tx.user.update({
+            where: { id: existing.id },
+            data: {
+              firstName: data.firstName.trim(),
+              lastName: data.lastName.trim(),
+              roles: Array.from(new Set([...(existing.roles || []), Role.DEVELOPER])),
+              isActive: true,
+              passwordHash: defaultPasswordHash,
+              mustChangePassword: true,
+            },
+          })
+        : await tx.user.create({
+            data: {
+              email: normalizedEmail,
+              firstName: data.firstName.trim(),
+              lastName: data.lastName.trim(),
+              roles: [Role.DEVELOPER],
+              isActive: true,
+              passwordHash: defaultPasswordHash,
+              mustChangePassword: true,
+              timezone: "Europe/Paris",
+            },
+          });
 
-      const profile = await tx.developerProfile.create({
-        data: {
-          userId: user.id,
-          jobTitle: data.jobTitle.trim(),
-          weeklyCapacityHours: weeklyHours,
-          weeklySchedule: { mon: 8, tue: 8, wed: 8, thu: 8, fri: 8, sat: 0, sun: 0 },
-          planningFactor: 1.0,
-          timezone: "Europe/Paris",
-          profileStatus: ProfileStatus.ACTIVE,
-        },
-      });
+      const profile = existing?.developerProfile
+        ? await tx.developerProfile.update({
+            where: { id: existing.developerProfile.id },
+            data: {
+              jobTitle: data.jobTitle.trim(),
+              weeklyCapacityHours: weeklyHours,
+              profileStatus: ProfileStatus.ACTIVE,
+            },
+          })
+        : await tx.developerProfile.create({
+            data: {
+              userId: user.id,
+              jobTitle: data.jobTitle.trim(),
+              weeklyCapacityHours: weeklyHours,
+              weeklySchedule: { mon: 8, tue: 8, wed: 8, thu: 8, fri: 8, sat: 0, sun: 0 },
+              planningFactor: 1.0,
+              timezone: "Europe/Paris",
+              profileStatus: ProfileStatus.ACTIVE,
+            },
+          });
 
       const assignedSkills: any[] = [];
       if (data.skills && data.skills.length > 0) {
         for (const sk of data.skills) {
           const validActorUuid = data.actorId && UUID_REGEX.test(data.actorId) ? data.actorId : undefined;
-          const createdSkill = await tx.developerSkill.create({
-            data: {
+          const createdSkill = await tx.developerSkill.upsert({
+            where: {
+              developerId_skillId: {
+                developerId: profile.id,
+                skillId: sk.skillId,
+              },
+            },
+            update: {
+              proficiencyLevel: sk.level,
+              validatedAt: new Date(),
+              validatedById: validActorUuid,
+            },
+            create: {
               developerId: profile.id,
               skillId: sk.skillId,
               proficiencyLevel: sk.level,
@@ -253,7 +286,6 @@ export class DevelopersService {
               roles: ["DEVELOPER"],
               isActive: true,
               passwordHash: defaultPasswordHash,
-              passwordPlain: "Safir2026!DevCapacity",
               mustChangePassword: true,
               developerProfile: { id: profile.id },
               updatedAt: new Date(),

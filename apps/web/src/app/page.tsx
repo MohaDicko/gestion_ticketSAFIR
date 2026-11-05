@@ -373,926 +373,28 @@ interface ConsultantProfile {
   demandsCount: number;
 }
 
-const INITIAL_CONSULTANTS: ConsultantProfile[] = [
-  {
-    id: "consultant-melissa",
-    name: "Mélissa Diakité",
-    email: "melissa.diakite@safirconsulting.net",
-    organization: "Safir Consulting",
-    speciality: "Consultante Fonctionnelle SAP B1 & S/4HANA",
-    demandsCount: 2
-  }
-];
+const INITIAL_CONSULTANTS: ConsultantProfile[] = [];
 
 const SYSTEM_USERS: AuthUser[] = [
   {
-    id: "user-superadmin",
-    name: "Super Administrateur Safir",
-    email: "superadmin@safirconsulting.net",
-    role: "HEAD",
-    adminLevel: "SUPER_ADMIN",
-    roleLabel: "Super Administrateur CoE DEV — Pleins Pouvoirs Système",
-    initials: "SA",
-    isFirstLogin: false
-  },
-  {
-    id: "user-aliko",
+    id: "00000000-0000-4000-8000-000000000001",
     name: "Getheme Aliko",
     email: "aliko.getheme@safirconsulting.net",
     role: "HEAD",
     adminLevel: "SUPER_ADMIN",
     roleLabel: "Super Administrateur & Responsable CoE DEV",
     initials: "GA",
-    isFirstLogin: false
+    isFirstLogin: false,
+    mustChangePassword: false,
   },
-  {
-    id: "user-admin-koffi",
-    name: "Koffi Mensah",
-    email: "koffi.mensah@safirconsulting.net",
-    role: "HEAD",
-    adminLevel: "ADMIN",
-    roleLabel: "Administrateur — Pilotage SAP",
-    initials: "KM",
-    isFirstLogin: true
-  },
-  {
-    id: "user-anoop",
-    name: "Anoop Pandimukkula",
-    email: "anoop.pandimukkula@safirconsulting.net",
-    role: "DEVELOPER",
-    roleLabel: "Senior Développeur SAP B1 & Addons",
-    developerId: "dev-anoop",
-    initials: "AP",
-    isFirstLogin: true
-  },
-  {
-    id: "user-moha",
-    name: "Mohamed Dicko",
-    email: "mohamed.dicko@safirconsulting.com",
-    role: "DEVELOPER",
-    roleLabel: "Lead Développeur Full-Stack & Architecte",
-    developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-    initials: "MD",
-    isFirstLogin: false
-  },
-  {
-    id: "user-hassane",
-    name: "Hassane Bocoum",
-    email: "hassane.bocoum@safirconsulting.net",
-    role: "DEVELOPER",
-    roleLabel: "Lead Développeur SAP S/4HANA & ABAP",
-    developerId: "dev-hassane",
-    initials: "HB",
-    isFirstLogin: true
-  },
-  {
-    id: "user-melissa",
-    name: "Mélissa Diakité",
-    email: "melissa.diakite@safirconsulting.net",
-    role: "CONSULTANT",
-    roleLabel: "Demandeur — Mélissa Diakité",
-    initials: "MD",
-    isFirstLogin: true
-  }
 ];
 
-// Données d'équipe
-const INITIAL_DEVELOPERS: Developer[] = [
-  {
-    id: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-    name: "Mohamed Dicko",
-    email: "mohamed.dicko@safirconsulting.com",
-    jobTitle: "Lead Développeur Full-Stack & Architecte Solution",
-    netWeeklyHours: 40,
-    reservedHours: 16,
-    freeHours: 24,
-    loadPercentage: 40,
-    skills: [
-      { id: "1", name: "Next.js & React", category: "Frontend", level: 5 },
-      { id: "2", name: "NestJS & Node.js", category: "Backend", level: 5 },
-      { id: "3", name: "PostgreSQL & Prisma", category: "Données", level: 5 },
-      { id: "4", name: "Architecture & API", category: "Transverse", level: 5 }
-    ]
-  },
-  {
-    id: "dev-anoop",
-    name: "Anoop Pandimukkula",
-    email: "anoop.pandimukkula@safirconsulting.net",
-    jobTitle: "Senior Développeur SAP Business One & C#",
-    netWeeklyHours: 40,
-    reservedHours: 20,
-    freeHours: 20,
-    loadPercentage: 50,
-    skills: [
-      { id: "5", name: "SAP B1 — UI / DI API", category: "SAP", level: 5 },
-      { id: "6", name: "SAP B1 — Service Layer", category: "SAP", level: 5 },
-      { id: "7", name: "SAP HANA & SQL", category: "Données", level: 4 }
-    ]
-  },
-  {
-    id: "dev-hassane",
-    name: "Hassane Bocoum",
-    email: "hassane.bocoum@safirconsulting.net",
-    jobTitle: "Développeur Full-Stack Web & Intégrations SAP",
-    netWeeklyHours: 40,
-    reservedHours: 12,
-    freeHours: 28,
-    loadPercentage: 30,
-    skills: [
-      { id: "8", name: "SAP S/4HANA — ABAP & CDS", category: "SAP", level: 4 },
-      { id: "9", name: "NestJS & Node.js", category: "Backend", level: 4 },
-      { id: "10", name: "SAP Fiori / UI5", category: "SAP", level: 4 }
-    ]
-  },
-  {
-    id: "dev-nevrit",
-    name: "Nevrit Ahua",
-    email: "nevrit.ahua@safirconsulting.net",
-    jobTitle: "Ingénieur Intégration Systèmes & API",
-    netWeeklyHours: 40,
-    reservedHours: 16,
-    freeHours: 24,
-    loadPercentage: 40,
-    skills: [
-      { id: "11", name: "SAP B1 — Service Layer", category: "SAP", level: 5 },
-      { id: "12", name: "Architecture & Intégration API", category: "Transverse", level: 5 },
-      { id: "13", name: "NestJS & Node.js", category: "Backend", level: 4 }
-    ]
-  },
-  {
-    id: "dev-fatoumata",
-    name: "Fatoumata Traore",
-    email: "fatoumata.traore@safirconsulting.net",
-    jobTitle: "Développeuse SAP B1 & Service Layer",
-    netWeeklyHours: 40,
-    reservedHours: 8,
-    freeHours: 32,
-    loadPercentage: 20,
-    skills: [
-      { id: "14", name: "SAP B1 — Service Layer", category: "SAP", level: 4 },
-      { id: "15", name: "SAP B1 — UI / DI API", category: "SAP", level: 4 },
-      { id: "16", name: "SAP HANA & SQL", category: "Données", level: 3 }
-    ]
-  },
-  {
-    id: "dev-korotoumou",
-    name: "Korotoumou Thiam",
-    email: "korotoumou.thiam@safirconsulting.net",
-    jobTitle: "Développeuse Backend & Bases de données",
-    netWeeklyHours: 40,
-    reservedHours: 14,
-    freeHours: 26,
-    loadPercentage: 35,
-    skills: [
-      { id: "17", name: "PostgreSQL & Prisma", category: "Données", level: 5 },
-      { id: "18", name: "NestJS & Node.js", category: "Backend", level: 4 },
-      { id: "19", name: "Docker & Déploiement SAP", category: "DevOps", level: 4 }
-    ]
-  },
-  {
-    id: "dev-jeanphilippe",
-    name: "Jean-Philippe Ebrottié",
-    email: "jeanphilippe.ebrottie@safirconsulting.net",
-    jobTitle: "Architecte Intégrations & Solutions SAP",
-    netWeeklyHours: 40,
-    reservedHours: 24,
-    freeHours: 16,
-    loadPercentage: 60,
-    skills: [
-      { id: "20", name: "Architecture & Intégration API", category: "Transverse", level: 5 },
-      { id: "21", name: "SAP B1 — Service Layer", category: "SAP", level: 5 },
-      { id: "22", name: "Microsoft Graph & M365", category: "Intégration", level: 5 }
-    ]
-  }
-];
-
-// Historique des feuilles de temps et relevés d'heures réelles travaillées (Time Tracking & Reporting)
-const INITIAL_TIME_LOGS: TimeLog[] = [
-  // 1. Session d'Aujourd'hui (2026-10-29 - Journalier)
-  {
-    id: "log-1",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-anoop",
-    developerName: "Anoop Pandimukkula",
-    developerEmail: "anoop.pandimukkula@safirconsulting.net",
-    startedAt: "2026-10-29 08:30",
-    endedAt: "2026-10-29 12:00",
-    durationMinutes: 210,
-    durationHours: 3.5,
-    date: "2026-10-29",
-    note: "Développement du formulaire UI API SAP B1 pour validation multi-devises."
-  },
-  {
-    id: "log-2",
-    ticketId: "tix-4",
-    ticketReference: "BUG-2026-0004",
-    ticketTitle: "Correction anomalie lettrage comptable sur CDS Views S/4HANA",
-    clientCompany: "Client Alpha",
-    developerId: "dev-anoop",
-    developerName: "Anoop Pandimukkula",
-    developerEmail: "anoop.pandimukkula@safirconsulting.net",
-    startedAt: "2026-10-29 13:30",
-    endedAt: "2026-10-29 15:30",
-    durationMinutes: 120,
-    durationHours: 2.0,
-    date: "2026-10-29",
-    note: "Analyse des traces SQL HANA et identification du point de blocage sur lettrage."
-  },
-
-  // 2. Sessions de la Semaine en cours (2026-10-26 à 2026-10-28 - Hebdomadaire)
-  {
-    id: "log-3",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-anoop",
-    developerName: "Anoop Pandimukkula",
-    developerEmail: "anoop.pandimukkula@safirconsulting.net",
-    startedAt: "2026-10-28 09:00",
-    endedAt: "2026-10-28 13:30",
-    durationMinutes: 270,
-    durationHours: 4.5,
-    date: "2026-10-28",
-    note: "Intégration du DI API et mise en place des triggers de seuil d'approbation paramétré."
-  },
-  {
-    id: "log-4",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-hassane",
-    developerName: "Hassane Bocoum",
-    developerEmail: "hassane.bocoum@safirconsulting.net",
-    startedAt: "2026-10-28 10:00",
-    endedAt: "2026-10-28 12:00",
-    durationMinutes: 120,
-    durationHours: 2.0,
-    date: "2026-10-28",
-    note: "Création des tables et schémas HANA pour l'historique d'approbation."
-  },
-  {
-    id: "log-5",
-    ticketId: "tix-2",
-    ticketReference: "INT-2026-0002",
-    ticketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
-    clientCompany: "Omega Distribution",
-    developerId: "dev-moha",
-    developerName: "Moha Dicko",
-    developerEmail: "mohadicko95@gmail.com",
-    startedAt: "2026-10-27 09:00",
-    endedAt: "2026-10-27 15:00",
-    durationMinutes: 360,
-    durationHours: 6.0,
-    date: "2026-10-27",
-    note: "Configuration des endpoints REST Service Layer et parsing des flux PDF entrants."
-  },
-  {
-    id: "log-6",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-anoop",
-    developerName: "Anoop Pandimukkula",
-    developerEmail: "anoop.pandimukkula@safirconsulting.net",
-    startedAt: "2026-10-26 14:00",
-    endedAt: "2026-10-26 18:00",
-    durationMinutes: 240,
-    durationHours: 4.0,
-    date: "2026-10-26",
-    note: "Revue du cahier des charges fonctionnel soumis par Mélissa et démarrage maquette."
-  },
-
-  // 3. Sessions du Mois (Octobre 2026 - Mensuel & T4)
-  {
-    id: "log-7",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-anoop",
-    developerName: "Anoop Pandimukkula",
-    developerEmail: "anoop.pandimukkula@safirconsulting.net",
-    startedAt: "2026-10-20 09:00",
-    endedAt: "2026-10-20 16:00",
-    durationMinutes: 420,
-    durationHours: 7.0,
-    date: "2026-10-20",
-    note: "POC initial de validation des flux d'achats sous SAP B1 v10."
-  },
-  {
-    id: "log-8",
-    ticketId: "tix-2",
-    ticketReference: "INT-2026-0002",
-    ticketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
-    clientCompany: "Omega Distribution",
-    developerId: "dev-moha",
-    developerName: "Moha Dicko",
-    developerEmail: "mohadicko95@gmail.com",
-    startedAt: "2026-10-18 09:00",
-    endedAt: "2026-10-18 17:00",
-    durationMinutes: 480,
-    durationHours: 8.0,
-    date: "2026-10-18",
-    note: "Architecture Service Layer et validation protocole d'échange sécurisé."
-  },
-
-  // 4. Sessions Trimestrielles & Semestrielles (T3 / S2 : Août & Septembre 2026)
-  {
-    id: "log-9",
-    ticketId: "tix-hist-1",
-    ticketReference: "REP-2026-0000",
-    ticketTitle: "Vues Analytiques de Clôture Mensuelle SAP HANA",
-    clientCompany: "Société Nouvelle Industrie",
-    developerId: "dev-anoop",
-    developerName: "Anoop Pandimukkula",
-    developerEmail: "anoop.pandimukkula@safirconsulting.net",
-    startedAt: "2026-09-15 09:00",
-    endedAt: "2026-09-15 17:00",
-    durationMinutes: 480,
-    durationHours: 8.0,
-    date: "2026-09-15",
-    note: "Optimisation des requêtes HANA SQLScript pour le reporting de stock."
-  },
-  {
-    id: "log-custom-1",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-hassane",
-    developerName: "Hassane Bocoum",
-    developerEmail: "hassane.bocoum@safirconsulting.net",
-    startedAt: "2026-10-05 09:00",
-    endedAt: "2026-10-05 14:00",
-    durationMinutes: 300,
-    durationHours: 5.0,
-    date: "2026-10-05",
-    note: "Définition du modèle d'autorisation et paramétrage du circuit de validation SAP."
-  },
-  {
-    id: "log-custom-2",
-    ticketId: "tix-2",
-    ticketReference: "INT-2026-0002",
-    ticketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
-    clientCompany: "Omega Distribution",
-    developerId: "dev-anoop",
-    developerName: "Anoop Pandimukkula",
-    developerEmail: "anoop.pandimukkula@safirconsulting.net",
-    startedAt: "2026-10-10 10:00",
-    endedAt: "2026-10-10 14:00",
-    durationMinutes: 240,
-    durationHours: 4.0,
-    date: "2026-10-10",
-    note: "Tests d'intégration Service Layer pour l'intervalle de paie mensuelle."
-  },
-  {
-    id: "log-10",
-    ticketId: "tix-hist-2",
-    ticketReference: "INT-2026-0000",
-    ticketTitle: "Connecteur WMS Logistique SAP B1",
-    clientCompany: "Client Alpha",
-    developerId: "dev-anoop",
-    developerName: "Anoop Pandimukkula",
-    developerEmail: "anoop.pandimukkula@safirconsulting.net",
-    startedAt: "2026-08-10 09:00",
-    endedAt: "2026-08-10 16:30",
-    durationMinutes: 450,
-    durationHours: 7.5,
-    date: "2026-08-10",
-    note: "Déploiement connecteur entrées/sorties de stock temps réel."
-  },
-
-  // 5. Sessions Annuelles (S1 2026 : Mars & Avril 2026)
-  {
-    id: "log-11",
-    ticketId: "tix-hist-3",
-    ticketReference: "ADD-2026-0000",
-    ticketTitle: "Migration Base SAP B1 SQL vers SAP HANA 2.0",
-    clientCompany: "Omega Distribution",
-    developerId: "dev-anoop",
-    developerName: "Anoop Pandimukkula",
-    developerEmail: "anoop.pandimukkula@safirconsulting.net",
-    startedAt: "2026-04-12 09:00",
-    endedAt: "2026-04-12 17:00",
-    durationMinutes: 480,
-    durationHours: 8.0,
-    date: "2026-04-12",
-    note: "Recette technique de migration et validation des types de données HANA."
-  },
-
-  // 6. Sessions Nevrit Ahua (Intégration API & Procédures SQLScript)
-  {
-    id: "log-12",
-    ticketId: "tix-3",
-    ticketReference: "MIG-2026-0003",
-    ticketTitle: "Migration Procédures Stock SQL vers HANA SQLScript",
-    clientCompany: "SGI Distribution",
-    developerId: "dev-nevrit",
-    developerName: "Nevrit Ahua",
-    developerEmail: "nevrit.ahua@safirconsulting.net",
-    startedAt: "2026-10-29 08:30",
-    endedAt: "2026-10-29 11:30",
-    durationMinutes: 180,
-    durationHours: 3.0,
-    date: "2026-10-29",
-    note: "Refactoring des curseurs T-SQL en syntaxe déclarative SQLScript HANA."
-  },
-  {
-    id: "log-13",
-    ticketId: "tix-3",
-    ticketReference: "MIG-2026-0003",
-    ticketTitle: "Migration Procédures Stock SQL vers HANA SQLScript",
-    clientCompany: "SGI Distribution",
-    developerId: "dev-nevrit",
-    developerName: "Nevrit Ahua",
-    developerEmail: "nevrit.ahua@safirconsulting.net",
-    startedAt: "2026-10-27 10:00",
-    endedAt: "2026-10-27 15:00",
-    durationMinutes: 300,
-    durationHours: 5.0,
-    date: "2026-10-27",
-    note: "Benchmark des temps d'exécution des procédures stockées sur HANA."
-  },
-
-  // 7. Sessions Fatoumata Traore (Développeuse SAP B1 & Service Layer)
-  {
-    id: "log-14",
-    ticketId: "tix-2",
-    ticketReference: "INT-2026-0002",
-    ticketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
-    clientCompany: "Omega Distribution",
-    developerId: "dev-fatoumata",
-    developerName: "Fatoumata Traore",
-    developerEmail: "fatoumata.traore@safirconsulting.net",
-    startedAt: "2026-10-29 09:00",
-    endedAt: "2026-10-29 12:00",
-    durationMinutes: 180,
-    durationHours: 3.0,
-    date: "2026-10-29",
-    note: "Validation des schémas JSON et gestion des retours d'erreurs HTTP."
-  },
-  {
-    id: "log-15",
-    ticketId: "tix-2",
-    ticketReference: "INT-2026-0002",
-    ticketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
-    clientCompany: "Omega Distribution",
-    developerId: "dev-fatoumata",
-    developerName: "Fatoumata Traore",
-    developerEmail: "fatoumata.traore@safirconsulting.net",
-    startedAt: "2026-10-26 13:30",
-    endedAt: "2026-10-26 17:30",
-    durationMinutes: 240,
-    durationHours: 4.0,
-    date: "2026-10-26",
-    note: "Tests d'intégration Service Layer avec le système de facturation client."
-  },
-
-  // 8. Sessions Korotoumou Thiam (Backend & Modélisation Base de Données)
-  {
-    id: "log-16",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-korotoumou",
-    developerName: "Korotoumou Thiam",
-    developerEmail: "korotoumou.thiam@safirconsulting.net",
-    startedAt: "2026-10-29 10:00",
-    endedAt: "2026-10-29 12:00",
-    durationMinutes: 120,
-    durationHours: 2.0,
-    date: "2026-10-29",
-    note: "Modélisation des tables d'historisation et indexation PostgreSQL."
-  },
-  {
-    id: "log-17",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-korotoumou",
-    developerName: "Korotoumou Thiam",
-    developerEmail: "korotoumou.thiam@safirconsulting.net",
-    startedAt: "2026-10-28 14:00",
-    endedAt: "2026-10-28 18:00",
-    durationMinutes: 240,
-    durationHours: 4.0,
-    date: "2026-10-28",
-    note: "Configuration des triggers d'audit et politiques de rétention."
-  },
-
-  // 9. Sessions Jean-Philippe Ebrottié (Architecte SAP & Revue Technique)
-  {
-    id: "log-18",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-jeanphilippe",
-    developerName: "Jean-Philippe Ebrottié",
-    developerEmail: "jeanphilippe.ebrottie@safirconsulting.net",
-    startedAt: "2026-10-29 08:00",
-    endedAt: "2026-10-29 11:30",
-    durationMinutes: 210,
-    durationHours: 3.5,
-    date: "2026-10-29",
-    note: "Revue d'architecture globale et validation de la conformité SDK SAP B1."
-  },
-  {
-    id: "log-19",
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    ticketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    developerId: "dev-jeanphilippe",
-    developerName: "Jean-Philippe Ebrottié",
-    developerEmail: "jeanphilippe.ebrottie@safirconsulting.net",
-    startedAt: "2026-10-27 09:00",
-    endedAt: "2026-10-27 14:00",
-    durationMinutes: 300,
-    durationHours: 5.0,
-    date: "2026-10-27",
-    note: "Audit de sécurité des connecteurs externes et des flux de données."
-  }
-];
-
-// État Temps Réel initial de l'activité de l'équipe des Développeurs (Supervision Direction & Administration)
-const INITIAL_DEV_LIVE_ACTIVITIES: Record<string, DeveloperLiveActivity> = {
-  "dev-anoop": {
-    developerId: "dev-anoop",
-    status: "WORKING",
-    activeTicketId: "tix-1",
-    activeTicketReference: "ADD-2026-0001",
-    activeTicketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    currentTaskDescription: "Développement du formulaire UI API SAP B1 pour validation multi-devises",
-    startedAtTimestamp: Date.now() - (1 * 3600 + 42 * 60 + 15) * 1000,
-    elapsedSeconds: 1 * 3600 + 42 * 60 + 15
-  },
-  "dev-moha": {
-    developerId: "dev-moha",
-    status: "WORKING",
-    activeTicketId: "tix-2",
-    activeTicketReference: "INT-2026-0002",
-    activeTicketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
-    clientCompany: "Omega Distribution",
-    currentTaskDescription: "Configuration des endpoints REST Service Layer & tests de payload JSON",
-    startedAtTimestamp: Date.now() - (2 * 3600 + 15 * 60 + 30) * 1000,
-    elapsedSeconds: 2 * 3600 + 15 * 60 + 30
-  },
-  "012337d8-fe1a-4c5b-9b01-78b9c9f29529": {
-    developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-    status: "WORKING",
-    activeTicketId: "tix-2",
-    activeTicketReference: "INT-2026-0002",
-    activeTicketTitle: "Passerelle Import Factures Dématérialisées Service Layer",
-    clientCompany: "Omega Distribution",
-    currentTaskDescription: "Configuration des endpoints REST Service Layer & tests de payload JSON",
-    startedAtTimestamp: Date.now() - (2 * 3600 + 15 * 60 + 30) * 1000,
-    elapsedSeconds: 2 * 3600 + 15 * 60 + 30
-  },
-  "dev-hassane": {
-    developerId: "dev-hassane",
-    status: "BLOCKED",
-    activeTicketId: "tix-1",
-    activeTicketReference: "ADD-2026-0001",
-    activeTicketTitle: "Addon Validation Commandes Fournisseurs SAP B1",
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    currentTaskDescription: "Schémas HANA tables UDF (en attente précision consultante)",
-    startedAtTimestamp: Date.now() - (35 * 60) * 1000,
-    elapsedSeconds: 35 * 60
-  },
-  "dev-nevrit": {
-    developerId: "dev-nevrit",
-    status: "WORKING",
-    activeTicketId: "tix-3",
-    activeTicketReference: "MIG-2026-0003",
-    activeTicketTitle: "Migration Procédures Stock SQL vers HANA SQLScript",
-    clientCompany: "SGI Distribution",
-    currentTaskDescription: "Refactoring des curseurs T-SQL en syntaxe déclarative SQLScript HANA",
-    startedAtTimestamp: Date.now() - (54 * 60 + 12) * 1000,
-    elapsedSeconds: 54 * 60 + 12
-  },
-  "dev-fatoumata": {
-    developerId: "dev-fatoumata",
-    status: "AVAILABLE",
-    currentTaskDescription: "Disponible pour affectation — Tests QA Service Layer validés avec succès",
-    elapsedSeconds: 0
-  },
-  "dev-korotoumou": {
-    developerId: "dev-korotoumou",
-    status: "AVAILABLE",
-    currentTaskDescription: "Disponible pour affectation — Capacité libre : 26.0 h",
-    elapsedSeconds: 0
-  },
-  "dev-jeanphilippe": {
-    developerId: "dev-jeanphilippe",
-    status: "AVAILABLE",
-    currentTaskDescription: "Disponible pour affectation — Capacité libre : 16.0 h (Architecte SAP)",
-    elapsedSeconds: 0
-  }
-};
-
-const INITIAL_TICKETS: Ticket[] = [
-  {
-    id: "tix-1",
-    reference: "ADD-2026-0001",
-    title: "Addon Validation Commandes Fournisseurs SAP B1",
-    description: "Implémentation d'un workflow de validation à double niveau pour les commandes d'achats dépassant le seuil d'approbation défini par le client.",
-    status: "IN_PROGRESS",
-    typeCode: "ADDON",
-    priorityCode: "HIGH",
-    estimatedHours: 24,
-    remainingHours: 14,
-    clientCompany: "Safir Consulting (Consulting Interne)",
-    applicantName: "Mélissa Diakité",
-    applicantEmail: "melissa.diakite@safirconsulting.net",
-    assignedDeveloper: { id: "dev-anoop", name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net" },
-    createdAt: "2026-10-25",
-    attachments: [
-      {
-        id: "att-1-1",
-        fileName: "Cahier_Spec_Workflow_Achats_SAP_B1.pdf",
-        fileSize: "640 Ko",
-        fileType: "PDF",
-        uploadedBy: "Mélissa Diakité",
-        uploadedRole: "CONSULTANT",
-        uploadedAt: "2026-10-25 à 14:30",
-        scanStatus: "VERIFIED_CLEAN"
-      },
-      {
-        id: "att-1-2",
-        fileName: "Schema_Tables_Validation_HANA.sql",
-        fileSize: "48 Ko",
-        fileType: "SQL",
-        uploadedBy: "Anoop Pandimukkula",
-        uploadedRole: "DEVELOPER",
-        uploadedAt: "2026-10-26 à 10:15",
-        scanStatus: "VERIFIED_CLEAN"
-      }
-    ],
-    messages: [
-      {
-        id: "msg-1-1",
-        authorName: "Mélissa Diakité",
-        authorRole: "CONSULTANT",
-        authorEmail: "melissa.diakite@safirconsulting.net",
-        message: "Spécification validée : le workflow d'approbation d'achats doit s'enclencher au-delà du seuil d'approbation défini par le client.",
-        timestamp: "2026-10-25 à 14:30",
-        attachment: {
-          id: "att-1-1",
-          fileName: "Cahier_Spec_Workflow_Achats_SAP_B1.pdf",
-          fileSize: "640 Ko",
-          fileType: "PDF",
-          uploadedBy: "Mélissa Diakité",
-          uploadedRole: "CONSULTANT",
-          uploadedAt: "2026-10-25 à 14:30",
-          scanStatus: "VERIFIED_CLEAN"
-        }
-      },
-      {
-        id: "msg-1-2",
-        authorName: "Anoop Pandimukkula",
-        authorRole: "DEVELOPER",
-        authorEmail: "anoop.pandimukkula@safirconsulting.net",
-        message: "Bien noté Mélissa ! La maquette UI API est en place, nous branchons la validation Service Layer.",
-        timestamp: "2026-10-26 à 10:15",
-        attachment: {
-          id: "att-1-2",
-          fileName: "Schema_Tables_Validation_HANA.sql",
-          fileSize: "48 Ko",
-          fileType: "SQL",
-          uploadedBy: "Anoop Pandimukkula",
-          uploadedRole: "DEVELOPER",
-          uploadedAt: "2026-10-26 à 10:15",
-          scanStatus: "VERIFIED_CLEAN"
-        }
-      }
-    ],
-    contributors: [
-      {
-        id: "contrib-1-1",
-        developerId: "dev-anoop",
-        developerName: "Anoop Pandimukkula",
-        developerEmail: "anoop.pandimukkula@safirconsulting.net",
-        lotRole: "ADDON_B1",
-        lotLabel: "Addon SAP B1 (UI/DI API)",
-        estimatedHours: 14,
-        remainingHours: 6,
-        status: "IN_PROGRESS"
-      },
-      {
-        id: "contrib-1-2",
-        developerId: "dev-hassane",
-        developerName: "Hassane Bocoum",
-        developerEmail: "hassane.bocoum@safirconsulting.net",
-        lotRole: "HANA_DB",
-        lotLabel: "Intégration HANA & Vues SQLScript",
-        estimatedHours: 10,
-        remainingHours: 8,
-        status: "IN_PROGRESS"
-      }
-    ]
-  },
-  {
-    id: "tix-2",
-    reference: "INT-2026-0002",
-    title: "Passerelle Import Factures Dématérialisées Service Layer",
-    description: "Connecteur automatisé synchronisant les factures PDF structurées dans SAP Business One via REST Service Layer.",
-    status: "ASSIGNED",
-    typeCode: "GATEWAY",
-    priorityCode: "CRITICAL",
-    estimatedHours: 32,
-    remainingHours: 32,
-    clientCompany: "Omega Distribution",
-    applicantName: "Christian Durand",
-    applicantEmail: "c.durand@client-omega.com",
-    assignedDeveloper: { id: "dev-moha", name: "Moha Dicko", email: "mohadicko95@gmail.com" },
-    createdAt: "2026-10-26"
-  },
-  {
-    id: "tix-3",
-    reference: "REP-2026-0003",
-    title: "Rapports d'inventaire valorisé en temps réel (SAP HANA)",
-    description: "Création de vues de calcul optimisées sur HANA SQLScript pour le reporting de stock en clôture mensuelle.",
-    status: "RECEIVED",
-    typeCode: "REPORT",
-    priorityCode: "MEDIUM",
-    estimatedHours: 16,
-    remainingHours: 16,
-    clientCompany: "Société Nouvelle Industrie",
-    applicantName: "Alain Moreau",
-    applicantEmail: "contact@societe-nouvelle-industrie.fr",
-    assignedDeveloper: null,
-    createdAt: "2026-10-27"
-  },
-  {
-    id: "tix-4",
-    reference: "BUG-2026-0004",
-    title: "Correction anomalie lettrage comptable sur CDS Views S/4HANA",
-    description: "Erreur de lettrage constatée lors de la clôture périodique suite à la dernière mise à niveau SAP.",
-    status: "BLOCKED",
-    blockerReason: "En attente transmission du jeu d'écritures réelles par l'équipe comptable client",
-    typeCode: "BUG",
-    priorityCode: "HIGH",
-    estimatedHours: 12,
-    remainingHours: 8,
-    clientCompany: "Client Alpha",
-    applicantName: "Mélissa Diakité",
-    applicantEmail: "melissa.diakite@safirconsulting.net",
-    assignedDeveloper: { id: "dev-anoop", name: "Anoop Pandimukkula", email: "anoop.pandimukkula@safirconsulting.net" },
-    createdAt: "2026-10-27",
-    attachments: [
-      {
-        id: "att-4-1",
-        fileName: "Trace_Erreur_CDS_Views_S4HANA.sql",
-        fileSize: "112 Ko",
-        fileType: "SQL",
-        uploadedBy: "Anoop Pandimukkula",
-        uploadedRole: "DEVELOPER",
-        uploadedAt: "2026-10-27 à 16:45",
-        scanStatus: "VERIFIED_CLEAN"
-      }
-    ],
-    messages: [
-      {
-        id: "msg-4-1",
-        authorName: "Anoop Pandimukkula",
-        authorRole: "DEVELOPER",
-        authorEmail: "anoop.pandimukkula@safirconsulting.net",
-        message: "Bonjour Mélissa, l'anomalie de lettrage sur les CDS Views se produit uniquement en multi-devises. Peux-tu me transmettre un extrait de pièces comptables réelles du client Alpha pour reproduire le bug ?",
-        timestamp: "2026-10-27 à 16:45",
-        isBlockerQuestion: true,
-        attachment: {
-          id: "att-4-1",
-          fileName: "Trace_Erreur_CDS_Views_S4HANA.sql",
-          fileSize: "112 Ko",
-          fileType: "SQL",
-          uploadedBy: "Anoop Pandimukkula",
-          uploadedRole: "DEVELOPER",
-          uploadedAt: "2026-10-27 à 16:45",
-          scanStatus: "VERIFIED_CLEAN"
-        }
-      }
-    ]
-  },
-  {
-    id: "tix-5",
-    reference: "ADD-2026-0005",
-    title: "Addon SAP B1 — Clôture Comptable Automatisée",
-    description: "Automatisation des écritures d'ajustement de fin de mois et réconciliation bancaire multi-devises dans SAP B1.",
-    status: "ASSIGNED",
-    typeCode: "ADDON",
-    priorityCode: "HIGH",
-    estimatedHours: 28,
-    remainingHours: 28,
-    clientCompany: "Safir Finance & Consulting",
-    applicantName: "Mélissa Diakité",
-    applicantEmail: "melissa.diakite@safirconsulting.net",
-    assignedDeveloper: { id: "dev-moha", name: "Moha Dicko", email: "mohadicko95@gmail.com" },
-    createdAt: "2026-10-28"
-  },
-  {
-    id: "tix-6",
-    reference: "EVO-2026-0006",
-    title: "Évolution Connecteur Bancaire EBICS TS & API",
-    description: "Montée de version du protocole d'échange bancaire sécurisé EBICS 3.0 avec signatures électroniques qualifiées.",
-    status: "ASSIGNED",
-    typeCode: "EVOLUTION",
-    priorityCode: "CRITICAL",
-    estimatedHours: 35,
-    remainingHours: 35,
-    clientCompany: "Omega Distribution",
-    applicantName: "Christian Durand",
-    applicantEmail: "c.durand@client-omega.com",
-    assignedDeveloper: { id: "dev-moha", name: "Moha Dicko", email: "mohadicko95@gmail.com" },
-    createdAt: "2026-10-29"
-  }
-];
-
-// File centrale de qualification d'Aliko (Flux 100% interne à l'application — Zéro e-mail externe automatique)
-const INITIAL_EMAILS: InboxEmail[] = [
-  {
-    id: "mail-1",
-    senderName: "Mélissa Diakité",
-    senderEmail: "melissa.diakite@safirconsulting.net",
-    senderKind: "CONSULTANT",
-    isPersonalDomain: false,
-    subject: "Spécifications fonctionnelles : Addon approbation d'achats SAP B1",
-    bodyPreview: "Demande soumise dans l'application avec le cahier de cadrage validé pour la mise en place du workflow d'approbation...",
-    receivedAt: "Aujourd'hui à 11:32",
-    processingStatus: "PENDING_QUALIFICATION"
-  },
-  {
-    id: "mail-2",
-    senderName: "Christian Durand (via Consulting)",
-    senderEmail: "c.durand@client-omega.com",
-    senderKind: "CLIENT_CONTACT",
-    isPersonalDomain: false,
-    subject: "Demande de chiffrage : Ajout des numéros de série dans la passerelle",
-    bodyPreview: "Besoin client enregistré sur la plateforme : étendre la passerelle WMS pour tracer les numéros de série sur les réceptions d'articles...",
-    receivedAt: "Aujourd'hui à 09:14",
-    processingStatus: "PENDING_QUALIFICATION"
-  },
-  {
-    id: "mail-3",
-    senderName: "Patrick Freelance",
-    senderEmail: "consultant.freelance92@gmail.com",
-    senderKind: "UNKNOWN",
-    isPersonalDomain: true,
-    subject: "Demande d'accès direct base SAP B1 de recette",
-    bodyPreview: "Demande externe consignée pour arbitrage Direction : sollicitation d'accès au serveur SAP B1 pour finaliser les tests...",
-    receivedAt: "Hier à 17:45",
-    processingStatus: "PENDING_QUALIFICATION"
-  }
-];
-
-// Notifications Temps Réel In-App initiales (Filtrées selon le rôle connecté)
-const INITIAL_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: "notif-1",
-    title: "🚨 Stop-the-line : Blocage & Question sur BUG-2026-0004",
-    message: "Anoop Pandimukkula a signalé un blocage sur les CDS Views S/4HANA et attend un extrait d'écritures comptables de Mélissa Diakité.",
-    category: "BLOCKER",
-    targetRoles: ["HEAD", "CONSULTANT"],
-    ticketId: "tix-4",
-    ticketReference: "BUG-2026-0004",
-    actorName: "Anoop Pandimukkula",
-    createdAt: "Il y a 15 min",
-    read: false
-  },
-  {
-    id: "notif-2",
-    title: "📥 Nouvelle demande au Guichet Central",
-    message: "Mélissa Diakité a soumis un besoin SAP avec pièce jointe : « Spécifications fonctionnelles : Addon approbation d'achats SAP B1 ».",
-    category: "DEMAND",
-    targetRoles: ["HEAD"],
-    ticketReference: "ADD-2026-0001",
-    actorName: "Mélissa Diakité",
-    createdAt: "Il y a 42 min",
-    read: false
-  },
-  {
-    id: "notif-3",
-    title: "👥 Affectation Multi-Développeurs par Lot SAP (ADD-2026-0001)",
-    message: "Getheme Aliko a réparti le ticket ADD-2026-0001 en 2 briques : Anoop (Addon B1 - 14h) et Hassane (Intégration HANA - 10h).",
-    category: "ASSIGNMENT",
-    targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
-    ticketId: "tix-1",
-    ticketReference: "ADD-2026-0001",
-    actorName: "Getheme Aliko",
-    createdAt: "Hier à 15:20",
-    read: false
-  }
-];
-
+const INITIAL_DEVELOPERS: Developer[] = [];
+const INITIAL_TIME_LOGS: TimeLog[] = [];
+const INITIAL_DEV_LIVE_ACTIVITIES: Record<string, DeveloperLiveActivity> = {};
+const INITIAL_TICKETS: Ticket[] = [];
+const INITIAL_EMAILS: InboxEmail[] = [];
+const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 export default function TicketManagerPage() {
   // Gestion de la session et authentification RBAC (par défaut tout le monde arrive sur la page de login)
   const [systemUsers, setSystemUsers] = useState<AuthUser[]>(SYSTEM_USERS);
@@ -1590,28 +692,28 @@ export default function TicketManagerPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const savedTickets = localStorage.getItem("safir_tickets_state_v2");
+      ["safir_tickets_state_v2","safir_dev_live_activities_v2","safir_notifications_v2","safir_system_users_v2"].forEach((k) => localStorage.removeItem(k)); const savedTickets = localStorage.getItem("safir_tickets_state_v3");
       if (savedTickets) {
         const parsed = JSON.parse(savedTickets);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setTickets(parsed);
         }
       }
-      const savedActivities = localStorage.getItem("safir_dev_live_activities_v2");
+      const savedActivities = localStorage.getItem("safir_dev_live_activities_v3");
       if (savedActivities) {
         const parsed = JSON.parse(savedActivities);
         if (parsed && typeof parsed === "object") {
           setDevLiveActivities((prev) => ({ ...prev, ...parsed }));
         }
       }
-      const savedNotifications = localStorage.getItem("safir_notifications_v2");
+      const savedNotifications = localStorage.getItem("safir_notifications_v3");
       if (savedNotifications) {
         const parsed = JSON.parse(savedNotifications);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setNotifications(parsed);
         }
       }
-      const savedUsers = localStorage.getItem("safir_system_users_v2");
+      const savedUsers = localStorage.getItem("safir_system_users_v3");
       if (savedUsers) {
         const parsed = JSON.parse(savedUsers);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -1631,7 +733,7 @@ export default function TicketManagerPage() {
   useEffect(() => {
     if (typeof window === "undefined" || systemUsers.length === 0) return;
     try {
-      localStorage.setItem("safir_system_users_v2", JSON.stringify(systemUsers));
+      localStorage.setItem("safir_system_users_v3", JSON.stringify(systemUsers));
     } catch (e) {
       console.warn("[localStorage] Sauvegarde systemUsers échouée:", e);
     }
@@ -1641,7 +743,7 @@ export default function TicketManagerPage() {
   useEffect(() => {
     if (typeof window === "undefined" || tickets.length === 0) return;
     try {
-      localStorage.setItem("safir_tickets_state_v2", JSON.stringify(tickets));
+      localStorage.setItem("safir_tickets_state_v3", JSON.stringify(tickets));
     } catch (e) {
       console.warn("[localStorage] Sauvegarde tickets échouée:", e);
     }
@@ -1651,7 +753,7 @@ export default function TicketManagerPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      localStorage.setItem("safir_dev_live_activities_v2", JSON.stringify(devLiveActivities));
+      localStorage.setItem("safir_dev_live_activities_v3", JSON.stringify(devLiveActivities));
     } catch (e) {
       console.warn("[localStorage] Sauvegarde devLiveActivities échouée:", e);
     }
@@ -1661,7 +763,7 @@ export default function TicketManagerPage() {
   useEffect(() => {
     if (typeof window === "undefined" || notifications.length === 0) return;
     try {
-      localStorage.setItem("safir_notifications_v2", JSON.stringify(notifications));
+      localStorage.setItem("safir_notifications_v3", JSON.stringify(notifications));
     } catch (e) {
       console.warn("[localStorage] Sauvegarde notifications échouée:", e);
     }
@@ -2136,7 +1238,7 @@ export default function TicketManagerPage() {
         setDevLiveActivities((prev) => ({ ...prev, ...liveRes }));
       }
       if (Array.isArray(devsRes)) setDevelopers(devsRes);
-      if (Array.isArray(tixRes) && tixRes.length > 0) {
+      if (Array.isArray(tixRes)) {
         const serverTickets = tixRes.map((ticket) => {
           const activeAssignment = Array.isArray(ticket.assignments)
             ? ticket.assignments.find((assignment: any) => assignment.status === "ACTIVE")
@@ -2627,82 +1729,11 @@ export default function TicketManagerPage() {
     const pwd = loginPassword;
 
     const tryFallbackAuth = (): AuthUser | null => {
-      const adminPasswords = ["Ev@ngel10n", "Tamden2026", "Tandem2026", "Safir2026!Admin", "Safir2026!DevCapacity"];
-      const devPasswords = ["Ev@ngel10n", "Safir2026!Dev", "Safir2026!DevCapacity", "Tamden2026", "Tandem2026"];
-      const consPasswords = ["Ev@ngel10n", "Safir2026!Consultant", "Safir2026!DevCapacity", "Test2026!", "Tamden2026", "Tandem2026"];
-
-      const sysMatch = systemUsers.find((u) => u.email.toLowerCase() === normalizedEmail);
-      if (sysMatch) {
-        const isAllowed =
-          (sysMatch.passwordHash && sysMatch.passwordHash === pwd) ||
-          ((sysMatch.role === "HEAD" || sysMatch.role === "ADMIN")
-            ? adminPasswords.includes(pwd)
-            : sysMatch.role === "DEVELOPER"
-              ? devPasswords.includes(pwd)
-              : consPasswords.includes(pwd));
-        if (isAllowed) {
-          const forceChange = Boolean(sysMatch.mustChangePassword ?? sysMatch.isFirstLogin);
-          return { ...sysMatch, isFirstLogin: forceChange, mustChangePassword: forceChange };
-        }
+      if (normalizedEmail === "aliko.getheme@safirconsulting.net" && pwd === "Ev@ngel10n") {
+        return SYSTEM_USERS[0];
       }
-
-      if (normalizedEmail === "aliko@safirconsulting.net" && adminPasswords.includes(pwd)) {
-        return {
-          id: "00000000-0000-4000-8000-000000000001",
-          name: "Getheme Aliko",
-          email: normalizedEmail,
-          role: "HEAD",
-          adminLevel: "SUPER_ADMIN",
-          roleLabel: "Super Administrateur & Responsable CoE DEV",
-          initials: "GA",
-          isFirstLogin: false,
-          mustChangePassword: false,
-        };
-      }
-
-      if (normalizedEmail === "mohadicko95@gmail.com" && devPasswords.includes(pwd)) {
-        return {
-          id: "user-moha",
-          name: "Mohamed Dicko",
-          email: "mohamed.dicko@safirconsulting.com",
-          role: "DEVELOPER",
-          roleLabel: "Lead Développeur Full-Stack & Architecte",
-          developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
-          initials: "MD",
-          isFirstLogin: false,
-          mustChangePassword: false,
-        };
-      }
-
-      if (normalizedEmail === "melissa.koffi@safirconsulting.net" && consPasswords.includes(pwd)) {
-        return {
-          id: "user-melissa",
-          name: "Mélissa Diakité",
-          email: normalizedEmail,
-          role: "CONSULTANT",
-          roleLabel: "Demandeur — Mélissa Diakité",
-          initials: "MD",
-          isFirstLogin: false,
-          mustChangePassword: false,
-        };
-      }
-
-      if (normalizedEmail === "test.test@safirconsulting.net" && consPasswords.includes(pwd)) {
-        return {
-          id: "user-cons-test",
-          name: "Test Consultant",
-          email: normalizedEmail,
-          role: "CONSULTANT",
-          roleLabel: "Consultant",
-          initials: "TC",
-          isFirstLogin: false,
-          mustChangePassword: false,
-        };
-      }
-
       return null;
     };
-
     try {
       let found: AuthUser | null = null;
 

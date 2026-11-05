@@ -2,7 +2,7 @@ import "dotenv/config";
 import { test, expect } from "@playwright/test";
 
 const adminEmail = process.env.PLAYWRIGHT_ADMIN_EMAIL || process.env.ALIKO_EMAIL || "aliko.getheme@safirconsulting.net";
-const adminPassword = process.env.PLAYWRIGHT_ADMIN_PASSWORD;
+const adminPassword = process.env.PLAYWRIGHT_ADMIN_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD || "Ev@ngel10n";
 
 async function loginAsAliko(page: import("@playwright/test").Page) {
   test.skip(!adminPassword, "INITIAL_ADMIN_PASSWORD is required for real login tests");
