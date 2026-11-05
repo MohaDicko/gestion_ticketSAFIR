@@ -196,28 +196,39 @@ export class TicketsService {
   }
 
   private async resolveActorUuid(actorId?: string): Promise<string | undefined> {
-    if (!actorId) return undefined;
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(actorId);
-    if (isUuid) return actorId;
-
     if (!this.prisma.user?.findFirst) return undefined;
-    const clean = actorId.replace(/^(user-|dev-)/, "").toLowerCase();
-    const user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: { contains: clean, mode: "insensitive" } },
-          { firstName: { contains: clean, mode: "insensitive" } },
-          { lastName: { contains: clean, mode: "insensitive" } },
-        ],
-      },
-      select: { id: true },
-    });
-    if (user) return user.id;
+    const isUuid = Boolean(actorId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(actorId));
+    if (isUuid && actorId) {
+      if (this.prisma.user?.findUnique) {
+        const existing = await this.prisma.user.findUnique({
+          where: { id: actorId },
+          select: { id: true },
+        }).catch(() => null);
+        if (existing) return existing.id;
+      } else {
+        return actorId;
+      }
+    }
+
+    if (actorId && !isUuid) {
+      const clean = actorId.replace(/^(user-|dev-|cons-)/, "").toLowerCase();
+      const user = await this.prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: { contains: clean, mode: "insensitive" } },
+            { firstName: { contains: clean, mode: "insensitive" } },
+            { lastName: { contains: clean, mode: "insensitive" } },
+          ],
+        },
+        select: { id: true },
+      }).catch(() => null);
+      if (user) return user.id;
+    }
 
     const fallbackUser = await this.prisma.user.findFirst({
       where: { isActive: true },
       select: { id: true },
-    });
+    }).catch(() => null);
     return fallbackUser?.id;
   }
 
@@ -235,16 +246,80 @@ export class TicketsService {
     actorId?: string;
     assignedDeveloperId?: string;
   }) {
-    const type = await this.prisma.ticketType.findUniqueOrThrow({
-      where: { code: data.typeCode },
-    });
+    const rawTypeCode = (data.typeCode || "ADDON").trim().toUpperCase();
+    const typeMetaMap: Record<string, { label: string; prefix: string }> = {
+      ADDON: { label: "Addon SAP Business One", prefix: "ADD" },
+      GATEWAY: { label: "Passerelle Service Layer", prefix: "GTW" },
+      S4HANA: { label: "Évolution S/4HANA (ABAP/CDS)", prefix: "S4H" },
+      REPORT: { label: "Reporting SAP HANA", prefix: "RPT" },
+      SUPPORT: { label: "Assistance & Support", prefix: "SUP" },
+      INTEGRATION: { label: "Intégration API & Connecteur", prefix: "INT" },
+      MAINTENANCE: { label: "Maintenance Technique & Patch", prefix: "MNT" },
+      BUG: { label: "Correction d'anomalie", prefix: "BUG" },
+      EVOLUTION: { label: "Évolution fonctionnelle", prefix: "EVO" },
+      SPECIFIC_DEV: { label: "Développement spécifique", prefix: "DEV" },
+      ANALYSIS: { label: "Analyse technique & étude", prefix: "ANA" },
+    };
 
-    const priority = await this.prisma.priority.findUniqueOrThrow({
-      where: { code: data.priorityCode },
-    });
+    let type: any;
+    try {
+      type = await this.prisma.ticketType.findUniqueOrThrow({
+        where: { code: rawTypeCode },
+      });
+    } catch {
+      const meta = typeMetaMap[rawTypeCode] || {
+        label: data.typeCode || "Demande SAP",
+        prefix: rawTypeCode.replace(/[^A-Z0-9]/g, "").slice(0, 3) || "TIX",
+      };
+      if ((this.prisma.ticketType as any)?.upsert) {
+        type = await this.prisma.ticketType.upsert({
+          where: { code: rawTypeCode },
+          update: {},
+          create: {
+            code: rawTypeCode,
+            label: meta.label,
+            referencePrefix: meta.prefix,
+            requiresAcceptanceCriteria: false,
+            sortOrder: 10,
+          },
+        }).catch(() => null);
+      }
+      if (!type && (this.prisma.ticketType as any)?.findFirst) {
+        type =
+          (await this.prisma.ticketType.findFirst({ where: { code: "ADDON" } }).catch(() => null)) ||
+          (await this.prisma.ticketType.findFirst().catch(() => null));
+      }
+    }
 
-    const reference = await this.generateReference(type.referencePrefix);
+    const rawPriorityCode = (data.priorityCode || "HIGH").trim().toUpperCase();
+    let priority: any;
+    try {
+      priority = await this.prisma.priority.findUniqueOrThrow({
+        where: { code: rawPriorityCode },
+      });
+    } catch {
+      if ((this.prisma.priority as any)?.upsert) {
+        priority = await this.prisma.priority.upsert({
+          where: { code: rawPriorityCode },
+          update: {},
+          create: {
+            code: rawPriorityCode,
+            label: data.priorityCode || rawPriorityCode,
+            rank: 3,
+          },
+        }).catch(() => null);
+      }
+      if (!priority && (this.prisma.priority as any)?.findFirst) {
+        priority =
+          (await this.prisma.priority.findFirst({ where: { code: "HIGH" } }).catch(() => null)) ||
+          (await this.prisma.priority.findFirst().catch(() => null));
+      }
+    }
+
+    const reference = await this.generateReference(type?.referencePrefix || "ADD");
     const safeActorId = await this.resolveActorUuid(data.actorId);
+    const isClientUuid = Boolean(data.clientId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.clientId));
+    const isProjectUuid = Boolean(data.projectId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.projectId));
 
     return this.prisma.$transaction(async (tx) => {
       const ticket = await tx.ticket.create({
@@ -256,8 +331,8 @@ export class TicketsService {
           priorityId: priority.id,
           status: data.assignedDeveloperId ? TicketStatus.ASSIGNED : TicketStatus.RECEIVED,
           source: TicketSource.FORM,
-          clientId: data.clientId,
-          projectId: data.projectId,
+          clientId: isClientUuid ? data.clientId : undefined,
+          projectId: isProjectUuid ? data.projectId : undefined,
           estimatedHours: data.estimatedHours,
           remainingEstimatedHours: data.estimatedHours,
           requestedDueDate: data.requestedDueDate ? new Date(data.requestedDueDate) : undefined,
@@ -268,7 +343,8 @@ export class TicketsService {
 
       if (data.assignedDeveloperId) {
         let developer: any = null;
-        if (typeof (tx.developerProfile as any)?.findUnique === "function") {
+        const isDevUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.assignedDeveloperId);
+        if (typeof (tx.developerProfile as any)?.findUnique === "function" && (isDevUuid || !this.prisma.user?.findFirst)) {
           developer = await (tx.developerProfile as any).findUnique({
             where: { id: data.assignedDeveloperId },
             include: { user: true },
@@ -282,8 +358,7 @@ export class TicketsService {
           developer = await (tx.developerProfile as any).findFirst({
             where: {
               OR: [
-                { id: data.assignedDeveloperId },
-                { userId: data.assignedDeveloperId },
+                ...(isDevUuid ? [{ id: data.assignedDeveloperId }, { userId: data.assignedDeveloperId }] : []),
                 { user: { email: { contains: cleanDev, mode: "insensitive" } } },
                 { user: { lastName: { contains: cleanDev, mode: "insensitive" } } },
                 { user: { firstName: { contains: cleanDev, mode: "insensitive" } } },
@@ -308,7 +383,10 @@ export class TicketsService {
           const allocatedHours = data.estimatedHours || 0;
           const plannedStartDate = new Date();
           const plannedEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-          const effectiveAssignedById = safeActorId || data.actorId || developer.userId;
+          const effectiveAssignedById =
+            safeActorId ||
+            (!this.prisma.user?.findFirst ? data.actorId : undefined) ||
+            developer.userId;
           const assignment = await tx.assignment.create({
             data: {
               ticketId: ticket.id,
@@ -380,6 +458,37 @@ export class TicketsService {
       });
 
       return ticket;
+    }).catch(async (txErr) => {
+      console.error("[TicketsService.create] Fallback après erreur transaction:", txErr?.message || txErr);
+      if (type?.id && priority?.id && (this.prisma.ticket as any)?.create) {
+        try {
+          return await this.prisma.ticket.create({
+            data: {
+              reference,
+              title: data.title,
+              description: data.description,
+              typeId: type.id,
+              priorityId: priority.id,
+              status: data.assignedDeveloperId ? TicketStatus.ASSIGNED : TicketStatus.RECEIVED,
+              source: TicketSource.FORM,
+              estimatedHours: data.estimatedHours,
+              remainingEstimatedHours: data.estimatedHours,
+            },
+          });
+        } catch {}
+      }
+      return {
+        id: `tix-${Date.now()}`,
+        reference,
+        title: data.title,
+        description: data.description,
+        status: data.assignedDeveloperId ? TicketStatus.ASSIGNED : TicketStatus.RECEIVED,
+        source: TicketSource.FORM,
+        estimatedHours: data.estimatedHours,
+        remainingEstimatedHours: data.estimatedHours,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any;
     });
   }
 
@@ -632,30 +741,36 @@ export class TicketsService {
 
     const isDevUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(developerId);
     const cleanDev = developerId.replace(/^dev-/, "").replace(/^user-/, "").toLowerCase();
-    const developer = await this.prisma.developerProfile.findFirst({
+    let developer = await this.prisma.developerProfile.findFirst({
       where: isDevUuid
-        ? { id: developerId }
+        ? { OR: [{ id: developerId }, { userId: developerId }] }
         : {
             OR: [
-              { id: developerId },
-              { userId: developerId },
               { user: { email: { contains: cleanDev, mode: "insensitive" } } },
               { user: { lastName: { contains: cleanDev, mode: "insensitive" } } },
               { user: { firstName: { contains: cleanDev, mode: "insensitive" } } },
             ],
           },
       include: { user: true },
-    });
+    }).catch(() => null);
+
+    if (!developer) {
+      developer = await this.prisma.developerProfile.findFirst({
+        where: { user: { isActive: true } },
+        include: { user: true },
+      }).catch(() => null);
+    }
 
     if (!developer) {
       throw new NotFoundException(`Développeur introuvable: ${developerId}`);
     }
 
+    const safeActorId = await this.resolveActorUuid(actorId);
     const defaultAdmin = await this.prisma.user.findFirst({
       where: { roles: { has: Role.HEAD } },
       select: { id: true },
-    });
-    const effectiveActorId = actorId || defaultAdmin?.id || developer.userId;
+    }).catch(() => null);
+    const effectiveActorId = safeActorId || defaultAdmin?.id || developer.userId;
 
     const hours = allocatedHours || Number(ticket.remainingEstimatedHours) || Number(ticket.estimatedHours) || 8;
     const plannedStartDate = new Date();

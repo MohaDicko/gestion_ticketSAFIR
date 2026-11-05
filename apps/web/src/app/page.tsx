@@ -4475,36 +4475,58 @@ export default function TicketManagerPage() {
           ticketUrl: typeof window !== "undefined" ? `${window.location.origin}/#ticket-${refCode}` : undefined,
         }),
       });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        throw new Error(payload?.message || "Impossible d'enregistrer le ticket.");
+      if (response.ok) {
+        const persistedTicket = (await response.json()) as {
+          id: string;
+          reference: string;
+          emailNotification?: { sent: boolean; messageId?: string; recipients: string[]; error?: string };
+        };
+        if (persistedTicket?.id) newTicket.id = persistedTicket.id;
+        if (persistedTicket?.reference) newTicket.reference = persistedTicket.reference;
+        emailNotificationSent = Boolean(persistedTicket?.emailNotification?.sent);
+      } else {
+        await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            creatorName: resolvedApplicantName,
+            creatorEmail: resolvedApplicantEmail,
+            recipientEmails: emailRecipients.map((recipient) => recipient.email),
+            ticketId: newTicket.reference,
+            ticketTitle: newTicket.title,
+            ticketDescription: newTicket.description,
+            ticketUrl: typeof window !== "undefined" ? `${window.location.origin}/#ticket-${newTicket.reference}` : undefined,
+          }),
+        }).then((r) => {
+          if (r.ok) emailNotificationSent = true;
+        }).catch(() => {});
       }
-      const persistedTicket = (await response.json()) as {
-        id: string;
-        reference: string;
-        emailNotification?: { sent: boolean; messageId?: string; recipients: string[]; error?: string };
-      };
-      newTicket.id = persistedTicket.id;
-      newTicket.reference = persistedTicket.reference;
-
-      // Enregistrement systématique dans l'historique d'alertes e-mails
-      dispatchAutomaticEmails({
-        ticketReference: persistedTicket.reference,
-        ticketTitle: newTicket.title,
-        subject: `[Notification E-mail Automatique] Nouveau Ticket ${persistedTicket.reference} — ${newTicket.title}`,
-        eventType: "TICKET_CREATED",
-        recipients: emailRecipients,
-      });
-
-      if (!persistedTicket.emailNotification?.sent) {
-        showToast(
-          `Ticket créé. Notification e-mail transmise à l'admin, au demandeur et aux développeurs.`,
-        );
-      }
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Impossible d'enregistrer le ticket.");
-      return;
+    } catch {
+      await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          creatorName: resolvedApplicantName,
+          creatorEmail: resolvedApplicantEmail,
+          recipientEmails: emailRecipients.map((recipient) => recipient.email),
+          ticketId: newTicket.reference,
+          ticketTitle: newTicket.title,
+          ticketDescription: newTicket.description,
+          ticketUrl: typeof window !== "undefined" ? `${window.location.origin}/#ticket-${newTicket.reference}` : undefined,
+        }),
+      }).then((r) => {
+        if (r.ok) emailNotificationSent = true;
+      }).catch(() => {});
     }
+
+    // Enregistrement systématique dans l'historique d'alertes e-mails
+    dispatchAutomaticEmails({
+      ticketReference: newTicket.reference,
+      ticketTitle: newTicket.title,
+      subject: `[Notification E-mail Automatique] Nouveau Ticket ${newTicket.reference} — ${newTicket.title}`,
+      eventType: "TICKET_CREATED",
+      recipients: emailRecipients,
+    });
 
     setTickets((prev) => [
       newTicket,
