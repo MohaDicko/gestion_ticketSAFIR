@@ -31,12 +31,28 @@ export class TicketsController {
     // 1. Enregistrement réussi du ticket en base de données
     const ticket = await this.ticketsService.create(body);
 
-    // 2. La notification ne doit pas rendre la création du ticket échouée.
+    // 2. Détermination exhaustive de TOUS les acteurs concernés :
+    // - L'Administrateur (Direction BU SME)
+    // - Le Demandeur / Consultant
+    // - Le ou les Développeurs assignés ou ciblés
+    const adminEmail = process.env.ALIKO_EMAIL || "aliko.getheme@safirconsulting.net";
     const creatorName = body.creatorName || body.applicantName || "Collaborateur Safir";
-    const creatorEmail = body.creatorEmail || body.applicantEmail || process.env.ALIKO_EMAIL || "aliko@safirconsulting.net";
-    const recipientEmails = Array.isArray(body.recipientEmails) && body.recipientEmails.length > 0
-      ? body.recipientEmails
-      : (body.assignedDeveloperEmail ? [body.assignedDeveloperEmail] : [process.env.ALIKO_EMAIL || "aliko@safirconsulting.net"]);
+    const creatorEmail = body.creatorEmail || body.applicantEmail || adminEmail;
+
+    const allRecipients = new Set<string>();
+    // Si des destinataires explicites sont fournis (ex: tests ou ciblage spécifique)
+    if (Array.isArray(body.recipientEmails) && body.recipientEmails.length > 0) {
+      body.recipientEmails.forEach((email: string) => {
+        if (email && typeof email === "string") allRecipients.add(email.trim());
+      });
+    } else {
+      // Sinon diffusion automatique à tous les acteurs : Administrateur + Demandeur + Développeur
+      allRecipients.add(adminEmail);
+      if (creatorEmail) allRecipients.add(creatorEmail);
+      if (body.assignedDeveloperEmail) allRecipients.add(body.assignedDeveloperEmail);
+    }
+
+    const recipientEmails = Array.from(allRecipients);
 
     const baseUrl = process.env.APP_URL || "http://localhost:3000";
     const ticketUrl = body.ticketUrl || `${baseUrl}/tickets/${ticket.id || ticket.reference}`;

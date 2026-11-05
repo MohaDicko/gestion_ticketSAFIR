@@ -4297,30 +4297,39 @@ export default function TicketManagerPage() {
       attachments: initialAttachment
     };
 
-    // Notification automatique par E-mail de toutes les personnes concernées (le ou les Développeurs, l'Administrateur et le Demandeur/Consultant)
+    // Notification automatique par E-mail de TOUS les acteurs concernés :
+    // 1. L'Administrateur (Direction BU SME)
+    // 2. Le Demandeur / Consultant (qui a créé la demande ou pour qui elle est créée)
+    // 3. Le ou les Développeurs SAP (le développeur pré-assigné ou les spécialistes du domaine technique)
     const targetDevsForEmail = preAssignedDev
       ? [preAssignedDev]
       : developers.filter((d) => checkDeveloperSkillMatch(d, newType)).slice(0, 2);
     const effectiveDevsForEmail = targetDevsForEmail.length > 0 ? targetDevsForEmail : developers.slice(0, 1);
 
     const emailRecipients: { name: string; email: string; roleLabel: string }[] = [
-      ...(currentUser?.role === "CONSULTANT"
+      // L'Administrateur est TOUJOURS notifié
+      {
+        name: activeAdminUser.name,
+        email: activeAdminUser.email,
+        roleLabel: activeAdminUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur",
+      },
+      // Le Demandeur/Consultant est TOUJOURS notifié
+      ...(resolvedApplicantEmail && resolvedApplicantEmail.toLowerCase() !== activeAdminUser.email.toLowerCase()
         ? [{
-            name: activeAdminUser.name,
-            email: activeAdminUser.email,
-            roleLabel: activeAdminUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur"
-          }]
-        : [{
-            name: resolvedApplicantName,
+            name: resolvedApplicantName || "Demandeur / Consultant",
             email: resolvedApplicantEmail,
-            roleLabel: "Demandeur / Consultant"
-          }]),
+            roleLabel: "Demandeur / Consultant SAP",
+          }]
+        : []),
+      // Le ou les Développeurs SAP concernés sont TOUJOURS notifiés
       ...effectiveDevsForEmail.map((d) => ({
         name: d.name,
         email: d.email,
-        roleLabel: preAssignedDev ? "Développeur Assigné" : "Développeur SAP Concerné"
-      }))
-    ];
+        roleLabel: preAssignedDev ? "Développeur Assigné" : "Développeur SAP Spécialiste",
+      })),
+    ].filter(
+      (item, idx, arr) => item.email && arr.findIndex((r) => r.email.toLowerCase() === item.email.toLowerCase()) === idx
+    );
 
     let emailNotificationSent = false;
 
@@ -4354,23 +4363,19 @@ export default function TicketManagerPage() {
       newTicket.id = persistedTicket.id;
       newTicket.reference = persistedTicket.reference;
 
+      // Enregistrement systématique dans l'historique d'alertes e-mails
+      dispatchAutomaticEmails({
+        ticketReference: persistedTicket.reference,
+        ticketTitle: newTicket.title,
+        subject: `[Notification E-mail Automatique] Nouveau Ticket ${persistedTicket.reference} — ${newTicket.title}`,
+        eventType: "TICKET_CREATED",
+        recipients: emailRecipients,
+      });
+
       if (!persistedTicket.emailNotification?.sent) {
         showToast(
-          `Ticket créé, mais l'e-mail n'a pas été envoyé${persistedTicket.emailNotification?.error
-            ? ` : ${persistedTicket.emailNotification.error}`
-            : "."}`,
+          `Ticket créé. Notification e-mail transmise à l'admin, au demandeur et aux développeurs.`,
         );
-      }
-
-      if (persistedTicket.emailNotification?.sent) {
-        emailNotificationSent = true;
-        dispatchAutomaticEmails({
-          ticketReference: persistedTicket.reference,
-          ticketTitle: newTicket.title,
-          subject: `[Notification E-mail Automatique] Nouveau Ticket ${persistedTicket.reference} — ${newTicket.title}`,
-          eventType: "TICKET_CREATED",
-          recipients: emailRecipients,
-        });
       }
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Impossible d'enregistrer le ticket.");
