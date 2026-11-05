@@ -254,7 +254,7 @@ export class DevelopersService {
               isActive: true,
               passwordHash: defaultPasswordHash,
               passwordPlain: "Safir2026!DevCapacity",
-              mustChangePassword: false,
+              mustChangePassword: true,
               developerProfile: { id: profile.id },
               updatedAt: new Date(),
             },

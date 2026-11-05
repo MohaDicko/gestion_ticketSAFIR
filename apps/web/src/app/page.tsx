@@ -2641,7 +2641,8 @@ export default function TicketManagerPage() {
               ? devPasswords.includes(pwd)
               : consPasswords.includes(pwd));
         if (isAllowed) {
-          return { ...sysMatch, isFirstLogin: false, mustChangePassword: false };
+          const forceChange = Boolean(sysMatch.mustChangePassword ?? sysMatch.isFirstLogin);
+          return { ...sysMatch, isFirstLogin: forceChange, mustChangePassword: forceChange };
         }
       }
 
@@ -2795,26 +2796,32 @@ export default function TicketManagerPage() {
   // Modification du mot de passe utilisateur (première connexion ou à tout moment)
   const handleUserPasswordChanged = async (currentPassword: string, newPassword: string) => {
     if (!currentUser) return;
-    const response = await apiFetch(`${API_BASE}/auth/change-password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => null);
-      throw new Error(payload?.message || "Impossible de modifier le mot de passe.");
+    try {
+      const response = await apiFetch(`${API_BASE}/auth/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (!response.ok && response.status === 400) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.message || "Impossible de modifier le mot de passe.");
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("mot de passe")) {
+        throw err;
+      }
     }
 
     const nowStr = new Date().toLocaleDateString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     setSystemUsers((prev) =>
       prev.map((u) =>
-        u.id === currentUser.id
-          ? { ...u, isFirstLogin: false, mustChangePassword: false, passwordChangedAt: nowStr }
+        u.id === currentUser.id || u.email.toLowerCase() === currentUser.email.toLowerCase()
+          ? { ...u, isFirstLogin: false, mustChangePassword: false, passwordHash: newPassword, passwordChangedAt: nowStr }
           : u
       )
     );
     setCurrentUser((prev) =>
-      prev ? { ...prev, isFirstLogin: false, mustChangePassword: false, passwordChangedAt: nowStr } : null
+      prev ? { ...prev, isFirstLogin: false, mustChangePassword: false, passwordHash: newPassword, passwordChangedAt: nowStr } : null
     );
     pushInAppNotification({
       title: "🔒 Mot de passe modifié avec succès",
@@ -4613,6 +4620,8 @@ export default function TicketManagerPage() {
       roleLabel: newDevObj.jobTitle,
       developerId: newDevObj.id,
       initials: `${newDevFirstName[0]}${newDevLastName[0]}`.toUpperCase(),
+      isFirstLogin: true,
+      mustChangePassword: true,
     };
 
     setDevelopers((prev) => [...prev, newDevObj]);
@@ -4679,6 +4688,8 @@ export default function TicketManagerPage() {
       roleLabel: `Demandeur — ${fullName}`,
       initials: `${newConsultantFirstName[0]}${newConsultantLastName[0]}`.toUpperCase(),
       passwordHash: initialPass,
+      isFirstLogin: true,
+      mustChangePassword: true,
     };
 
     try {

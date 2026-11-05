@@ -89,6 +89,7 @@ export class ConsultantsService {
 
     const passwordToHash = data.passwordPlain || "Safir2026!Consultant";
     const passwordHash = await argon2.hash(passwordToHash);
+    const mustChangeAtFirstLogin = normalizedEmail !== "test.test@safirconsulting.net";
 
     return this.prisma.$transaction(async (tx) => {
       let user = existing;
@@ -101,7 +102,7 @@ export class ConsultantsService {
             roles: [Role.CONSULTANT],
             isActive: true,
             passwordHash,
-            mustChangePassword: false,
+            mustChangePassword: mustChangeAtFirstLogin,
             timezone: "Europe/Paris",
           },
           include: { consultant: true },
@@ -159,7 +160,7 @@ export class ConsultantsService {
               isActive: true,
               passwordHash,
               passwordPlain: passwordToHash,
-              mustChangePassword: false,
+              mustChangePassword: mustChangeAtFirstLogin,
               updatedAt: new Date(),
             },
             { merge: true },
