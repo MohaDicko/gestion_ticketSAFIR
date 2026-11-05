@@ -8,12 +8,20 @@ import * as fs from "fs";
 @Injectable()
 export class FirebaseAdminService implements OnModuleInit {
   private readonly logger = new Logger(FirebaseAdminService.name);
-  private app!: App;
+  private app: App | null = null;
+  private isReady = false;
 
   onModuleInit() {
+    this.ensureInitialized();
+  }
+
+  private ensureInitialized() {
+    if (this.isReady && this.app) return;
+
     const existingApps = getApps();
     if (existingApps.length > 0) {
       this.app = existingApps[0]!;
+      this.isReady = true;
       return;
     }
 
@@ -29,37 +37,57 @@ export class FirebaseAdminService implements OnModuleInit {
 
       for (const candidate of candidates) {
         if (!candidate) continue;
-        if (candidate.trim().startsWith("{")) {
-          credentialObj = JSON.parse(candidate);
+        const trimmed = candidate.trim().replace(/^['"]|['"]$/g, "");
+        if (trimmed.startsWith("{")) {
+          try {
+            credentialObj = JSON.parse(trimmed);
+          } catch {
+            // Gère le cas où Vercel a converti les \n en retours à la ligne réels
+            const sanitized = trimmed.replace(/\r?\n/g, "\\n");
+            credentialObj = JSON.parse(sanitized);
+          }
           break;
-        } else if (fs.existsSync(candidate)) {
-          credentialObj = JSON.parse(fs.readFileSync(candidate, "utf8"));
+        } else if (fs.existsSync(trimmed)) {
+          credentialObj = JSON.parse(fs.readFileSync(trimmed, "utf8"));
           break;
         }
       }
 
       if (credentialObj) {
+        if ((credentialObj as any).private_key) {
+          (credentialObj as any).private_key = String((credentialObj as any).private_key).replace(/\\n/g, "\n");
+        }
         this.app = initializeApp({
           credential: cert(credentialObj),
           projectId: process.env.FIREBASE_PROJECT_ID || (credentialObj as any).project_id || "tandem-2-75612",
         });
+        this.isReady = true;
         this.logger.log("✅ Firebase Admin SDK initialisé avec succès pour le projet tandem-2-75612");
       } else {
-        this.app = initializeApp({
-          projectId: process.env.FIREBASE_PROJECT_ID || "tandem-2-75612",
-        });
-        this.logger.warn("Firebase Admin SDK initialisé sans clé de compte de service");
+        this.logger.warn("Firebase Admin SDK : aucune clé de compte de service valide détectée, repli PostgreSQL actif");
       }
     } catch (error: any) {
       this.logger.error(`Erreur d'initialisation Firebase Admin : ${error?.message || error}`);
     }
   }
 
-  get firestore(): Firestore {
-    return getFirestore(this.app);
+  get firestore(): Firestore | null {
+    try {
+      this.ensureInitialized();
+      if (!this.isReady || !this.app) return null;
+      return getFirestore(this.app);
+    } catch {
+      return null;
+    }
   }
 
-  get auth(): Auth {
-    return getAuth(this.app);
+  get auth(): Auth | null {
+    try {
+      this.ensureInitialized();
+      if (!this.isReady || !this.app) return null;
+      return getAuth(this.app);
+    } catch {
+      return null;
+    }
   }
 }
