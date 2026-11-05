@@ -2,8 +2,10 @@ import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import * as argon2 from "argon2";
 import * as path from "path";
+import * as fs from "fs";
 
-const cred = require(path.resolve(__dirname, "../firebase-service-account.json"));
+const keyPath = path.resolve(process.cwd(), "firebase-service-account.json");
+const cred = JSON.parse(fs.readFileSync(keyPath, "utf-8"));
 initializeApp({ credential: cert(cred) });
 const db = getFirestore();
 
@@ -53,6 +55,39 @@ async function seed() {
       email: "anoop.pandimukkula@safirconsulting.net",
       firstName: "Anoop",
       lastName: "Pandimukkula",
+      role: "DEVELOPER",
+      roles: ["DEVELOPER"],
+      passwordHash: defaultDevHash,
+      isActive: true,
+      mustChangePassword: false,
+    },
+    {
+      id: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
+      email: "mohamed.dicko@safirconsulting.com",
+      firstName: "Mohamed",
+      lastName: "Dicko",
+      role: "DEVELOPER",
+      roles: ["DEVELOPER"],
+      passwordHash: defaultDevHash,
+      isActive: true,
+      mustChangePassword: false,
+    },
+    {
+      id: "user-dev-moha-net",
+      email: "mohamed.dicko@safirconsulting.net",
+      firstName: "Mohamed",
+      lastName: "Dicko",
+      role: "DEVELOPER",
+      roles: ["DEVELOPER"],
+      passwordHash: defaultDevHash,
+      isActive: true,
+      mustChangePassword: false,
+    },
+    {
+      id: "user-dev-mohadicko",
+      email: "mohadicko95@gmail.com",
+      firstName: "Mohamed",
+      lastName: "Dicko",
       role: "DEVELOPER",
       roles: ["DEVELOPER"],
       passwordHash: defaultDevHash,

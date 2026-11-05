@@ -428,7 +428,7 @@ const SYSTEM_USERS: AuthUser[] = [
   {
     id: "user-moha",
     name: "Mohamed Dicko",
-    email: "mohamed.dicko@safirconsulting.net",
+    email: "mohamed.dicko@safirconsulting.com",
     role: "DEVELOPER",
     roleLabel: "Lead Développeur Full-Stack & Architecte",
     developerId: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
@@ -461,7 +461,7 @@ const INITIAL_DEVELOPERS: Developer[] = [
   {
     id: "012337d8-fe1a-4c5b-9b01-78b9c9f29529",
     name: "Mohamed Dicko",
-    email: "mohamed.dicko@safirconsulting.net",
+    email: "mohamed.dicko@safirconsulting.com",
     jobTitle: "Lead Développeur Full-Stack & Architecte Solution",
     netWeeklyHours: 40,
     reservedHours: 16,
@@ -4258,8 +4258,8 @@ export default function TicketManagerPage() {
         ]
       : undefined;
 
-    // L'estimation de la charge est une prérogative exclusive de l'Administrateur (HEAD) ; pour les demandeurs, elle démarre à 0
-    const isHead = currentUser?.role === "HEAD";
+    // L'estimation de la charge est une prérogative de l'Administrateur (HEAD / ADMIN) ; pour les demandeurs, elle démarre à 0
+    const isHead = currentUser?.role === "HEAD" || currentUser?.role === "ADMIN";
     const initialHours = isHead ? (Number(newHours) || 16) : 0;
     const preAssignedDev = isHead && newTicketAssignedDevId
       ? developers.find((d) => d.id === newTicketAssignedDevId) || null
@@ -8702,7 +8702,7 @@ export default function TicketManagerPage() {
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">Parties Prenantes & Cible Client</h4>
                   </div>
 
-                  {currentUser?.role === "HEAD" ? (
+                  {isAdminRole ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       {/* Entreprise / Client SAP */}
                       <div>
