@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 import { PrismaModule } from "./prisma/prisma.module";
+import { FirebaseModule } from "./firebase/firebase.module";
 import { HealthController } from "./health/health.controller";
 import { AuthService } from "./auth/auth.service";
 import { AuthController } from "./auth/auth.controller";
@@ -31,6 +32,7 @@ import { TimeEntriesService } from "./time-entries/time-entries.service";
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
+    FirebaseModule,
   ],
   controllers: [
     HealthController,

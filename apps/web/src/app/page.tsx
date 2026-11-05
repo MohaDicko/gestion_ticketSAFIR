@@ -60,6 +60,7 @@ import {
 import { ChangePasswordModal } from "@/components/modals/ChangePasswordModal";
 import { translateAttribute, translateText } from "@/lib/i18n";
 import { getReportDateRange, ReportPeriod } from "@/lib/report-period";
+import { subscribeTicketMessages, sendFirestoreMessage, subscribeAdminBlockerAlerts, setFirestoreBlockerAlert } from "@/lib/firebaseSync";
 
 const API_BASE = "/api/v1";
 
@@ -2242,6 +2243,37 @@ export default function TicketManagerPage() {
     refreshData();
   }, [currentUser]);
 
+  // Écoute en temps réel Firestore des messages du ticket ouvert
+  useEffect(() => {
+    if (!discussingTicket?.id) return;
+    const unsubscribe = subscribeTicketMessages(discussingTicket.id, (firestoreMessages) => {
+      if (!firestoreMessages || firestoreMessages.length === 0) return;
+      setDiscussingTicket((current) => {
+        if (!current || current.id !== discussingTicket.id) return current;
+        const existingMessages = current.messages || [];
+        const mapped = firestoreMessages.map((fm) => ({
+          id: fm.id || `fs-${Date.now()}`,
+          authorName: fm.senderName,
+          authorEmail: "",
+          authorRole: fm.senderRole,
+          message: fm.content,
+          timestamp: "À l'instant",
+          isBlockerQuestion: !!fm.isBlockerAlert,
+          isConsultantReply: false,
+        }));
+        
+        const combined = [...existingMessages];
+        for (const m of mapped) {
+          if (!combined.some((em) => em.id === m.id || (em.message === m.message && em.authorName === m.authorName))) {
+            combined.push(m);
+          }
+        }
+        return { ...current, messages: combined };
+      });
+    });
+    return () => unsubscribe();
+  }, [discussingTicket?.id]);
+
   // Polling temps réel bi-directionnel de l'activité, des blocages et des messages (toutes les 4 secondes)
   useEffect(() => {
     if (!currentUser) return;
@@ -2262,8 +2294,19 @@ export default function TicketManagerPage() {
           return res.json();
         };
 
-        const [tixData, liveData] = await Promise.all([fetchTickets(), fetchLive()]);
+        const fetchEmails = async () => {
+          if (currentUser.role !== "HEAD" && currentUser.role !== "ADMIN") return null;
+          const res = await apiFetch(`${API_BASE}/emails/inbox`);
+          if (!res.ok) return null;
+          return res.json();
+        };
+
+        const [tixData, liveData, emailData] = await Promise.all([fetchTickets(), fetchLive(), fetchEmails()]);
         if (isCancelled) return;
+
+        if (Array.isArray(emailData)) {
+          setEmails(emailData);
+        }
 
         if (liveData && typeof liveData === "object") {
           setDevLiveActivities((prev) => ({
@@ -2284,7 +2327,7 @@ export default function TicketManagerPage() {
                 : undefined;
               const serverMessages: TicketMessage[] = Array.isArray(serverT.comments)
                 ? serverT.comments.map((c: any) => {
-                    const authorRole = c.author?.roles?.includes("HEAD")
+                    const authorRole = c.author?.roles?.includes("HEAD") || c.author?.roles?.includes("ADMIN")
                       ? "HEAD"
                       : c.author?.roles?.includes("DEVELOPER")
                       ? "DEVELOPER"
@@ -2309,6 +2352,34 @@ export default function TicketManagerPage() {
                   })
                 : [];
 
+              const activeAssignment = Array.isArray(serverT.assignments)
+                ? serverT.assignments.find((assignment: any) => assignment.status === "ACTIVE")
+                : undefined;
+              const assignedUser = activeAssignment?.developer?.user;
+
+              const normalizedTicket = {
+                ...serverT,
+                typeCode: serverT.typeCode || serverT.type?.code,
+                priorityCode: serverT.priorityCode || serverT.priority?.code,
+                clientCompany: serverT.clientCompany || serverT.client?.name || "Safir Consulting",
+                applicantName: serverT.applicantName || serverT.consultant?.name,
+                applicantEmail: serverT.applicantEmail || serverT.consultant?.email,
+                estimatedHours: Number(serverT.estimatedHours || 0),
+                remainingHours: Number(serverT.remainingEstimatedHours ?? serverT.estimatedHours ?? 0),
+                spentHours: Number(serverT.spentHours || 0),
+                progressPercent: Number(serverT.progressPercent || 0),
+                blockerReason: activeBlocker?.reason || (serverT.status === "BLOCKED" ? currentList[idx]?.blockerReason : undefined),
+                blockerId: activeBlocker?.id || currentList[idx]?.blockerId,
+                assignedDeveloper: assignedUser
+                  ? {
+                      id: activeAssignment.developer.id,
+                      name: `${assignedUser.firstName} ${assignedUser.lastName}`,
+                      email: assignedUser.email,
+                    }
+                  : serverT.assignedDeveloper || null,
+                messages: serverMessages,
+              };
+
               if (idx >= 0) {
                 const localMsgs = currentList[idx].messages || [];
                 const mergedMsgs = [...serverMessages];
@@ -2319,13 +2390,11 @@ export default function TicketManagerPage() {
                 }
                 currentList[idx] = {
                   ...currentList[idx],
-                  status: serverT.status,
-                  applicantName: currentList[idx].applicantName || serverT.consultant?.name,
-                  applicantEmail: currentList[idx].applicantEmail || serverT.consultant?.email,
-                  blockerReason: activeBlocker?.reason || (serverT.status === "BLOCKED" ? currentList[idx].blockerReason : undefined),
-                  blockerId: activeBlocker?.id || currentList[idx].blockerId,
+                  ...normalizedTicket,
                   messages: mergedMsgs,
                 };
+              } else {
+                currentList.unshift(normalizedTicket);
               }
             }
             return currentList;
@@ -2343,7 +2412,7 @@ export default function TicketManagerPage() {
                 : undefined;
               const newServerMsgs: TicketMessage[] = Array.isArray(updated.comments)
                 ? updated.comments.map((c: any) => {
-                    const authorRole = c.author?.roles?.includes("HEAD")
+                    const authorRole = c.author?.roles?.includes("HEAD") || c.author?.roles?.includes("ADMIN")
                       ? "HEAD"
                       : c.author?.roles?.includes("DEVELOPER")
                       ? "DEVELOPER"
@@ -2380,10 +2449,59 @@ export default function TicketManagerPage() {
                 ...currentDiscuss,
                 status: updated.status,
                 blockerReason: activeBlocker?.reason || updated.blockerReason,
+                blockerId: activeBlocker?.id || updated.blockerId,
                 messages: combined,
               };
             }
             return currentDiscuss;
+          });
+
+          // Rafraîchir le ticket en cours de supervision Admin
+          setSupervisingTicket((currentSupervising) => {
+            if (!currentSupervising) return null;
+            const updated = tixData.find(
+              (t: any) => t.reference === currentSupervising.reference || t.id === currentSupervising.id
+            );
+            if (updated) {
+              const activeBlocker = Array.isArray(updated.blockers)
+                ? updated.blockers.find((b: any) => !b.resolvedAt)
+                : undefined;
+              const newServerMsgs: TicketMessage[] = Array.isArray(updated.comments)
+                ? updated.comments.map((c: any) => {
+                    const authorRole = c.author?.roles?.includes("HEAD") || c.author?.roles?.includes("ADMIN")
+                      ? "HEAD"
+                      : c.author?.roles?.includes("DEVELOPER")
+                      ? "DEVELOPER"
+                      : c.author?.roles?.includes("CONSULTANT")
+                      ? "CONSULTANT"
+                      : (c.authorRole || "DEVELOPER");
+                    const authorName = c.author
+                      ? `${c.author.firstName} ${c.author.lastName}`
+                      : (c.authorName || c.authorEmail || "Collaborateur");
+                    return {
+                      id: c.id,
+                      authorName,
+                      authorRole,
+                      authorEmail: c.author?.email || c.authorEmail || "",
+                      message: c.content,
+                      timestamp: c.createdAt
+                        ? new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : "À l'instant",
+                      attachment: c.attachment || undefined,
+                      isBlockerQuestion: c.isBlockerQuestion || false,
+                    };
+                  })
+                : [];
+
+              return {
+                ...currentSupervising,
+                ...updated,
+                blockerReason: activeBlocker?.reason || updated.blockerReason,
+                blockerId: activeBlocker?.id || updated.blockerId,
+                messages: newServerMsgs.length > 0 ? newServerMsgs : currentSupervising.messages,
+              };
+            }
+            return currentSupervising;
           });
         }
       } catch {
@@ -3984,6 +4102,16 @@ export default function TicketManagerPage() {
       console.warn("[handleSendMessage] Enregistrement commentaire API échoué:", err);
     }
 
+    // Réplication temps réel instantanée sur Cloud Firestore
+    void sendFirestoreMessage(discussingTicket.id, {
+      ticketId: discussingTicket.id,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderRole: currentUser.role as any,
+      content: newMsg.message,
+      isBlockerAlert: isQuestion,
+    });
+
     setTickets((prev) =>
       prev.map((t) => {
         if (t.id !== discussingTicket.id) return t;
@@ -4249,7 +4377,10 @@ export default function TicketManagerPage() {
       return;
     }
 
-    setTickets([newTicket, ...tickets]);
+    setTickets((prev) => [
+      newTicket,
+      ...prev.filter((t) => t.id !== newTicket.id && t.reference !== newTicket.reference),
+    ]);
 
     // Si la demande est émise par un demandeur (consultant), elle alimente automatiquement le Guichet Central
     if (currentUser?.role === "CONSULTANT") {
@@ -4264,7 +4395,7 @@ export default function TicketManagerPage() {
           bodyPreview: newDesc,
           receivedAt: "À l'instant",
           processingStatus: "QUALIFIED_IN_APP",
-          ticket: { reference: refCode, title: newTitle }
+          ticket: { reference: newTicket.reference, title: newTitle }
         },
         ...prev
       ]);
@@ -4274,15 +4405,15 @@ export default function TicketManagerPage() {
     const recipientsSummary = emailRecipients.map((r) => `${r.name} (${r.roleLabel})`).join(", ");
     pushInAppNotification({
       title: emailNotificationSent
-        ? `📧 Nouveau ticket ${refCode} créé — E-mails automatiques envoyés`
-        : `⚠️ Nouveau ticket ${refCode} créé — E-mail non envoyé`,
+        ? `📧 Nouveau ticket ${newTicket.reference} créé — E-mails automatiques envoyés`
+        : `⚠️ Nouveau ticket ${newTicket.reference} créé — E-mail non envoyé`,
       message: emailNotificationSent
         ? `${newTicket.applicantName} a créé « ${newTitle} » (${hoursLabel}). Notifications e-mail envoyées automatiquement à : ${recipientsSummary}.`
         : `${newTicket.applicantName} a créé « ${newTitle} » (${hoursLabel}), mais la notification e-mail n'a pas été confirmée.`,
       category: "DEMAND",
       targetRoles: ["HEAD", "DEVELOPER", "CONSULTANT"],
       ticketId: newTicket.id,
-      ticketReference: refCode,
+      ticketReference: newTicket.reference,
       actorName: newTicket.applicantName || activeAdminUser.name
     });
 
@@ -4293,8 +4424,9 @@ export default function TicketManagerPage() {
     setNewTicketAssignedDevId("");
     setUploadedTicketFile(null);
     showToast(emailNotificationSent
-      ? `📧 Ticket ${refCode} créé ! E-mails automatiques envoyés.`
-      : `⚠️ Ticket ${refCode} créé, mais l'envoi e-mail n'a pas été confirmé.`);
+      ? `📧 Ticket ${newTicket.reference} créé avec succès !`
+      : `✓ Ticket ${newTicket.reference} enregistré sur le serveur.`);
+    refreshData();
   };
 
   // Action HEAD : Intégrer un nouveau Développeur dans l'équipe
@@ -6047,7 +6179,7 @@ export default function TicketManagerPage() {
               <button
                 onClick={() => {
                   setNewApplicant(currentUser.name);
-                  setNewClient("Safir Consulting (Consulting Interne)");
+                  setNewClient("Safir Consulting");
                   setShowCreateModal(true);
                 }}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-medium rounded-lg shadow-sm cursor-pointer transition-colors"

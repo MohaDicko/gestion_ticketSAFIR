@@ -41,13 +41,14 @@ export class TicketsController {
     const baseUrl = process.env.APP_URL || "http://localhost:3000";
     const ticketUrl = body.ticketUrl || `${baseUrl}/tickets/${ticket.id || ticket.reference}`;
 
+    // 3. Envoi de la notification e-mail (sans bloquer en cas de dépassement)
     let emailNotification: { sent: boolean; messageId?: string; recipients: string[]; error?: string } = {
       sent: false,
       recipients: recipientEmails,
     };
 
     try {
-      const result = await sendTicketCreatedNotification({
+      const emailPromise = sendTicketCreatedNotification({
         creatorName,
         creatorEmail,
         recipientEmails,
@@ -56,6 +57,10 @@ export class TicketsController {
         ticketDescription: ticket.description,
         ticketUrl,
       });
+      const timeoutPromise = new Promise<{ sent: boolean; timeout: true }>((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout d'envoi e-mail (2s)")), 2000),
+      );
+      const result = (await Promise.race([emailPromise, timeoutPromise])) as any;
       emailNotification = {
         sent: true,
         messageId: result?.messageId,
@@ -63,13 +68,13 @@ export class TicketsController {
       };
     } catch (error) {
       emailNotification.error = error instanceof Error ? error.message : "Erreur d'envoi e-mail";
-      console.error(
-        `[tickets] Le ticket ${ticket.reference || ticket.id} a été créé, mais la notification e-mail a échoué :`,
+      console.warn(
+        `[tickets] Le ticket ${ticket.reference || ticket.id} a été créé, notification e-mail différée :`,
         emailNotification.error,
       );
     }
 
-    // 3. Retour HTTP 201 même si le fournisseur e-mail est indisponible.
+    // 4. Retour HTTP 201 immédiat
     return { ...ticket, emailNotification };
   }
 

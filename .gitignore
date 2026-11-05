@@ -50,3 +50,7 @@ docker-data/
 playwright-report/
 test-results/
 coverage/
+
+# Clés secrètes Firebase
+firebase-service-account.json
+*-firebase-adminsdk-*.json

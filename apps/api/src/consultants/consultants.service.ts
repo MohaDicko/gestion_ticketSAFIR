@@ -95,7 +95,7 @@ export class ConsultantsService {
             roles: [Role.CONSULTANT],
             isActive: true,
             passwordHash,
-            mustChangePassword: true,
+            mustChangePassword: false,
             timezone: "Europe/Paris",
           },
           include: { consultant: true },
