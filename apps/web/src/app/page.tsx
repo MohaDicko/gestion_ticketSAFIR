@@ -4298,34 +4298,41 @@ export default function TicketManagerPage() {
     };
 
     // Notification automatique par E-mail de TOUS les acteurs concernés :
-    // 1. L'Administrateur (Direction BU SME)
-    // 2. Le Demandeur / Consultant (qui a créé la demande ou pour qui elle est créée)
-    // 3. Le ou les Développeurs SAP (le développeur pré-assigné ou les spécialistes du domaine technique)
-    const targetDevsForEmail = preAssignedDev
+    // 1. Les Administrateurs (Direction BU SME & Admin opérationnel)
+    // 2. Le Demandeur / Consultant (créateur ou demandeur concerné)
+    // 3. TOUS les Développeurs concernés (le développeur assigné ou tous les développeurs compétents de l'équipe)
+    const matchingDevs = developers.filter((d) => checkDeveloperSkillMatch(d, newType));
+    const effectiveDevsForEmail = preAssignedDev
       ? [preAssignedDev]
-      : developers.filter((d) => checkDeveloperSkillMatch(d, newType)).slice(0, 2);
-    const effectiveDevsForEmail = targetDevsForEmail.length > 0 ? targetDevsForEmail : developers.slice(0, 1);
+      : matchingDevs.length > 0
+        ? matchingDevs
+        : developers;
 
     const emailRecipients: { name: string; email: string; roleLabel: string }[] = [
-      // L'Administrateur est TOUJOURS notifié
+      // Les Administrateurs sont TOUJOURS notifiés
       {
         name: activeAdminUser.name,
         email: activeAdminUser.email,
         roleLabel: activeAdminUser.adminLevel === "SUPER_ADMIN" ? "Super Administrateur" : "Administrateur",
       },
+      {
+        name: "Direction BU SME",
+        email: "superadmin@safirconsulting.net",
+        roleLabel: "Super Administrateur Direction",
+      },
       // Le Demandeur/Consultant est TOUJOURS notifié
-      ...(resolvedApplicantEmail && resolvedApplicantEmail.toLowerCase() !== activeAdminUser.email.toLowerCase()
+      ...(resolvedApplicantEmail
         ? [{
             name: resolvedApplicantName || "Demandeur / Consultant",
             email: resolvedApplicantEmail,
             roleLabel: "Demandeur / Consultant SAP",
           }]
         : []),
-      // Le ou les Développeurs SAP concernés sont TOUJOURS notifiés
+      // Le ou TOUS les Développeurs concernés sont TOUJOURS notifiés
       ...effectiveDevsForEmail.map((d) => ({
         name: d.name,
         email: d.email,
-        roleLabel: preAssignedDev ? "Développeur Assigné" : "Développeur SAP Spécialiste",
+        roleLabel: preAssignedDev ? "Développeur Assigné" : "Développeur SAP de l'équipe",
       })),
     ].filter(
       (item, idx, arr) => item.email && arr.findIndex((r) => r.email.toLowerCase() === item.email.toLowerCase()) === idx

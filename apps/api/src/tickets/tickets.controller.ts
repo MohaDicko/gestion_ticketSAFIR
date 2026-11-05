@@ -36,20 +36,38 @@ export class TicketsController {
     // - Le Demandeur / Consultant
     // - Le ou les Développeurs assignés ou ciblés
     const adminEmail = process.env.ALIKO_EMAIL || "aliko.getheme@safirconsulting.net";
+    const superAdminEmail = "superadmin@safirconsulting.net";
     const creatorName = body.creatorName || body.applicantName || "Collaborateur Safir";
     const creatorEmail = body.creatorEmail || body.applicantEmail || adminEmail;
 
     const allRecipients = new Set<string>();
-    // Si des destinataires explicites sont fournis (ex: tests ou ciblage spécifique)
+    // Si des destinataires explicites sont fournis (ex: liste complète construite par le frontend ou tests)
     if (Array.isArray(body.recipientEmails) && body.recipientEmails.length > 0) {
       body.recipientEmails.forEach((email: string) => {
-        if (email && typeof email === "string") allRecipients.add(email.trim());
+        if (email && typeof email === "string" && email.trim()) allRecipients.add(email.trim());
       });
     } else {
-      // Sinon diffusion automatique à tous les acteurs : Administrateur + Demandeur + Développeur
+      // Sinon diffusion automatique exhaustive à tous les acteurs :
+      // 1. Administrateurs (Direction BU SME & Admin opérationnel)
       allRecipients.add(adminEmail);
+      allRecipients.add(superAdminEmail);
+
+      // 2. Demandeur / Consultant
       if (creatorEmail) allRecipients.add(creatorEmail);
-      if (body.assignedDeveloperEmail) allRecipients.add(body.assignedDeveloperEmail);
+
+      // 3. Développeur(s) assigné(s) ou concerné(s)
+      if (body.assignedDeveloperEmail) {
+        allRecipients.add(body.assignedDeveloperEmail);
+      } else if (body.assignedDeveloperId) {
+        const devIdLower = String(body.assignedDeveloperId).toLowerCase();
+        if (devIdLower.includes("dicko") || devIdLower.includes("moha") || devIdLower === "012337d8-fe1a-4c5b-9b01-78b9c9f29529") {
+          allRecipients.add("mohamed.dicko@safirconsulting.com");
+        } else if (devIdLower.includes("anoop")) {
+          allRecipients.add("anoop.pandimukkula@safirconsulting.net");
+        } else if (devIdLower.includes("hassane")) {
+          allRecipients.add("hassane.bocoum@safirconsulting.net");
+        }
+      }
     }
 
     const recipientEmails = Array.from(allRecipients);
