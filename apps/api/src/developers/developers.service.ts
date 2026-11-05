@@ -114,7 +114,7 @@ export class DevelopersService {
               { user: { lastName: { contains: cleanDev, mode: "insensitive" } } },
             ],
           },
-      select: { id: true, userId: true },
+      select: { id: true, userId: true, user: { select: { email: true } } },
     });
     if (!developer) {
       throw new NotFoundException("Développeur introuvable");
@@ -130,6 +130,14 @@ export class DevelopersService {
         data: { isActive: false },
       }),
     ]);
+
+    if (this.firebaseAdmin?.firestore && developer.user?.email) {
+      this.firebaseAdmin.firestore
+        .collection("users")
+        .doc(developer.user.email.toLowerCase())
+        .set({ isActive: false, updatedAt: new Date() }, { merge: true })
+        .catch(() => {});
+    }
 
     return { id: developer.id, deleted: true };
   }

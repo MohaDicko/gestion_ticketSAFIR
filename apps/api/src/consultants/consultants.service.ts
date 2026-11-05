@@ -45,7 +45,7 @@ export class ConsultantsService {
               { name: { contains: cleanCons, mode: "insensitive" } },
             ],
           },
-      select: { id: true, userId: true },
+      select: { id: true, userId: true, email: true },
     });
     if (!consultant) {
       throw new NotFoundException("Consultant introuvable");
@@ -65,6 +65,14 @@ export class ConsultantsService {
           ]
         : []),
     ]);
+
+    if (this.firebaseAdmin?.firestore && consultant.email) {
+      this.firebaseAdmin.firestore
+        .collection("users")
+        .doc(consultant.email.toLowerCase())
+        .set({ isActive: false, updatedAt: new Date() }, { merge: true })
+        .catch(() => {});
+    }
 
     return { id: consultant.id, deleted: true };
   }

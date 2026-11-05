@@ -46,6 +46,11 @@ export class AuthService {
     let user: any = null;
     let isMatch = false;
 
+    // Si le compte est explicitement désactivé dans PostgreSQL ou Firestore, refuser immédiatement
+    if ((pgUser && pgUser.isActive === false) || (fsUser && fsUser.isActive === false)) {
+      throw new UnauthorizedException("Identifiants invalides");
+    }
+
     // A. Vérification sur l'utilisateur PostgreSQL en priorité (hachage Argon2id uniquement)
     if (pgUser && pgUser.isActive !== false && pgUser.passwordHash) {
       try {
