@@ -38,7 +38,7 @@ async function login(email, password) {
   for (const [e, p] of [
     ["superadmin@safirconsulting.net", "Ev@ngel10n"],
     ["anoop.pandimukkula@safirconsulting.net", "Safir2026!Dev"],
-    ["hassane.bocoum@safirconsulting.net", "Safir2026!Dev"],
+    ["mohamed.dicko@safirconsulting.com", "Safir@2026"],
     ["melissa.diakite@safirconsulting.net", "Safir2026!Consultant"],
   ]) {
     const l = await login(e, p);
@@ -95,7 +95,8 @@ async function login(email, password) {
   ok("Consultant lit la liste des tickets", r.status === 200, `status ${r.status}`);
 
   // ---- Qualification + affectation
-  ok("Ticket consultant créé en RECEIVED", tk?.status === "RECEIVED", `statut ${tk?.status}`);\n  for (const s of ["TO_QUALIFY", "READY"]) {
+  ok("Ticket consultant créé en RECEIVED", tk?.status === "RECEIVED", `statut ${tk?.status}`);
+  for (const s of ["TO_QUALIFY", "READY"]) {
     r = await call(admin, "PATCH", `/tickets/${tk.reference}/status`, { status: s, actorId: admin.user?.id });
     ok(`Admin statut -> ${s}`, r.status === 200, `status ${r.status} ${JSON.stringify(r.data).slice(0, 100)}`);
   }
@@ -131,8 +132,13 @@ async function login(email, password) {
   r = await call(admin, "GET", `/tickets/${tk.reference}`);
   ok("Les 3 messages sont visibles", (r.data?.comments || []).length >= 3, `comments ${(r.data?.comments || []).length}`);
 
-  r = await call(dev, "POST", `/time-entries/${entryId}/stop`, { comment: "fin" });
-  ok("Dev arrête le chrono", r.status === 201 || r.status === 200, `status ${r.status}`);
+  r = await call(dev, "GET", "/time-entries/active");
+  ok("Le blocage a clôturé le chrono du dev", r.status === 200 && !r.data, `status ${r.status}`);
+  r = await call(dev, "POST", "/time-entries/start", { ticketId: tk.id });
+  ok("Dev redémarre le chrono après déblocage", r.status === 201 || r.status === 200, `status ${r.status} ${JSON.stringify(r.data).slice(0, 100)}`);
+  await new Promise((res) => setTimeout(res, 7000));
+  r = await call(dev, "POST", `/time-entries/${r.data?.id}/stop`, { comment: "fin" });
+  ok("Dev arrête le chrono (temps consigné)", (r.status === 201 || r.status === 200) && r.data?.ignored === false, `status ${r.status} ${JSON.stringify(r.data).slice(0, 100)}`);
   r = await call(dev, "PATCH", `/tickets/${tk.reference}/status`, { status: "DELIVERED", actorId: dev.user?.id, reason: "livré" });
   ok("Dev livre le ticket (DELIVERED)", r.status === 200, `status ${r.status} ${JSON.stringify(r.data).slice(0, 100)}`);
 
